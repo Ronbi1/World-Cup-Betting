@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { useMatches } from '../hooks/useMatches';
+import { useAuth } from '../context/AuthContext';
 import MatchCard from '../components/MatchCard';
 import SkeletonCard from '../components/SkeletonCard';
 import BetModal from '../components/BetModal';
+import LiveBetsReveal from '../components/LiveBetsReveal';
 import { STAGE_LABELS, MATCH_STATUS } from '../utils/constants';
 import styles from './AllGamesPage.module.css';
 
@@ -39,6 +41,7 @@ const isToday = (utcDate) => {
 
 export default function AllGamesPage() {
   const { matches, loading, error } = useMatches();
+  const { user, users } = useAuth();
   const [activeStage, setActiveStage] = useState('GROUP_STAGE');
   const [filterStatus, setFilterStatus] = useState('ALL');
   const [selectedMatch, setSelectedMatch] = useState(null);
@@ -172,6 +175,17 @@ export default function AllGamesPage() {
               ))}
           </div>
         )
+      )}
+
+      {/* Live bets reveal — shown when any match has kicked off */}
+      {!loading && !error && matches.length > 0 && (
+        <div className={styles.liveBetsWrapper}>
+          <LiveBetsReveal
+            matches={matches}
+            users={users}
+            currentUserId={user?.id}
+          />
+        </div>
       )}
 
       <BetModal

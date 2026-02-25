@@ -6,6 +6,7 @@ import MatchCard from '../components/MatchCard';
 import SkeletonCard from '../components/SkeletonCard';
 import TeamFlag from '../components/TeamFlag';
 import BetModal from '../components/BetModal';
+import LiveBetsReveal from '../components/LiveBetsReveal';
 import styles from './HomePage.module.css';
 
 // ─── Score table helpers ──────────────────────────────────────────────────────
@@ -130,6 +131,17 @@ export default function HomePage() {
             </div>
           )}
         </section>
+
+        {/* ── Live Bets Reveal ──────────────────────────────────────────── */}
+        {!loadingMatches && todayMatches.length > 0 && (
+          <section className={`${styles.card} ${styles.fullWidth}`}>
+            <LiveBetsReveal
+              matches={todayMatches}
+              users={users}
+              currentUserId={user?.id}
+            />
+          </section>
+        )}
 
         {/* ── Score Table / Leaderboard ─────────────────────────────────── */}
         <section className={`${styles.card} ${styles.fullWidth}`}>
