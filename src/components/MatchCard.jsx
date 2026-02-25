@@ -23,14 +23,20 @@ const formatTime = (utcDate) => {
   return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 };
 
-export default function MatchCard({ match, compact = false }) {
+export default function MatchCard({ match, compact = false, onClick }) {
   const { text: stTxt, cls: stCls } = statusLabel(match.status);
   const isFinished = match.status === MATCH_STATUS.FINISHED;
   const isLive =
     match.status === MATCH_STATUS.IN_PLAY || match.status === MATCH_STATUS.PAUSED;
 
   return (
-    <article className={`${styles.card} ${compact ? styles.compact : ''}`}>
+    <article
+      className={`${styles.card} ${compact ? styles.compact : ''} ${onClick ? styles.clickable : ''}`}
+      onClick={onClick ? () => onClick(match) : undefined}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') onClick(match); } : undefined}
+    >
       <div className={styles.meta}>
         <span className={`${styles.statusBadge} ${stCls}`}>{stTxt}</span>
         <span className={styles.date}>{formatDate(match.utcDate)}</span>

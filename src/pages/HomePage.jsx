@@ -5,6 +5,7 @@ import { STORAGE_KEYS } from '../utils/constants';
 import MatchCard from '../components/MatchCard';
 import SkeletonCard from '../components/SkeletonCard';
 import TeamFlag from '../components/TeamFlag';
+import BetModal from '../components/BetModal';
 import styles from './HomePage.module.css';
 
 // ─── Score table helpers ──────────────────────────────────────────────────────
@@ -20,6 +21,13 @@ export default function HomePage() {
   const [loadingMatches, setLoadingMatches] = useState(true);
   const [matchError, setMatchError] = useState(null);
   const [scores] = useState(loadScores);
+  const [selectedMatch, setSelectedMatch] = useState(null);
+  const [modalOpened, setModalOpened] = useState(false);
+
+  const handleMatchClick = (match) => {
+    setSelectedMatch(match);
+    setModalOpened(true);
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -118,7 +126,7 @@ export default function HomePage() {
           )}
           {!loadingMatches && todayMatches.length > 0 && (
             <div className={styles.matchList}>
-              {todayMatches.map((m) => <MatchCard key={m.id} match={m} compact />)}
+              {todayMatches.map((m) => <MatchCard key={m.id} match={m} compact onClick={handleMatchClick} />)}
             </div>
           )}
         </section>
@@ -169,6 +177,12 @@ export default function HomePage() {
           )}
         </section>
       </div>
+
+      <BetModal
+        match={selectedMatch}
+        opened={modalOpened}
+        onClose={() => setModalOpened(false)}
+      />
     </main>
   );
 }

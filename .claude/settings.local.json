@@ -16,7 +16,8 @@
       "Bash(powershell.exe -Command \"[System.IO.File]::ReadAllText\\(''C:\\\\dev\\\\WorldCupApp\\\\World-Cup\\\\src\\\\App.jsx'', [System.Text.Encoding]::UTF8\\) | Select-String ''─'' | ForEach-Object { $_.Line }\")",
       "Bash(powershell.exe -Command \"[System.IO.File]::ReadAllText\\(''C:\\\\dev\\\\WorldCupApp\\\\World-Cup\\\\src\\\\App.jsx'', [System.Text.Encoding]::UTF8\\).Contains\\([char]0x2500\\)\")",
       "Bash(npm run build:*)",
-      "Bash(git -C /c/dev/WorldCupApp/World-Cup status)"
+      "Bash(git -C /c/dev/WorldCupApp/World-Cup status)",
+      "Bash(git add:*)"
     ]
   }
 }

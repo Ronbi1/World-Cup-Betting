@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useMatches } from '../hooks/useMatches';
 import MatchCard from '../components/MatchCard';
 import SkeletonCard from '../components/SkeletonCard';
+import BetModal from '../components/BetModal';
 import { STAGE_LABELS, MATCH_STATUS } from '../utils/constants';
 import styles from './AllGamesPage.module.css';
 
@@ -40,6 +41,17 @@ export default function AllGamesPage() {
   const { matches, loading, error } = useMatches();
   const [activeStage, setActiveStage] = useState('GROUP_STAGE');
   const [filterStatus, setFilterStatus] = useState('ALL');
+  const [selectedMatch, setSelectedMatch] = useState(null);
+  const [modalOpened, setModalOpened] = useState(false);
+
+  const handleMatchClick = (match) => {
+    setSelectedMatch(match);
+    setModalOpened(true);
+  };
+
+  const handleModalClose = () => {
+    setModalOpened(false);
+  };
 
   const stageMap = groupMatchesByStageAndGroup(matches);
   const availableStages = STAGE_ORDER.filter((s) => stageMap[s]);
@@ -152,7 +164,7 @@ export default function AllGamesPage() {
                       .sort((a, b) => new Date(a.utcDate) - new Date(b.utcDate))
                       .map((m) => (
                         <div key={m.id} className={isToday(m.utcDate) ? styles.todayHighlight : ''}>
-                          <MatchCard match={m} />
+                          <MatchCard match={m} onClick={handleMatchClick} />
                         </div>
                       ))}
                   </div>
@@ -161,6 +173,12 @@ export default function AllGamesPage() {
           </div>
         )
       )}
+
+      <BetModal
+        match={selectedMatch}
+        opened={modalOpened}
+        onClose={handleModalClose}
+      />
     </main>
   );
 }

@@ -30,6 +30,11 @@ export default function Navbar() {
           </NavLink>
         </li>
         <li>
+          <NavLink to="/scorers" className={({ isActive }) => isActive ? styles.active : ''}>
+            Golden Boot
+          </NavLink>
+        </li>
+        <li>
           <NavLink to="/profile" className={({ isActive }) => isActive ? styles.active : ''}>
             My Profile
           </NavLink>

@@ -1,0 +1,199 @@
+.page {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 1.5rem 1.25rem;
+}
+
+.header { margin-bottom: 1.75rem; }
+
+.title {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--clr-text-primary);
+  margin: 0 0 0.25rem;
+}
+
+.sub {
+  font-size: 0.875rem;
+  color: var(--clr-text-secondary);
+  margin: 0;
+}
+
+/* Error */
+.errorBox {
+  background: #450a0a;
+  border: 1px solid #7f1d1d;
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+  color: #fca5a5;
+  font-size: 0.875rem;
+  margin-bottom: 1.5rem;
+}
+
+/* Empty state */
+.empty {
+  text-align: center;
+  padding: 4rem 2rem;
+  color: var(--clr-text-secondary);
+}
+
+.emptyIcon { font-size: 3rem; margin-bottom: 1rem; }
+
+.empty h3 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--clr-text-primary);
+  margin: 0 0 0.5rem;
+}
+
+.empty p { font-size: 0.9rem; margin: 0; line-height: 1.6; }
+
+/* Table */
+.tableWrapper {
+  background: var(--clr-surface);
+  border: 1px solid var(--clr-border);
+  border-radius: 14px;
+  overflow: hidden;
+  overflow-x: auto;
+  margin-bottom: 1rem;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.table thead tr {
+  background: var(--clr-surface-raised);
+  border-bottom: 1px solid var(--clr-border);
+}
+
+.table th {
+  padding: 0.65rem 1rem;
+  text-align: left;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--clr-muted);
+  white-space: nowrap;
+}
+
+.thRank { width: 48px; text-align: center; }
+.thStat { width: 60px; text-align: center; }
+
+.table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--clr-border);
+  color: var(--clr-text-secondary);
+  vertical-align: middle;
+}
+
+.table tbody tr:last-child td { border-bottom: none; }
+
+.table tbody tr:hover td {
+  background: var(--clr-surface-raised);
+}
+
+/* Top 3 highlight */
+.topThree td {
+  background: rgba(99, 102, 241, 0.05);
+}
+
+.topThree:first-child td {
+  background: rgba(250, 204, 21, 0.06);
+}
+
+/* Rank cell */
+.rank {
+  text-align: center;
+  font-size: 1.1rem;
+  width: 48px;
+  font-weight: 700;
+}
+
+/* Player cell */
+.playerCell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.playerName {
+  font-weight: 600;
+  color: var(--clr-text-primary);
+  font-size: 0.95rem;
+}
+
+.nationality {
+  font-size: 0.75rem;
+  color: var(--clr-muted);
+}
+
+/* Team cell */
+.teamCell {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.teamName {
+  font-size: 0.875rem;
+  color: var(--clr-text-secondary);
+  white-space: nowrap;
+}
+
+/* Stats */
+.goals {
+  text-align: center;
+  font-weight: 800;
+  font-size: 1.1rem;
+  color: var(--clr-accent);
+  font-family: var(--font-mono);
+}
+
+.stat {
+  text-align: center;
+  font-family: var(--font-mono);
+  color: var(--clr-text-secondary);
+}
+
+/* Skeleton shimmer */
+.shimmer {
+  display: inline-block;
+  background: linear-gradient(
+    90deg,
+    var(--clr-border) 25%,
+    var(--clr-surface-raised) 50%,
+    var(--clr-border) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.skeletonRow td { padding: 0.85rem 1rem; }
+
+.teamCellSkeleton {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Footer note */
+.note {
+  font-size: 0.75rem;
+  color: var(--clr-muted);
+  text-align: center;
+  margin-top: 0.5rem;
+}
+
+@media (max-width: 600px) {
+  .teamName { display: none; }
+  .nationality { display: none; }
+}

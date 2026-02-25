@@ -7,6 +7,7 @@ import HomePage from './pages/HomePage';
 import AllGamesPage from './pages/AllGamesPage';
 import ProfilePage from './pages/ProfilePage';
 import AdminPage from './pages/AdminPage';
+import TopScorersPage from './pages/TopScorersPage';
 import Navbar from './components/Navbar';
 
 // ─── Route guard: redirect to /login when not authenticated ──────────────────
@@ -78,6 +79,17 @@ function AppRoutes() {
           <ProtectedRoute>
             <AppLayout>
               <AdminPage />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/scorers"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <TopScorersPage />
             </AppLayout>
           </ProtectedRoute>
         }
