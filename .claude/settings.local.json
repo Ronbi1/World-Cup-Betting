@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(dir:*)",
+      "Bash(echo:*)",
+      "Bash(env:*)",
+      "Bash(cmd /c \"echo %CD%\")",
+      "Bash(cmd /c \"dir C:\\\\dev\\\\WorldCupApp\\\\World-Cup\")",
+      "Bash(cmd /c:*)",
+      "Bash(powershell -Command \"Get-ChildItem -Path ''C:\\\\dev\\\\WorldCupApp\\\\World-Cup'' -Recurse -Directory | Select-Object FullName\")",
+      "Bash(powershell -Command:*)",
+      "Bash(printf:*)",
+      "Bash(powershell.exe -Command \"Get-Content ''C:\\\\dev\\\\WorldCupApp\\\\World-Cup\\\\src\\\\App.jsx''\")",
+      "Bash(powershell.exe -Command \"Get-Content ''C:\\\\dev\\\\WorldCupApp\\\\World-Cup\\\\src\\\\App.jsx'' | Select-String ''─''\")",
+      "Bash(powershell.exe -Command \"[System.IO.File]::ReadAllText\\(''C:\\\\dev\\\\WorldCupApp\\\\World-Cup\\\\src\\\\App.jsx'', [System.Text.Encoding]::UTF8\\) | Select-String ''─'' | ForEach-Object { $_.Line }\")",
+      "Bash(powershell.exe -Command \"[System.IO.File]::ReadAllText\\(''C:\\\\dev\\\\WorldCupApp\\\\World-Cup\\\\src\\\\App.jsx'', [System.Text.Encoding]::UTF8\\).Contains\\([char]0x2500\\)\")",
+      "Bash(npm run build:*)",
+      "Bash(git -C /c/dev/WorldCupApp/World-Cup status)"
+    ]
+  }
+}

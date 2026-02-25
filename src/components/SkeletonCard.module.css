@@ -1,0 +1,51 @@
+.skeleton {
+  background: var(--clr-surface);
+  border: 1px solid var(--clr-border);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+}
+
+.compact { padding: 0.65rem 1rem; }
+
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--clr-border) 25%,
+    var(--clr-surface-raised) 50%,
+    var(--clr-border) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+  border-radius: 6px;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.meta {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.badge { width: 40px; height: 20px; border-radius: 999px; }
+.dateBar { width: 100px; height: 20px; }
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.teamBlock, .teamBlockR {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.flag { width: 32px; height: 32px; border-radius: 4px; }
+.name { width: 80px; height: 16px; }
+.score { width: 64px; height: 32px; border-radius: 8px; }

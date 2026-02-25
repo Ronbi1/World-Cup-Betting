@@ -1,0 +1,118 @@
+.page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1.5rem 1.25rem;
+}
+
+.welcome {
+  margin-bottom: 1.75rem;
+}
+
+.welcomeTitle {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--clr-text-primary);
+  margin: 0 0 0.3rem;
+}
+
+.accent { color: var(--clr-accent); }
+
+.welcomeSub {
+  font-size: 0.9rem;
+  color: var(--clr-text-secondary);
+  margin: 0;
+}
+
+/* 2-column grid on desktop, stacks on mobile */
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+}
+
+.fullWidth { grid-column: 1 / -1; }
+
+.card {
+  background: var(--clr-surface);
+  border: 1px solid var(--clr-border);
+  border-radius: 14px;
+  padding: 1.25rem;
+}
+
+.sectionTitle {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--clr-text-primary);
+  margin: 0 0 1rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid var(--clr-border);
+}
+
+/* Gamble info */
+.gambleInfo p { font-size: 0.9rem; color: var(--clr-text-secondary); margin: 0 0 0.75rem; line-height: 1.6; }
+.betRules { margin: 0 0 0.75rem; padding-left: 1.2rem; display: flex; flex-direction: column; gap: 0.4rem; }
+.betRules li { font-size: 0.875rem; color: var(--clr-text-secondary); line-height: 1.5; }
+.betRules strong { color: var(--clr-text-primary); }
+.comingSoon { font-size: 0.8rem; color: var(--clr-muted); margin: 0; }
+
+/* Today matches */
+.matchList { display: flex; flex-direction: column; gap: 0.65rem; }
+
+.apiError {
+  background: #450a0a;
+  border: 1px solid #7f1d1d;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  color: #fca5a5;
+  font-size: 0.875rem;
+}
+.apiError small { display: block; margin-top: 0.25rem; opacity: 0.75; }
+
+.noMatches { text-align: center; padding: 1.5rem 0; color: var(--clr-text-secondary); font-size: 0.9rem; }
+.noMatchesSub { font-size: 0.82rem; color: var(--clr-muted); margin-top: 0.35rem; }
+.noMatchesSub a { color: var(--clr-accent); }
+
+/* Leaderboard table */
+.tableWrapper { overflow-x: auto; }
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.table th {
+  text-align: left;
+  padding: 0.5rem 0.75rem;
+  color: var(--clr-muted);
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid var(--clr-border);
+}
+
+.table td {
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid var(--clr-border);
+  color: var(--clr-text-secondary);
+}
+
+.table tbody tr:last-child td { border-bottom: none; }
+.table tbody tr:hover td { background: var(--clr-surface-raised); }
+
+.currentUserRow td { background: rgba(99, 102, 241, 0.08); }
+.currentUserRow td:first-child { border-left: 3px solid var(--clr-accent); }
+
+.rank { font-size: 1rem; text-align: center; width: 40px; }
+.playerName { font-weight: 600; color: var(--clr-text-primary); display: flex; align-items: center; gap: 0.4rem; }
+.youTag { font-size: 0.65rem; background: var(--clr-accent); color: #fff; padding: 1px 5px; border-radius: 999px; font-weight: 700; }
+.center { text-align: center; }
+.points { font-weight: 700; color: var(--clr-accent); font-size: 1rem; text-align: right; }
+.missing { color: var(--clr-muted); }
+.empty { color: var(--clr-muted); font-size: 0.875rem; }
+
+@media (max-width: 768px) {
+  .grid { grid-template-columns: 1fr; }
+  .fullWidth { grid-column: 1; }
+}

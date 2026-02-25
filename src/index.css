@@ -1,0 +1,61 @@
+/* ─── Design tokens ──────────────────────────────────────────────────────── */
+:root {
+  --clr-bg:             #0f172a;
+  --clr-surface:        #1e293b;
+  --clr-surface-raised: #283548;
+  --clr-border:         #334155;
+  --clr-accent:         #6366f1;
+  --clr-accent-hover:   #818cf8;
+  --clr-text-primary:   #f1f5f9;
+  --clr-text-secondary: #94a3b8;
+  --clr-muted:          #64748b;
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+}
+
+/* ─── Reset ──────────────────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html { font-size: 16px; scroll-behavior: smooth; }
+
+body {
+  font-family: var(--font-sans);
+  background: var(--clr-bg);
+  color: var(--clr-text-primary);
+  line-height: 1.6;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ─── Typography ─────────────────────────────────────────────────────────── */
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  color: var(--clr-text-primary);
+}
+
+a {
+  color: var(--clr-accent);
+  text-decoration: none;
+}
+
+a:hover { color: var(--clr-accent-hover); text-decoration: underline; }
+
+ul { list-style: none; }
+
+button { font-family: inherit; }
+
+/* ─── Scrollbar ──────────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--clr-bg); }
+::-webkit-scrollbar-thumb { background: var(--clr-border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--clr-muted); }
+
+/* ─── Focus ring ─────────────────────────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--clr-accent);
+  outline-offset: 2px;
+}
