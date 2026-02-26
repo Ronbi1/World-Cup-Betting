@@ -1,12 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { fetchTodayMatches, parseApiError } from '../services/footballService';
 import { STORAGE_KEYS } from '../utils/constants';
+import { useTodayMatches } from '../hooks/useTodayMatches';
 import MatchCard from '../components/MatchCard';
 import SkeletonCard from '../components/SkeletonCard';
-import TeamFlag from '../components/TeamFlag';
 import BetModal from '../components/BetModal';
 import LiveBetsReveal from '../components/LiveBetsReveal';
+import LiveScoreBanner from '../components/LiveScoreBanner';
 import styles from './HomePage.module.css';
 
 // ─── Score table helpers ──────────────────────────────────────────────────────
@@ -18,9 +18,9 @@ const loadScores = () => {
 export default function HomePage() {
   const { user, users } = useAuth();
 
-  const [todayMatches, setTodayMatches] = useState([]);
-  const [loadingMatches, setLoadingMatches] = useState(true);
-  const [matchError, setMatchError] = useState(null);
+  // Polling hook — auto-refreshes every 60s during live matches
+  const { matches: todayMatches, loading: loadingMatches, error: matchError, lastUpdated, refresh } = useTodayMatches();
+
   const [scores] = useState(loadScores);
   const [selectedMatch, setSelectedMatch] = useState(null);
   const [modalOpened, setModalOpened] = useState(false);
@@ -29,24 +29,6 @@ export default function HomePage() {
     setSelectedMatch(match);
     setModalOpened(true);
   };
-
-  useEffect(() => {
-    let cancelled = false;
-    const load = async () => {
-      setLoadingMatches(true);
-      setMatchError(null);
-      try {
-        const data = await fetchTodayMatches();
-        if (!cancelled) setTodayMatches(data);
-      } catch (err) {
-        if (!cancelled) setMatchError(parseApiError(err));
-      } finally {
-        if (!cancelled) setLoadingMatches(false);
-      }
-    };
-    load();
-    return () => { cancelled = true; };
-  }, []);
 
   // Build leaderboard from users + scores
   const leaderboard = users
@@ -74,6 +56,13 @@ export default function HomePage() {
           World Cup 2026 · Jun 11 – Jul 19, 2026 · USA, Canada &amp; Mexico
         </p>
       </section>
+
+      {/* ── Live Score Banner (only visible during live matches) ──────── */}
+      <LiveScoreBanner
+        matches={todayMatches}
+        lastUpdated={lastUpdated}
+        onRefresh={refresh}
+      />
 
       <div className={styles.grid}>
         {/* ── Gamble Info ───────────────────────────────────────────────── */}

@@ -1,0 +1,204 @@
+.banner {
+  background: linear-gradient(135deg, #0f1f0f 0%, #0a1628 60%, #1a0f2e 100%);
+  border: 1px solid #16a34a;
+  border-radius: 14px;
+  overflow: hidden;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 0 0 1px rgba(74, 222, 128, 0.15), 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+/* ── Header bar ─────────────────────────────────────────────────────────── */
+.bannerHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.55rem 1.25rem;
+  background: rgba(22, 163, 74, 0.15);
+  border-bottom: 1px solid rgba(74, 222, 128, 0.2);
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.liveIndicator {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.liveDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #4ade80;
+  box-shadow: 0 0 8px #4ade80;
+  animation: pulse 1.2s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 8px #4ade80; }
+  50%       { opacity: 0.6; transform: scale(0.85); box-shadow: 0 0 4px #4ade80; }
+}
+
+.liveText {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: #4ade80;
+  text-transform: uppercase;
+}
+
+.matchCount {
+  font-size: 0.72rem;
+  color: #86efac;
+  background: rgba(74, 222, 128, 0.15);
+  padding: 1px 8px;
+  border-radius: 999px;
+}
+
+.updateInfo {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.lastUpdated {
+  font-size: 0.72rem;
+  color: #4ade8080;
+}
+
+.refreshBtn {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #4ade80;
+  background: rgba(74, 222, 128, 0.1);
+  border: 1px solid rgba(74, 222, 128, 0.3);
+  border-radius: 6px;
+  padding: 2px 10px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.refreshBtn:hover {
+  background: rgba(74, 222, 128, 0.2);
+}
+
+/* ── Scores row ─────────────────────────────────────────────────────────── */
+.scoresRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1px;
+}
+
+/* ── Individual score card ──────────────────────────────────────────────── */
+.scoreCard {
+  flex: 1;
+  min-width: 280px;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1.1rem 1.25rem;
+  border-right: 1px solid rgba(74, 222, 128, 0.1);
+}
+
+.scoreCard:last-child {
+  border-right: none;
+}
+
+/* ── Team ────────────────────────────────────────────────────────────────── */
+.team {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  text-align: center;
+}
+
+.teamRight {
+  align-items: center;
+}
+
+.teamName {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #e2e8f0;
+  line-height: 1.2;
+}
+
+/* ── Score block ─────────────────────────────────────────────────────────── */
+.scoreBlock {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.score {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.scoreNum {
+  font-size: 2.2rem;
+  font-weight: 900;
+  color: #f1f5f9;
+  font-family: var(--font-mono);
+  line-height: 1;
+  min-width: 1.5ch;
+  text-align: center;
+}
+
+.scoreDash {
+  font-size: 1.5rem;
+  font-weight: 300;
+  color: #4ade8060;
+  line-height: 1;
+}
+
+/* Status badges */
+.statusRow {
+  display: flex;
+  justify-content: center;
+}
+
+.inPlayBadge {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: #4ade80;
+  text-transform: uppercase;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #4ade80;
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+.htBadge {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: #60a5fa;
+  text-transform: uppercase;
+}
+
+.htScore {
+  font-size: 0.68rem;
+  color: #4ade8060;
+  font-family: var(--font-mono);
+}
+
+@media (max-width: 560px) {
+  .scoreCard { min-width: 100%; border-right: none; border-bottom: 1px solid rgba(74, 222, 128, 0.1); }
+  .scoreCard:last-child { border-bottom: none; }
+  .scoreNum { font-size: 1.8rem; }
+  .lastUpdated { display: none; }
+}
