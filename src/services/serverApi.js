@@ -7,7 +7,7 @@ import { STORAGE_KEYS } from '../utils/constants';
  * The JWT token is automatically attached to every request.
  */
 const serverApi = axios.create({
-  baseURL: import.meta.env.VITE_SERVER_BASE_URL || '/server',
+  baseURL: import.meta.env.VITE_SERVER_BASE_URL,
   timeout: 10_000,
   headers: { 'Content-Type': 'application/json' },
 });
