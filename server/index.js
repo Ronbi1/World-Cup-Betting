@@ -21,7 +21,7 @@ const app = express();
 app.use(cors({
   origin: true, // זה מאפשר לכל כתובת לגשת - מצוין לבדיקה עכשיו
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
