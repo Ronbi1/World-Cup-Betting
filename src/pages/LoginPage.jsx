@@ -97,9 +97,9 @@ export default function LoginPage() {
           <Link to="/register">Request access</Link>
         </p>
 
-        <p className={styles.adminHint}>
+        {/* <p className={styles.adminHint}>
           <small>Demo admin: <code>admin@worldcup.com</code> / <code>Admin123!</code></small>
-        </p>
+        </p> */}
       </div>
     </div>
   );
