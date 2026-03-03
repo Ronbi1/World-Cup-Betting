@@ -1,7 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { fetchTeams, fetchScorers, parseApiError } from '../services/footballService';
 import styles from './AuthPage.module.css';
 
 export default function RegisterPage() {
@@ -13,31 +12,11 @@ export default function RegisterPage() {
     email: '',
     password: '',
     confirmPassword: '',
-    winningTeam: '',
-    topScorer: '',
   });
 
-  const [teams, setTeams] = useState([]);
-  const [scorers, setScorers] = useState([]);
-  const [loadingOptions, setLoadingOptions] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
-
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const [t, s] = await Promise.all([fetchTeams(), fetchScorers()]);
-        setTeams(t);
-        setScorers(s);
-      } catch (err) {
-        // Non-blocking: user can still register without picking bets
-        console.warn('Could not load teams/scorers for bet selection:', parseApiError(err));
-      } finally {
-        setLoadingOptions(false);
-      }
-    };
-    load();
-  }, []);
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -50,22 +29,23 @@ export default function RegisterPage() {
     return null;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     const validationError = validate();
     if (validationError) { setError(validationError); return; }
 
-    const result = register({
+    setLoading(true);
+    const result = await register({
       name: form.name,
       email: form.email,
       password: form.password,
-      winningTeam: form.winningTeam || null,
-      topScorer: form.topScorer || null,
     });
+    setLoading(false);
 
     if (result.success) {
       setSuccess(true);
+      setTimeout(() => navigate('/login'), 3000);
     } else {
       setError(result.error);
     }
@@ -79,11 +59,12 @@ export default function RegisterPage() {
             <span className={styles.trophy}>⏳</span>
             <h1 className={styles.title}>Registration Sent!</h1>
             <p className={styles.subtitle}>
-              Your account is pending admin approval. You&apos;ll be able to log in once approved.
-              You can update your bets from your profile after logging in.
+              Your account is pending admin approval. Once approved, log in and
+              set your tournament bets from your Profile page.
             </p>
           </div>
-          <Link to="/login" className={styles.submitBtn} style={{ display: 'block', textAlign: 'center', textDecoration: 'none' }}>
+          <Link to="/login" className={styles.submitBtn}
+            style={{ display: 'block', textAlign: 'center', textDecoration: 'none' }}>
             Back to Login
           </Link>
         </div>
@@ -106,7 +87,7 @@ export default function RegisterPage() {
           <div className={styles.field}>
             <label htmlFor="name">Display Name</label>
             <input id="name" name="name" value={form.name} onChange={handleChange}
-              placeholder="Your name" required />
+              placeholder="Your name" required autoFocus />
           </div>
 
           <div className={styles.field}>
@@ -124,46 +105,12 @@ export default function RegisterPage() {
           <div className={styles.field}>
             <label htmlFor="confirmPassword">Confirm Password</label>
             <input id="confirmPassword" type="password" name="confirmPassword"
-              value={form.confirmPassword} onChange={handleChange} placeholder="Repeat password" required />
+              value={form.confirmPassword} onChange={handleChange}
+              placeholder="Repeat password" required />
           </div>
 
-          <div className={styles.divider}>
-            <span>Place Your Tournament Bets</span>
-          </div>
-
-          <div className={styles.field}>
-            <label htmlFor="winningTeam">
-              🏅 World Cup Winner {loadingOptions && <small>(loading…)</small>}
-            </label>
-            <select id="winningTeam" name="winningTeam" value={form.winningTeam} onChange={handleChange}>
-              <option value="">— Pick a team —</option>
-              {teams.map((t) => (
-                <option key={t.id} value={t.name}>{t.name}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className={styles.field}>
-            <label htmlFor="topScorer">
-              ⚽ Top Scorer {loadingOptions && <small>(loading…)</small>}
-            </label>
-            <select id="topScorer" name="topScorer" value={form.topScorer} onChange={handleChange}>
-              <option value="">— Pick a player —</option>
-              {scorers.map((s) => (
-                <option key={s.id} value={s.name}>{s.name} ({s.team})</option>
-              ))}
-              {scorers.length === 0 && !loadingOptions && (
-                <option disabled>Player list unavailable — update from profile later</option>
-              )}
-            </select>
-          </div>
-
-          <p className={styles.betNote}>
-            You can change these bets from your profile until the tournament starts.
-          </p>
-
-          <button type="submit" className={styles.submitBtn}>
-            Submit Registration
+          <button type="submit" disabled={loading} className={styles.submitBtn}>
+            {loading ? 'Submitting…' : 'Request Access'}
           </button>
         </form>
 

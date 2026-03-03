@@ -1,15 +1,19 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import styles from './AuthPage.module.css';
 
 export default function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const [form, setForm] = useState({ email: '', password: '', rememberMe: false });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Show a friendly banner when the user was redirected here because their session expired
+  const sessionExpired = searchParams.get('reason') === 'expired';
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -20,7 +24,7 @@ export default function LoginPage() {
     e.preventDefault();
     setError('');
     setLoading(true);
-    const result = login(form.email, form.password, form.rememberMe);
+    const result = await login(form.email, form.password, form.rememberMe);
     setLoading(false);
     if (result.success) {
       navigate('/');
@@ -38,6 +42,11 @@ export default function LoginPage() {
           <p className={styles.subtitle}>Sign in to your account</p>
         </div>
 
+        {sessionExpired && (
+          <div className={styles.warningBanner}>
+            ⏰ Your session has expired. Please sign in again.
+          </div>
+        )}
         {error && <div className={styles.errorBanner}>{error}</div>}
 
         <form onSubmit={handleSubmit} className={styles.form}>

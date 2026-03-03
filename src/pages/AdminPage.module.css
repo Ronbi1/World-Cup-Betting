@@ -130,6 +130,109 @@
 .rejectBtn { background: #450a0a; color: #fca5a5; }
 .rejectBtn:hover { opacity: 0.8; }
 
+/* ── Delete button (trash icon) ─────────────────────────────────────────── */
+.deleteBtn {
+  background: transparent;
+  border: 1px solid #7f1d1d;
+  color: #fca5a5;
+  border-radius: 6px;
+  padding: 0.2rem 0.45rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  line-height: 1;
+}
+.deleteBtn:hover { background: #450a0a; border-color: #fca5a5; }
+
+/* ── Delete error banner ─────────────────────────────────────────────────── */
+.deleteError {
+  background: #450a0a;
+  color: #fca5a5;
+  border: 1px solid #7f1d1d;
+  border-radius: 8px;
+  padding: 0.6rem 1rem;
+  margin-bottom: 1rem;
+  font-size: 0.875rem;
+}
+
+/* ── Confirm delete modal ────────────────────────────────────────────────── */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.modal {
+  background: var(--clr-surface);
+  border: 1px solid var(--clr-border);
+  border-radius: 14px;
+  padding: 1.75rem;
+  max-width: 420px;
+  width: 100%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.modalTitle {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #fca5a5;
+  margin: 0 0 0.75rem;
+}
+
+.modalBody {
+  font-size: 0.9rem;
+  color: var(--clr-text-secondary);
+  margin: 0 0 1.25rem;
+  line-height: 1.55;
+}
+
+.modalWarn {
+  display: inline-block;
+  margin-top: 0.5rem;
+  font-size: 0.8rem;
+  color: #fca5a5;
+  opacity: 0.8;
+}
+
+.modalActions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+}
+
+.cancelBtn {
+  padding: 0.45rem 1.1rem;
+  border-radius: 8px;
+  border: 1px solid var(--clr-border);
+  background: transparent;
+  color: var(--clr-text-secondary);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.cancelBtn:hover { background: var(--clr-surface-raised); }
+.cancelBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.deleteConfirmBtn {
+  padding: 0.45rem 1.1rem;
+  border-radius: 8px;
+  border: none;
+  background: #7f1d1d;
+  color: #fca5a5;
+  font-size: 0.875rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.deleteConfirmBtn:hover { background: #991b1b; }
+.deleteConfirmBtn:disabled { opacity: 0.6; cursor: not-allowed; }
+
 .statusBadge {
   font-size: 0.72rem;
   font-weight: 700;
@@ -140,3 +243,31 @@
 
 .approved { background: #14532d; color: #4ade80; }
 .rejected { background: #450a0a; color: #fca5a5; }
+
+@media (max-width: 768px) {
+  .stats { gap: 0.75rem; }
+  .stat { min-width: 100px; padding: 0.85rem; }
+  .statNum { font-size: 1.65rem; }
+}
+
+@media (max-width: 600px) {
+  .page { padding: 1rem 0.85rem; }
+  .title { font-size: 1.3rem; }
+  .section { padding: 1rem; border-radius: 10px; }
+  .stats { flex-wrap: wrap; }
+  .stat { flex: 1 1 calc(50% - 0.75rem); min-width: 0; }
+  /* Collapse table — hide less critical columns on small screens */
+  .table th:nth-child(3),
+  .table td:nth-child(3) { display: none; } /* email column */
+  .table th, .table td { padding: 0.5rem 0.5rem; font-size: 0.8rem; }
+  .approveBtn, .rejectBtn { padding: 0.2rem 0.55rem; font-size: 0.75rem; }
+  .actions { gap: 0.35rem; }
+}
+
+@media (max-width: 400px) {
+  .page { padding: 0.75rem 0.65rem; }
+  .stat { flex: 1 1 100%; }
+  .statNum { font-size: 1.4rem; }
+  .table th:nth-child(4),
+  .table td:nth-child(4) { display: none; } /* registered date column */
+}

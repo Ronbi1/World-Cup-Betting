@@ -1,5 +1,4 @@
-// ─── API ────────────────────────────────────────────────────────────────────
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
+// ─── Competition ─────────────────────────────────────────────────────────────
 export const COMPETITION_CODE = 'WC';
 
 // ─── Tournament dates ────────────────────────────────────────────────────────
@@ -33,23 +32,31 @@ export const STAGE_LABELS = {
 };
 
 // ─── Local storage keys ──────────────────────────────────────────────────────
+// Only keys that are actively used. Legacy keys (wc_users_db, wc_bets,
+// wc_match_predictions, wc_scores) were from the pre-backend era and are
+// purged from localStorage on app boot (see App.jsx → purgeLegacyStorage).
 export const STORAGE_KEYS = {
   USER: 'wc_user',
-  USERS_DB: 'wc_users_db',
-  BETS: 'wc_bets',
-  MATCH_PREDICTIONS: 'wc_match_predictions',
-  SCORES: 'wc_scores',
 };
+
+// Keys that belonged to the old localStorage-only architecture.
+// Listed here so App.jsx can clear them once on boot.
+export const LEGACY_STORAGE_KEYS = [
+  'wc_users_db',
+  'wc_match_predictions',
+  'wc_bets',
+  'wc_scores',
+];
 
 // ─── Roles ───────────────────────────────────────────────────────────────────
 export const ROLES = {
-  ADMIN: 'admin',
-  USER: 'user',
+  ADMIN: 'ADMIN',
+  USER: 'USER',
 };
 
 // ─── Registration status ─────────────────────────────────────────────────────
 export const REG_STATUS = {
-  PENDING: 'pending',
-  APPROVED: 'approved',
-  REJECTED: 'rejected',
+  PENDING: 'PENDING',
+  APPROVED: 'APPROVED',
+  REJECTED: 'REJECTED',
 };

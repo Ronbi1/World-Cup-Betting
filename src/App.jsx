@@ -1,5 +1,11 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { LEGACY_STORAGE_KEYS } from './utils/constants';
+
+// ─── One-time purge of stale pre-backend localStorage keys ───────────────────
+// Users who registered before the Express backend was added may have leftover
+// data in localStorage under these keys. Clear them once on every app boot.
+LEGACY_STORAGE_KEYS.forEach((key) => localStorage.removeItem(key));
 
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';

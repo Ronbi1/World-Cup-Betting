@@ -2,18 +2,10 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { fetchTeams, fetchScorers, parseApiError } from '../services/footballService';
 import { useMatches } from '../hooks/useMatches';
-import { isTournamentStarted, STORAGE_KEYS, MATCH_STATUS } from '../utils/constants';
+import { isTournamentStarted, MATCH_STATUS } from '../utils/constants';
+import serverApi from '../services/serverApi';
 import TeamFlag from '../components/TeamFlag';
 import styles from './ProfilePage.module.css';
-
-const loadMatchPredictions = (userId) => {
-  try {
-    const all = JSON.parse(localStorage.getItem(STORAGE_KEYS.MATCH_PREDICTIONS) || '{}');
-    return all[userId] ?? {};
-  } catch {
-    return {};
-  }
-};
 
 const formatDate = (utcDate) =>
   new Date(utcDate).toLocaleDateString('en-GB', {
@@ -40,11 +32,14 @@ export default function ProfilePage() {
   const [optionsError, setOptionsError] = useState(null);
 
   const [winningTeam, setWinningTeam] = useState(user?.bet?.winningTeam ?? '');
-  const [topScorer, setTopScorer] = useState(user?.bet?.topScorer ?? '');
+  const [topScorer, setTopScorer]     = useState(user?.bet?.topScorer   ?? '');
+  const [topAssist, setTopAssist]     = useState(user?.bet?.topAssist   ?? '');
   const [betSaved, setBetSaved] = useState(false);
   const [betError, setBetError] = useState('');
 
-  const rawPredictions = loadMatchPredictions(user?.id);
+  // Predictions loaded from Supabase
+  const [rawPredictions, setRawPredictions] = useState({});
+
   const totalPredictions = Object.keys(rawPredictions).length;
 
   // Join predictions with match data from cache
@@ -75,11 +70,31 @@ export default function ProfilePage() {
     load();
   }, []);
 
-  const handleSaveBet = (e) => {
+  // Load this user's match predictions from Express.
+  // Depend only on user.id (stable primitive) — NOT the whole user object,
+  // which is recreated on every AuthContext render and would cause an infinite loop.
+  const userId = user?.id;
+  useEffect(() => {
+    if (!userId) return;
+    const fetchPredictions = async () => {
+      try {
+        const { data } = await serverApi.get('/predictions', { params: { userId } });
+        // Convert array → { [matchId]: { home, away } }
+        const map = {};
+        data.forEach((row) => { map[row.match_id] = { home: row.home, away: row.away }; });
+        setRawPredictions(map);
+      } catch (err) {
+        console.error('[ProfilePage] fetchPredictions error:', err.message);
+      }
+    };
+    fetchPredictions();
+  }, [userId]);
+
+  const handleSaveBet = async (e) => {
     e.preventDefault();
     setBetError('');
     setBetSaved(false);
-    const result = updateBet(winningTeam || null, topScorer || null);
+    const result = await updateBet(winningTeam || null, topScorer || null, topAssist || null);
     if (result.success) {
       setBetSaved(true);
       setTimeout(() => setBetSaved(false), 3000);
@@ -139,6 +154,13 @@ export default function ProfilePage() {
               </span>
             </div>
             <div className={styles.summaryItem}>
+              <span className={styles.summaryIcon}>🎯</span>
+              <span className={styles.summaryLabel}>Top Assist</span>
+              <span className={styles.summaryValue}>
+                {user?.bet?.topAssist || <span className={styles.missing}>Not set</span>}
+              </span>
+            </div>
+            <div className={styles.summaryItem}>
               <span className={styles.summaryIcon}>📝</span>
               <span className={styles.summaryLabel}>Match Predictions</span>
               <span className={styles.summaryValue}>{totalPredictions}</span>
@@ -146,12 +168,13 @@ export default function ProfilePage() {
           </div>
 
           {/* Missing bets reminder */}
-          {(!user?.bet?.winningTeam || !user?.bet?.topScorer) && (
+          {(!user?.bet?.winningTeam || !user?.bet?.topScorer || !user?.bet?.topAssist) && (
             <div className={styles.reminderBox}>
               <strong>⚠️ Missing bets:</strong>
               <ul className={styles.missingList}>
                 {!user?.bet?.winningTeam && <li>Tournament winner</li>}
-                {!user?.bet?.topScorer && <li>Top scorer</li>}
+                {!user?.bet?.topScorer   && <li>Top scorer</li>}
+                {!user?.bet?.topAssist   && <li>Top assist</li>}
               </ul>
               {!canChangeBet && (
                 <p className={styles.locked}>The tournament has started – bets are now locked.</p>
@@ -281,7 +304,7 @@ export default function ProfilePage() {
                     onChange={(e) => setWinningTeam(e.target.value)}
                     disabled={loadingOptions}
                   >
-                    <option value=''>â Pick a team â</option>
+                    <option value=''>-- Pick a team --</option>
                     {teams.map((t) => (
                       <option key={t.id} value={t.name}>{t.name}</option>
                     ))}
@@ -298,7 +321,27 @@ export default function ProfilePage() {
                     onChange={(e) => setTopScorer(e.target.value)}
                     disabled={loadingOptions}
                   >
-                    <option value=''>â Pick a player â</option>
+                    <option value=''>-- Pick a player --</option>
+                    {scorers.map((s) => (
+                      <option key={s.id} value={s.name}>{s.name} ({s.team})</option>
+                    ))}
+                    {scorers.length === 0 && !loadingOptions && (
+                      <option disabled>Player list unavailable</option>
+                    )}
+                  </select>
+                </div>
+
+                <div className={styles.field}>
+                  <label htmlFor="topAssist">
+                    🎯 Top Assist {loadingOptions && <small>(loading…)</small>}
+                  </label>
+                  <select
+                    id="topAssist"
+                    value={topAssist}
+                    onChange={(e) => setTopAssist(e.target.value)}
+                    disabled={loadingOptions}
+                  >
+                    <option value=''>-- Pick a player --</option>
                     {scorers.map((s) => (
                       <option key={s.id} value={s.name}>{s.name} ({s.team})</option>
                     ))}
@@ -322,6 +365,7 @@ export default function ProfilePage() {
               <div className={styles.lockedBets}>
                 <div><strong>Winner:</strong> {user?.bet?.winningTeam ?? '—'}</div>
                 <div><strong>Top Scorer:</strong> {user?.bet?.topScorer ?? '—'}</div>
+                <div><strong>Top Assist:</strong> {user?.bet?.topAssist ?? '—'}</div>
               </div>
             </div>
           )}

@@ -50,6 +50,17 @@
   margin-bottom: 1.25rem;
 }
 
+/* Shown when the user is redirected from a 401 (session expired) */
+.warningBanner {
+  background: #431407;
+  border: 1px solid #9a3412;
+  color: #fdba74;
+  border-radius: 8px;
+  padding: 0.65rem 1rem;
+  font-size: 0.875rem;
+  margin-bottom: 1.25rem;
+}
+
 .form {
   display: flex;
   flex-direction: column;
@@ -172,4 +183,17 @@
   padding: 1px 4px;
   border-radius: 4px;
   font-family: var(--font-mono);
+}
+
+@media (max-width: 480px) {
+  .wrapper { padding: 1rem 0.75rem; align-items: flex-start; padding-top: 1.5rem; }
+  .card { padding: 1.5rem 1.25rem; border-radius: 12px; }
+  .title { font-size: 1.35rem; }
+  .trophy { font-size: 2rem; }
+  .submitBtn { font-size: 0.95rem; padding: 0.7rem; }
+}
+
+@media (max-width: 360px) {
+  .card { padding: 1.25rem 1rem; }
+  .title { font-size: 1.2rem; }
 }
