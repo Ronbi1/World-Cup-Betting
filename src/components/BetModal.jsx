@@ -2,22 +2,9 @@ import { useState, useEffect } from 'react';
 import { Modal, NumberInput, Button, Group, Stack, Text } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { useAuth } from '../context/AuthContext';
-import { STORAGE_KEYS } from '../utils/constants';
+import serverApi from '../services/serverApi';
 import TeamFlag from './TeamFlag';
 import styles from './BetModal.module.css';
-
-// ─── localStorage helpers ─────────────────────────────────────────────────────
-const loadPredictions = () => {
-  try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEYS.MATCH_PREDICTIONS) || '{}');
-  } catch {
-    return {};
-  }
-};
-
-const savePredictions = (data) => {
-  localStorage.setItem(STORAGE_KEYS.MATCH_PREDICTIONS, JSON.stringify(data));
-};
 
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function BetModal({ match, opened, onClose }) {
@@ -28,18 +15,30 @@ export default function BetModal({ match, opened, onClose }) {
   // Pre-populate inputs if the user already has a prediction for this match
   useEffect(() => {
     if (!match || !user) return;
-    const all = loadPredictions();
-    const existing = all[user.id]?.[match.id];
-    if (existing !== undefined) {
-      setHomeScore(existing.home);
-      setAwayScore(existing.away);
-    } else {
-      setHomeScore('');
-      setAwayScore('');
-    }
+
+    const fetchExisting = async () => {
+      try {
+        const { data } = await serverApi.get('/predictions', {
+          params: { userId: user.id, matchId: String(match.id) },
+        });
+        const prediction = data[0]; // returns array
+        if (prediction) {
+          setHomeScore(prediction.home);
+          setAwayScore(prediction.away);
+        } else {
+          setHomeScore('');
+          setAwayScore('');
+        }
+      } catch {
+        setHomeScore('');
+        setAwayScore('');
+      }
+    };
+
+    fetchExisting();
   }, [match, user]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (homeScore === '' || homeScore === null || awayScore === '' || awayScore === null) {
       notifications.show({
         title: 'Incomplete prediction',
@@ -50,34 +49,30 @@ export default function BetModal({ match, opened, onClose }) {
       return;
     }
 
-    const all = loadPredictions();
-    if (!all[user.id]) all[user.id] = {};
+    try {
+      await serverApi.post('/predictions', {
+        user_id:  user.id,
+        match_id: String(match.id),
+        home:     Number(homeScore),
+        away:     Number(awayScore),
+      });
 
-    const prediction = {
-      home: Number(homeScore),
-      away: Number(awayScore),
-    };
+      notifications.show({
+        title: '✅ Prediction saved!',
+        message: `${match.homeTeam.shortName} ${Number(homeScore)} – ${Number(awayScore)} ${match.awayTeam.shortName}`,
+        color: 'green',
+        autoClose: 4000,
+      });
 
-    all[user.id][match.id] = prediction;
-    savePredictions(all);
-
-    // TODO: When backend is added, POST prediction to /api/bets instead
-    console.log('Prediction saved:', {
-      userId: user.id,
-      matchId: match.id,
-      homeTeam: match.homeTeam.name,
-      awayTeam: match.awayTeam.name,
-      prediction,
-    });
-
-    notifications.show({
-      title: '✅ Prediction saved!',
-      message: `${match.homeTeam.shortName} ${prediction.home} – ${prediction.away} ${match.awayTeam.shortName}`,
-      color: 'green',
-      autoClose: 4000,
-    });
-
-    onClose();
+      onClose();
+    } catch (err) {
+      notifications.show({
+        title: 'Error',
+        message: err.response?.data?.error || 'Failed to save prediction. Try again.',
+        color: 'red',
+        autoClose: 3000,
+      });
+    }
   };
 
   // Guard against brief window during modal close animation

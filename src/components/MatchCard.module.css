@@ -102,7 +102,20 @@
   text-align: center;
 }
 
+@media (max-width: 600px) {
+  .card { padding: 0.85rem 1rem; }
+  .teamName { font-size: 0.88rem; }
+  .score { font-size: 1.2rem; min-width: 56px; }
+}
+
 @media (max-width: 480px) {
+  .card { padding: 0.75rem 0.85rem; border-radius: 10px; }
   .teamName { font-size: 0.8rem; }
   .score { font-size: 1.1rem; min-width: 50px; }
+  .meta { font-size: 0.7rem; margin-bottom: 0.6rem; }
+}
+
+@media (max-width: 360px) {
+  .teamName { font-size: 0.72rem; }
+  .score { font-size: 1rem; min-width: 44px; }
 }

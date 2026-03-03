@@ -196,9 +196,22 @@
   font-family: var(--font-mono);
 }
 
+@media (max-width: 768px) {
+  .scoreCard { min-width: 240px; }
+  .scoreNum { font-size: 2rem; }
+}
+
 @media (max-width: 560px) {
   .scoreCard { min-width: 100%; border-right: none; border-bottom: 1px solid rgba(74, 222, 128, 0.1); }
   .scoreCard:last-child { border-bottom: none; }
   .scoreNum { font-size: 1.8rem; }
   .lastUpdated { display: none; }
+  .bannerHeader { padding: 0.5rem 1rem; }
+  .teamName { font-size: 0.72rem; }
+}
+
+@media (max-width: 400px) {
+  .scoreNum { font-size: 1.5rem; }
+  .scoreCard { padding: 0.85rem 1rem; }
+  .refreshBtn { padding: 2px 7px; font-size: 0.68rem; }
 }

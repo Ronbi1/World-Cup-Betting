@@ -1,16 +1,10 @@
-import { STORAGE_KEYS, MATCH_STATUS } from '../utils/constants';
+import { useState, useEffect } from 'react';
+import serverApi from '../services/serverApi';
+import { MATCH_STATUS, REG_STATUS } from '../utils/constants';
 import TeamFlag from './TeamFlag';
 import styles from './LiveBetsReveal.module.css';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-const loadAllPredictions = () => {
-  try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEYS.MATCH_PREDICTIONS) || '{}');
-  } catch {
-    return {};
-  }
-};
-
 const isMatchLive = (status) =>
   status === MATCH_STATUS.IN_PLAY || status === MATCH_STATUS.PAUSED;
 
@@ -41,19 +35,48 @@ const getPredictionResult = (prediction, liveScore) => {
  * Bets are hidden (locked) until the match starts — only revealed once live.
  *
  * Props:
- *   matches  – all today's matches (or all matches)
- *   users    – approved users from AuthContext
- *   currentUserId – to highlight the current user's row
+ *   matches        – all today's matches (or all matches)
+ *   users          – approved users from AuthContext
+ *   currentUserId  – to highlight the current user's row
  */
 export default function LiveBetsReveal({ matches, users, currentUserId }) {
-  const allPredictions = loadAllPredictions();
+  // { [matchId]: { [userId]: { home, away } } }
+  const [allPredictions, setAllPredictions] = useState({});
 
   // Only show matches that have already started (live or finished today)
   const startedMatches = matches.filter((m) => isMatchStarted(m.status));
 
+  // Use a stable key: sorted comma-separated IDs of started matches.
+  // This prevents re-fetching on every poll cycle when the match list hasn't changed.
+  const startedMatchKey = startedMatches.map((m) => m.id).sort().join(',');
+
+  // Fetch predictions from Express for all started matches
+  useEffect(() => {
+    if (!startedMatchKey) return;
+
+    const fetchPredictions = async () => {
+      try {
+        const { data } = await serverApi.get('/predictions', {
+          params: { matchIds: startedMatchKey },
+        });
+        // Build nested map: { [matchId]: { [userId]: { home, away } } }
+        const map = {};
+        data.forEach((row) => {
+          if (!map[row.match_id]) map[row.match_id] = {};
+          map[row.match_id][row.user_id] = { home: row.home, away: row.away };
+        });
+        setAllPredictions(map);
+      } catch (err) {
+        console.error('[LiveBetsReveal] fetchPredictions error:', err.message);
+      }
+    };
+
+    fetchPredictions();
+  }, [startedMatchKey]);
+
   if (startedMatches.length === 0) return null;
 
-  const approvedUsers = users.filter((u) => u.status === 'approved');
+  const approvedUsers = users.filter((u) => u.status === REG_STATUS.APPROVED);
 
   return (
     <section className={styles.section}>
@@ -66,10 +89,11 @@ export default function LiveBetsReveal({ matches, users, currentUserId }) {
         {startedMatches.map((match) => {
           const isLive = isMatchLive(match.status);
           const liveScore = match.score;
+          const matchPreds = allPredictions[String(match.id)] ?? {};
 
           // Collect predictions from every approved user for this match
           const rows = approvedUsers.map((u) => {
-            const pred = allPredictions[u.id]?.[match.id];
+            const pred = matchPreds[u.id] ?? null;
             const result = pred ? getPredictionResult(pred, liveScore) : null;
             return { user: u, pred, result };
           });

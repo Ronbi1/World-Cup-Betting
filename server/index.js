@@ -14,9 +14,15 @@ const app = express();
 // ─── CORS ─────────────────────────────────────────────────────────────────────
 // Allow requests from the Vite dev server.
 // In production, replace with your actual deployed frontend URL.
+// app.use(cors({
+//   origin: process.env.CLIENT_ORIGIN || 'http://localhost:5173',
+//   credentials: true,
+// }));
 app.use(cors({
-  origin: process.env.CLIENT_ORIGIN || 'http://localhost:5173',
+  origin: true, // זה מאפשר לכל כתובת לגשת - מצוין לבדיקה עכשיו
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 // ─── Body parser ──────────────────────────────────────────────────────────────
@@ -26,11 +32,11 @@ app.use(express.json());
 app.get('/health', (_req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
-app.use('/auth',        authRoutes);
-app.use('/users',       usersRoutes);
+app.use('/auth', authRoutes);
+app.use('/users', usersRoutes);
 app.use('/predictions', predictionsRoutes);
-app.use('/football',    footballRoutes);
-app.use('/scores',      scoresRoutes);
+app.use('/football', footballRoutes);
+app.use('/scores', scoresRoutes);
 
 // ─── Central error handler (must be last) ────────────────────────────────────
 app.use(errorHandler);

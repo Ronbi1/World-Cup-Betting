@@ -216,7 +216,21 @@
 .badge_wrong   { background: #450a0a; color: #f87171; }
 .badge_pending { background: #422006; color: #fbbf24; }
 
+@media (max-width: 768px) {
+  .predsTable th, .predsTable td { padding: 0.45rem 0.75rem; }
+}
+
 @media (max-width: 560px) {
   .teamInline span { display: none; }
   .thStatus, .resultCell { display: none; }
+  .section { margin-top: 1rem; }
+  .predsTable th, .predsTable td { padding: 0.4rem 0.6rem; font-size: 0.8rem; }
+  .scoreChip { font-size: 0.85rem; padding: 2px 7px; }
+  .matchHeader { padding: 0.5rem 0.75rem; }
+}
+
+@media (max-width: 400px) {
+  .scoreText, .scoreTextLive { font-size: 1rem; }
+  .playerName { font-size: 0.82rem; }
+  .predsTable th, .predsTable td { padding: 0.35rem 0.5rem; font-size: 0.75rem; }
 }

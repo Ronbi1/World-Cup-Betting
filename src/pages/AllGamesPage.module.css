@@ -159,6 +159,21 @@
   box-shadow: 0 0 0 1px var(--clr-accent);
 }
 
+@media (max-width: 768px) {
+  .stageTabs { gap: 0.4rem; }
+  .stageTab { padding: 0.4rem 0.75rem; font-size: 0.8rem; }
+}
+
 @media (max-width: 600px) {
+  .page { padding: 1rem 0.85rem; }
   .matchGrid { grid-template-columns: 1fr; }
+  .title { font-size: 1.3rem; }
+  .stageTab { padding: 0.35rem 0.6rem; font-size: 0.75rem; }
+  .filterBtn { padding: 0.25rem 0.65rem; font-size: 0.75rem; }
+  .liveBetsWrapper { padding: 1rem; margin-top: 1.25rem; }
+}
+
+@media (max-width: 400px) {
+  .page { padding: 0.75rem 0.65rem; }
+  .stageTab { padding: 0.3rem 0.5rem; font-size: 0.7rem; }
 }

@@ -17,7 +17,16 @@
       "Bash(powershell.exe -Command \"[System.IO.File]::ReadAllText\\(''C:\\\\dev\\\\WorldCupApp\\\\World-Cup\\\\src\\\\App.jsx'', [System.Text.Encoding]::UTF8\\).Contains\\([char]0x2500\\)\")",
       "Bash(npm run build:*)",
       "Bash(git -C /c/dev/WorldCupApp/World-Cup status)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(python3:*)",
+      "Bash(python /c/dev/WorldCupApp/World-Cup/write_profile.py:*)",
+      "Bash(python -c \"\ncontent = open\\(''/c/dev/WorldCupApp/World-Cup/src/pages/ProfilePage.jsx'', ''w'', encoding=''utf-8''\\) if False else None\n\")",
+      "Bash(python:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(del \"C:\\\\dev\\\\WorldCupApp\\\\World-Cup\\\\src\\\\services\\\\supabaseClient.js\")",
+      "Bash(Remove-Item \"C:\\\\dev\\\\WorldCupApp\\\\World-Cup\\\\src\\\\services\\\\supabaseClient.js\")"
     ]
   }
 }
