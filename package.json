@@ -3,6 +3,9 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  },
   "description": "World Cup 2026 score-prediction PWA — Vercel + Supabase (free-tier).",
   "scripts": {
     "dev": "vite",
@@ -29,7 +32,8 @@
     "react-dom": "^19.2.0",
     "react-i18next": "^15.0.0",
     "react-router-dom": "^7.13.1",
-    "resend": "^4.0.0"
+    "resend": "^4.0.0",
+    "ws": "^8.21.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",

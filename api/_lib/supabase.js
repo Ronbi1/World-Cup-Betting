@@ -5,6 +5,7 @@
 // importing module that never touches Supabase (e.g. a cold-loaded health
 // check) can still load even if env vars are unset locally.
 const { createClient } = require('@supabase/supabase-js');
+const WebSocket = require('ws');
 
 let cached = null;
 
@@ -23,6 +24,8 @@ function getSupabase() {
 
   cached = createClient(url, key, {
     auth: { autoRefreshToken: false, persistSession: false },
+    // Node < 22 has no native WebSocket; @supabase/realtime-js requires one at init.
+    realtime: { transport: WebSocket },
   });
   return cached;
 }
