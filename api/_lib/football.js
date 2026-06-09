@@ -1,34 +1,62 @@
-// TheSportsDB v1 integration. Single source of truth for:
-//   - Base URL + API key composition
-//   - Cached + single-flight upstream fetcher (60s TTL)
-//   - Normalization from TheSportsDB JSON → the internal shape the rest of
-//     the app (frontend + scoring) speaks. Keeping the transform server-side
-//     means no duplication and no leaky upstream field names in the UI.
+// worldcup26.ir integration. Single source of truth for:
+//   - Base URL + optional JWT auth (service account in env)
+//   - Cached + single-flight upstream fetcher
+//   - Normalization from worldcup26 JSON → the internal shape the rest of
+//     the app (frontend + scoring) speaks.
 //
-// Free tier notes:
-//   - Public key '123' works without signup (30 req/min).
-//   - Free V1 does NOT provide in-play / live status — events flip directly
-//     from "Not Started" to "Match Finished". Live scores require V2 premium.
-//   - World Cup league ID is 4429; the 2026 season is "2026".
+// Upstream docs: https://worldcup26.ir/api-docs/
+// Live scores are pull-based — their DB updates during matches; we poll via
+// the client hooks and keep a short server cache on /get/games.
 const axios = require('axios');
 
-const THESPORTSDB_BASE = 'https://www.thesportsdb.com/api/v1/json';
-const LEAGUE_ID = '4429';   // FIFA World Cup
-const SEASON = '2026';
+const WC26_BASE = (process.env.WC26_API_BASE_URL || 'https://worldcup26.ir').replace(/\/$/, '');
 
-function apiKey() {
-  return process.env.SPORTSDB_API_KEY || '123';
+const GAMES_CACHE_TTL_MS = 30_000;
+const DEFAULT_CACHE_TTL_MS = 60_000;
+
+function apiBase() {
+  return WC26_BASE;
 }
 
-function buildUrl(path, params = {}) {
-  const qs = new URLSearchParams(params).toString();
-  return `${THESPORTSDB_BASE}/${apiKey()}/${path}${qs ? '?' + qs : ''}`;
+// ── JWT auth (optional — upstream may allow anonymous reads) ─────────────────
+let _authToken = null;
+let _authExpiresAt = 0;
+let _authPromise = null;
+
+async function getAuthToken() {
+  const email = process.env.WC26_API_EMAIL;
+  const password = process.env.WC26_API_PASSWORD;
+  if (!email || !password) return null;
+
+  if (_authToken && Date.now() < _authExpiresAt) return _authToken;
+  if (_authPromise) return _authPromise;
+
+  _authPromise = axios
+    .post(`${WC26_BASE}/auth/authenticate`, { email, password }, { timeout: 10_000 })
+    .then((res) => {
+      _authToken = res.data?.token ?? null;
+      _authExpiresAt = Date.now() + 23 * 60 * 60 * 1000;
+      return _authToken;
+    })
+    .catch((err) => {
+      _authPromise = null;
+      throw err;
+    })
+    .finally(() => {
+      _authPromise = null;
+    });
+
+  return _authPromise;
+}
+
+function clearAuth() {
+  _authToken = null;
+  _authExpiresAt = 0;
 }
 
 // ── Cache + single-flight ───────────────────────────────────────────────────
-const CACHE_TTL_MS = 60_000;
-const cache = new Map();    // key → { data, expiresAt }
-const inFlight = new Map(); // key → Promise<data>
+const cache = new Map();
+const inFlight = new Map();
 
 function getCached(key) {
   const entry = cache.get(key);
@@ -40,73 +68,88 @@ function getCached(key) {
   return entry.data;
 }
 
-function setCache(key, data, ttlMs = CACHE_TTL_MS) {
+function setCache(key, data, ttlMs) {
   cache.set(key, { data, expiresAt: Date.now() + ttlMs });
 }
 
-async function fetchUpstream(url) {
-  const cached = getCached(url);
+async function wc26Request(path, { ttlMs = DEFAULT_CACHE_TTL_MS, retryAuth = true } = {}) {
+  const cacheKey = path;
+  const cached = getCached(cacheKey);
   if (cached) return cached;
-  if (inFlight.has(url)) return inFlight.get(url);
+  if (inFlight.has(cacheKey)) return inFlight.get(cacheKey);
 
-  const promise = axios
-    .get(url, { timeout: 10_000 })
-    .then((res) => {
-      setCache(url, res.data);
+  const promise = (async () => {
+    const token = await getAuthToken();
+    const headers = {};
+    if (token) headers.Authorization = `Bearer ${token}`;
+
+    try {
+      const res = await axios.get(`${WC26_BASE}${path}`, { headers, timeout: 15_000 });
+      setCache(cacheKey, res.data, ttlMs);
       return res.data;
-    })
-    .finally(() => inFlight.delete(url));
+    } catch (err) {
+      if (retryAuth && err.response?.status === 401 && process.env.WC26_API_EMAIL) {
+        clearAuth();
+        return wc26Request(path, { ttlMs, retryAuth: false });
+      }
+      throw err;
+    }
+  })().finally(() => inFlight.delete(cacheKey));
 
-  inFlight.set(url, promise);
+  inFlight.set(cacheKey, promise);
   return promise;
 }
 
-// ── Status mapping (TheSportsDB strStatus → internal MATCH_STATUS) ──────────
-// Free V1 only emits "Not Started" or finished variants. We still emit the
-// full enum the UI knows so any future swap to V2 lights up without changes.
-function mapStatus(raw) {
-  if (!raw) return 'SCHEDULED';
-  const s = String(raw).trim().toUpperCase();
-  if (s === 'NOT STARTED' || s === '' || s === 'NS') return 'SCHEDULED';
-  if (s === 'MATCH FINISHED' || s === 'FT' || s === 'AET' || s === 'PEN') return 'FINISHED';
-  if (s === 'POSTPONED' || s === 'PPD') return 'POSTPONED';
-  if (s === 'CANCELLED' || s === 'CANCELED' || s === 'CNX') return 'CANCELLED';
-  if (s === 'IN PLAY' || s === 'LIVE' || s === '1H' || s === '2H' || s === 'ET') return 'IN_PLAY';
-  if (s === 'HT' || s === 'HALF TIME') return 'PAUSED';
+// Legacy export name used by tests / future routes.
+const fetchUpstream = wc26Request;
+
+// ── Status mapping (worldcup26 finished + time_elapsed → MATCH_STATUS) ───────
+function mapStatus(finished, timeElapsed) {
+  if (String(finished).toUpperCase() === 'TRUE') return 'FINISHED';
+
+  const te = String(timeElapsed || '').trim().toLowerCase();
+  if (!te || te === 'notstarted') return 'SCHEDULED';
+  if (te === 'ht' || te === 'halftime' || te === 'half time' || te === 'half-time') {
+    return 'PAUSED';
+  }
+  if (te === 'live' || te === 'inplay' || te === 'in play' || te === '1h' || te === '2h') {
+    return 'IN_PLAY';
+  }
+  if (/^\d/.test(te) || te.includes("'") || te.endsWith('+')) return 'IN_PLAY';
+
   return 'SCHEDULED';
 }
 
-// ── Stage mapping (WC 2026 format: 12 groups → R32 → R16 → QF → SF → F) ────
-// TheSportsDB's intRound is sometimes string, sometimes number. Default to
-// GROUP_STAGE for unknown rounds rather than guessing.
-function mapStage(intRound) {
-  const r = parseInt(intRound, 10);
-  if (Number.isNaN(r)) return 'GROUP_STAGE';
-  if (r <= 3) return 'GROUP_STAGE';
-  if (r === 4) return 'ROUND_OF_32';
-  if (r === 5) return 'ROUND_OF_16';
-  if (r === 6) return 'QUARTER_FINALS';
-  if (r === 7) return 'SEMI_FINALS';
-  if (r === 125) return 'THIRD_PLACE';   // TheSportsDB's convention for 3rd-place
-  if (r === 8 || r === 200) return 'FINAL';
+// ── Stage mapping (worldcup26 type / group → internal STAGE_ORDER values) ────
+function mapStage(type, group) {
+  const t = String(type || '').toLowerCase();
+  if (t === 'r32') return 'ROUND_OF_32';
+  if (t === 'r16') return 'ROUND_OF_16';
+  if (t === 'qf') return 'QUARTER_FINALS';
+  if (t === 'sf') return 'SEMI_FINALS';
+  if (t === 'third') return 'THIRD_PLACE';
+  if (t === 'final') return 'FINAL';
+  if (t === 'group') return 'GROUP_STAGE';
+
+  const g = String(group || '').toUpperCase();
+  if (g === 'R32') return 'ROUND_OF_32';
+  if (g === 'R16') return 'ROUND_OF_16';
+  if (g === 'QF') return 'QUARTER_FINALS';
+  if (g === 'SF') return 'SEMI_FINALS';
+  if (g === '3RD') return 'THIRD_PLACE';
+  if (g === 'FINAL') return 'FINAL';
+
   return 'GROUP_STAGE';
 }
 
-// ── ISO UTC kickoff from dateEvent + strTimestamp / strTime ─────────────────
-function toIsoUtc(raw) {
-  if (raw.strTimestamp) {
-    const d = new Date(raw.strTimestamp);
-    if (!Number.isNaN(d.getTime())) return d.toISOString();
-  }
-  if (raw.dateEvent && raw.strTime) {
-    const d = new Date(`${raw.dateEvent}T${raw.strTime}Z`);
-    if (!Number.isNaN(d.getTime())) return d.toISOString();
-  }
-  if (raw.dateEvent) {
-    const d = new Date(`${raw.dateEvent}T00:00:00Z`);
-    if (!Number.isNaN(d.getTime())) return d.toISOString();
-  }
-  return null;
+function parseLocalDate(raw) {
+  if (!raw) return null;
+  const [datePart, timePart = '00:00'] = String(raw).trim().split(' ');
+  const [month, day, year] = datePart.split('/').map((v) => parseInt(v, 10));
+  if (!month || !day || !year) return null;
+  const [hour, minute] = timePart.split(':').map((v) => parseInt(v, 10) || 0);
+  const d = new Date(Date.UTC(year, month - 1, day, hour, minute));
+  return Number.isNaN(d.getTime()) ? null : d.toISOString();
 }
 
 function toIntOrNull(v) {
@@ -115,119 +158,130 @@ function toIntOrNull(v) {
   return Number.isNaN(n) ? null : n;
 }
 
-// ── Server-side team cache (keyed by team id) ───────────────────────────────
-// Populated lazily on the first /matches or /teams call so we can decorate
-// events with badge URLs. One upstream call per cold-start, then in-memory.
-let _teamsByName = null;
-let _teamsById = null;
-let _teamsPromise = null;
-
-function ensureTeams() {
-  if (_teamsByName) return Promise.resolve();
-  if (_teamsPromise) return _teamsPromise;
-
-  const url = buildUrl('lookup_all_teams.php', { id: LEAGUE_ID });
-  _teamsPromise = fetchUpstream(url)
-    .then((data) => {
-      const raw = data?.teams ?? [];
-      _teamsByName = {};
-      _teamsById = {};
-      for (const t of raw) {
-        _teamsByName[String(t.strTeam).toLowerCase()] = t;
-        _teamsById[String(t.idTeam)] = t;
-      }
-    })
-    .catch((err) => {
-      _teamsPromise = null;
-      throw err;
-    });
-  return _teamsPromise;
-}
-
-function lookupTeam({ id, name }) {
-  if (id && _teamsById && _teamsById[String(id)]) return _teamsById[String(id)];
-  if (name && _teamsByName && _teamsByName[String(name).toLowerCase()]) {
-    return _teamsByName[String(name).toLowerCase()];
-  }
-  return null;
-}
-
 function teamTla(name) {
   if (!name) return '???';
   const cleaned = String(name).replace(/[^A-Za-z\u00C0-\u024F]/g, '');
   return cleaned.slice(0, 3).toUpperCase() || '???';
 }
 
-// ── Transforms (TheSportsDB → internal shape) ───────────────────────────────
-function transformEvent(raw) {
-  const homeMeta = lookupTeam({ id: raw.idHomeTeam, name: raw.strHomeTeam });
-  const awayMeta = lookupTeam({ id: raw.idAwayTeam, name: raw.strAwayTeam });
+// ── Server-side team cache (keyed by team id) ───────────────────────────────
+let _teamsById = null;
+let _teamsPromise = null;
+
+function ensureTeams() {
+  if (_teamsById) return Promise.resolve();
+  if (_teamsPromise) return _teamsPromise;
+
+  _teamsPromise = wc26Request('/get/teams', { ttlMs: 5 * 60_000 })
+    .then((data) => {
+      _teamsById = {};
+      for (const t of data?.teams ?? []) {
+        _teamsById[String(t.id)] = t;
+      }
+    })
+    .catch((err) => {
+      _teamsPromise = null;
+      throw err;
+    });
+
+  return _teamsPromise;
+}
+
+function lookupTeam(id) {
+  if (!id || id === '0' || !_teamsById) return null;
+  return _teamsById[String(id)] ?? null;
+}
+
+function buildTeamSide({ teamId, labelEn, labelFa }) {
+  const meta = lookupTeam(teamId);
+
+  if (meta) {
+    return {
+      id: String(meta.id),
+      name: meta.name_en || 'TBD',
+      shortName: meta.name_en || 'TBD',
+      tla: meta.fifa_code || teamTla(meta.name_en),
+      crest: meta.flag ?? null,
+    };
+  }
+
+  const fallback = labelEn || labelFa || 'TBD';
+  return {
+    id: teamId && teamId !== '0' ? String(teamId) : null,
+    name: fallback,
+    shortName: fallback,
+    tla: teamTla(fallback),
+    crest: null,
+  };
+}
+
+// ── Transforms (worldcup26 → internal shape) ────────────────────────────────
+function transformGame(raw) {
+  const homeScore = toIntOrNull(raw.home_score);
+  const awayScore = toIntOrNull(raw.away_score);
 
   return {
-    id: raw.idEvent,
-    utcDate: toIsoUtc(raw),
-    status: mapStatus(raw.strStatus),
-    stage: mapStage(raw.intRound),
-    group: raw.strGroup || null,
-    homeTeam: {
-      id: raw.idHomeTeam ?? null,
-      name: raw.strHomeTeam ?? 'TBD',
-      shortName: homeMeta?.strTeamShort || raw.strHomeTeam || 'TBD',
-      tla: teamTla(homeMeta?.strTeamShort || raw.strHomeTeam),
-      crest: homeMeta?.strTeamBadge ?? null,
-    },
-    awayTeam: {
-      id: raw.idAwayTeam ?? null,
-      name: raw.strAwayTeam ?? 'TBD',
-      shortName: awayMeta?.strTeamShort || raw.strAwayTeam || 'TBD',
-      tla: teamTla(awayMeta?.strTeamShort || raw.strAwayTeam),
-      crest: awayMeta?.strTeamBadge ?? null,
-    },
+    id: String(raw.id),
+    utcDate: parseLocalDate(raw.local_date),
+    status: mapStatus(raw.finished, raw.time_elapsed),
+    stage: mapStage(raw.type, raw.group),
+    group: raw.group || null,
+    homeTeam: buildTeamSide({
+      teamId: raw.home_team_id,
+      labelEn: raw.home_team_name_en || raw.home_team_label,
+      labelFa: raw.home_team_name_fa,
+    }),
+    awayTeam: buildTeamSide({
+      teamId: raw.away_team_id,
+      labelEn: raw.away_team_name_en || raw.away_team_label,
+      labelFa: raw.away_team_name_fa,
+    }),
     score: {
-      home: toIntOrNull(raw.intHomeScore),
-      away: toIntOrNull(raw.intAwayScore),
-      halfHome: toIntOrNull(raw.intHomeShots),  // TheSportsDB has no half-time
-      halfAway: toIntOrNull(raw.intAwayShots),  // score in free V1; leave null.
+      home: homeScore,
+      away: awayScore,
+      halfHome: null,
+      halfAway: null,
       winner: null,
-      // Shape kept compatible with scoring.js which reads score.fullTime.{home,away}
-      fullTime: {
-        home: toIntOrNull(raw.intHomeScore),
-        away: toIntOrNull(raw.intAwayScore),
-      },
+      fullTime: { home: homeScore, away: awayScore },
     },
-    matchday: toIntOrNull(raw.intRound),
+    matchday: toIntOrNull(raw.matchday),
+    timeElapsed: raw.time_elapsed && raw.time_elapsed !== 'notstarted'
+      ? String(raw.time_elapsed)
+      : null,
     referees: [],
   };
 }
 
 function transformTeam(raw) {
   return {
-    id: raw.idTeam,
-    name: raw.strTeam,
-    shortName: raw.strTeamShort || raw.strTeam,
-    tla: teamTla(raw.strTeamShort || raw.strTeam),
-    crest: raw.strTeamBadge ?? null,
-    founded: raw.intFormedYear ?? null,
-    venue: raw.strStadium ?? null,
+    id: String(raw.id),
+    name: raw.name_en,
+    shortName: raw.name_en,
+    tla: raw.fifa_code || teamTla(raw.name_en),
+    crest: raw.flag ?? null,
+    founded: null,
+    venue: null,
   };
 }
 
 // ── High-level fetchers used by routes ──────────────────────────────────────
-async function fetchSeasonMatches() {
+async function fetchAllGamesRaw() {
   await ensureTeams();
-  const url = buildUrl('eventsseason.php', { id: LEAGUE_ID, s: SEASON });
-  const data = await fetchUpstream(url);
-  const events = data?.events ?? [];
-  return events.map(transformEvent);
+  const data = await wc26Request('/get/games', { ttlMs: GAMES_CACHE_TTL_MS });
+  return data?.games ?? [];
+}
+
+async function fetchSeasonMatches() {
+  const games = await fetchAllGamesRaw();
+  return games
+    .map(transformGame)
+    .sort((a, b) => new Date(a.utcDate || 0) - new Date(b.utcDate || 0));
 }
 
 async function fetchTodayMatches() {
-  await ensureTeams();
+  const all = await fetchSeasonMatches();
   const today = new Date().toISOString().slice(0, 10);
-  const url = buildUrl('eventsday.php', { d: today, l: LEAGUE_ID });
-  const data = await fetchUpstream(url);
-  const events = data?.events ?? [];
-  return events.map(transformEvent);
+  return all.filter((m) => m.utcDate && m.utcDate.slice(0, 10) === today);
 }
 
 async function fetchAllTeams() {
@@ -242,17 +296,11 @@ async function fetchFinishedMatches() {
 }
 
 module.exports = {
-  // constants
-  THESPORTSDB_BASE,
-  LEAGUE_ID,
-  SEASON,
-  // helpers (exported for tests / future routes)
-  buildUrl,
+  apiBase,
   fetchUpstream,
   getCached,
-  transformEvent,
+  transformGame,
   transformTeam,
-  // route-level fetchers
   fetchSeasonMatches,
   fetchTodayMatches,
   fetchAllTeams,
