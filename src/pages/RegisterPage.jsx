@@ -82,7 +82,7 @@ export default function RegisterPage() {
           <p className={styles.subtitle}>{t('auth.register.subtitle')}</p>
         </div>
 
-        {error && <div className={styles.errorBanner}>{error}</div>}
+        {error && <div className={styles.errorBanner}>{typeof error === 'string' ? error : String(error)}</div>}
 
         <form onSubmit={handleSubmit} className={styles.form}>
           <div className={styles.field}>

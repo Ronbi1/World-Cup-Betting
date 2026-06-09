@@ -6,7 +6,7 @@
   "description": "World Cup 2026 score-prediction PWA — Vercel + Supabase (free-tier).",
   "scripts": {
     "dev": "vite",
-    "dev:api": "node api/_local-dev.js",
+    "dev:api": "node dev-server.cjs",
     "dev:all": "concurrently -n \"vite,api\" -c \"cyan,green\" \"npm run dev\" \"npm run dev:api\"",
     "build": "vite build",
     "lint": "eslint .",

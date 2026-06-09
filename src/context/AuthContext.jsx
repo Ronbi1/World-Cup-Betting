@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import serverApi from '../services/serverApi';
 import { STORAGE_KEYS, ROLES } from '../utils/constants';
+import { extractApiError } from '../utils/apiErrors';
 
 // ─── Session helpers (logged-in user stays in localStorage) ───────────────────
 const loadSession = () => {
@@ -97,8 +98,7 @@ export function AuthProvider({ children }) {
 
       return { success: true };
     } catch (err) {
-      const message = err.response?.data?.error || 'Login failed. Please try again.';
-      return { success: false, error: message };
+      return { success: false, error: extractApiError(err, 'Login failed. Please try again.') };
     }
   }, [fetchUsers, fetchScores]);
 
@@ -108,8 +108,7 @@ export function AuthProvider({ children }) {
       await serverApi.post('/auth/register', { email, password, name, winningTeam, topScorer, topAssist });
       return { success: true };
     } catch (err) {
-      const message = err.response?.data?.error || 'Registration failed. Please try again.';
-      return { success: false, error: message };
+      return { success: false, error: extractApiError(err, 'Registration failed. Please try again.') };
     }
   }, []);
 
@@ -132,8 +131,7 @@ export function AuthProvider({ children }) {
       return { success: true };
     } catch (err) {
       console.error('[AuthContext] updateUserStatus error:', err.message);
-      const message = err.response?.data?.error || 'Failed to update user status.';
-      return { success: false, error: message };
+      return { success: false, error: extractApiError(err, 'Failed to update user status.') };
     }
   }, []);
 
@@ -145,8 +143,7 @@ export function AuthProvider({ children }) {
       setScores(prev => prev.filter(s => s.userId !== userId));
       return { success: true };
     } catch (err) {
-      const message = err.response?.data?.error || 'Failed to delete user.';
-      return { success: false, error: message };
+      return { success: false, error: extractApiError(err, 'Failed to delete user.') };
     }
   }, []);
 
@@ -164,8 +161,7 @@ export function AuthProvider({ children }) {
       }
       return { success: true };
     } catch (err) {
-      const message = err.response?.data?.error || 'Failed to recalculate scores.';
-      return { success: false, error: message };
+      return { success: false, error: extractApiError(err, 'Failed to recalculate scores.') };
     }
   }, [fetchScores]);
 
@@ -180,8 +176,7 @@ export function AuthProvider({ children }) {
       if (localStorage.getItem(STORAGE_KEYS.USER)) saveSession(updatedUser);
       return { success: true };
     } catch (err) {
-      const message = err.response?.data?.error || 'Failed to save bet.';
-      return { success: false, error: message };
+      return { success: false, error: extractApiError(err, 'Failed to save bet.') };
     }
   }, [user]);
 

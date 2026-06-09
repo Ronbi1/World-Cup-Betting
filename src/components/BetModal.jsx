@@ -4,6 +4,7 @@ import { notifications } from '@mantine/notifications';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import serverApi from '../services/serverApi';
+import { extractApiError } from '../utils/apiErrors';
 import TeamFlag from './TeamFlag';
 import styles from './BetModal.module.css';
 
@@ -62,7 +63,7 @@ export default function BetModal({ match, opened, onClose }) {
     } catch (err) {
       notifications.show({
         title: t('betModal.errorTitle'),
-        message: err.response?.data?.error || t('betModal.errorBody'),
+        message: extractApiError(err, t('betModal.errorBody')),
         color: 'red',
         autoClose: 3000,
       });
