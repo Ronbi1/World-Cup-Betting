@@ -1,0 +1,266 @@
+{
+  "app": {
+    "title": "World Cup 2026 Bets",
+    "tagline": "FIFA World Cup 2026 · Jun 11 – Jul 19, 2026 · USA, Canada & Mexico"
+  },
+  "lang": {
+    "switch": "Language",
+    "english": "English",
+    "hebrew": "עברית"
+  },
+  "nav": {
+    "home": "Home",
+    "games": "All Games",
+    "scorers": "Golden Boot",
+    "profile": "My Profile",
+    "admin": "Admin",
+    "logout": "Logout"
+  },
+  "auth": {
+    "login": {
+      "title": "World Cup 2026",
+      "subtitle": "Sign in to your account",
+      "emailLabel": "Email",
+      "emailPlaceholder": "you@example.com",
+      "passwordLabel": "Password",
+      "passwordPlaceholder": "••••••••",
+      "rememberMe": "Keep me logged in",
+      "submit": "Sign In",
+      "submitting": "Signing in…",
+      "noAccount": "Don't have an account?",
+      "requestAccess": "Request access",
+      "sessionExpired": "Your session has expired. Please sign in again."
+    },
+    "register": {
+      "title": "Request Access",
+      "subtitle": "An admin will approve your account",
+      "nameLabel": "Display Name",
+      "namePlaceholder": "Your name",
+      "emailLabel": "Email",
+      "emailPlaceholder": "you@example.com",
+      "passwordLabel": "Password",
+      "passwordPlaceholder": "Min. 6 characters",
+      "confirmPasswordLabel": "Confirm Password",
+      "confirmPasswordPlaceholder": "Repeat password",
+      "submit": "Request Access",
+      "submitting": "Submitting…",
+      "passwordMismatch": "Passwords do not match.",
+      "passwordTooShort": "Password must be at least 6 characters.",
+      "haveAccount": "Already have an account?",
+      "signIn": "Sign in",
+      "successTitle": "Registration Sent!",
+      "successBody": "Your account is pending admin approval. Once approved, log in and set your tournament bets from your Profile page.",
+      "backToLogin": "Back to Login"
+    }
+  },
+  "home": {
+    "welcomeBack": "Welcome back, {{name}}",
+    "howItWorks": "How Betting Works",
+    "rules": {
+      "intro": "Predict the score of every World Cup match before it kicks off. The more accurate your predictions, the more points you earn.",
+      "exactScore": "Exact Score — predict the exact final score → 3 pts",
+      "exactScoreHigh": "Exact Score (5+ goals) — high-scoring game, exact score → 5 pts",
+      "correctResult": "Correct Result — right winner or draw, wrong score → 1 pt",
+      "tournamentWinner": "Tournament Winner — pick the World Cup champion → 15 pts",
+      "topScorer": "Top Scorer — pick the Golden Boot winner → 5 pts",
+      "topAssist": "Top Assist — pick the most-assists player → 5 pts"
+    },
+    "todayMatches": "Today's Matches",
+    "noMatchesToday": "No matches scheduled for today.",
+    "noMatchesTodaySub": "Check the All Games page for upcoming fixtures.",
+    "loadError": "Could not load today's matches.",
+    "leaderboard": "Leaderboard",
+    "recalc": "Recalculate Scores",
+    "recalcCalculating": "Calculating…",
+    "recalcSuccess": "Scores updated!",
+    "bonusToggle": "Tournament bonus",
+    "bonusNote": "Optional — fill in only at end of tournament to award bonus points:",
+    "bonusWinningTeam": "Winning team (15 pts)",
+    "bonusTopScorer": "Top scorer name (5 pts)",
+    "bonusTopAssist": "Top assist name (5 pts)",
+    "leaderboardEmpty": "No participants yet."
+  },
+  "leaderboard": {
+    "rank": "#",
+    "player": "Player",
+    "winnerBet": "Winner Bet",
+    "topScorer": "Top Scorer",
+    "topAssist": "Top Assist",
+    "exact": "Exact",
+    "results": "Results",
+    "points": "Pts",
+    "you": "you"
+  },
+  "matchCard": {
+    "vs": "vs",
+    "halfTime": "Half-time"
+  },
+  "matchStatus": {
+    "scheduled": "SCH",
+    "live": "LIVE",
+    "halfTime": "HT",
+    "finished": "FT",
+    "postponed": "PPD",
+    "cancelled": "CNX"
+  },
+  "allGames": {
+    "title": "All Matches",
+    "subtitle": "FIFA World Cup 2026 · Full Schedule",
+    "filter": {
+      "all": "All",
+      "today": "Today ({{count}})",
+      "upcoming": "Upcoming",
+      "finished": "Finished"
+    },
+    "noMatchesFilter": "No matches match the current filter.",
+    "loadError": "Failed to load matches: {{error}}",
+    "scheduleNotAvailable": "Schedule Not Available Yet",
+    "scheduleNotAvailableBody": "The World Cup 2026 fixtures haven't been published yet. Check back closer to the tournament start on June 11, 2026."
+  },
+  "stages": {
+    "GROUP_STAGE": "Group Stage",
+    "ROUND_OF_32": "Round of 32",
+    "ROUND_OF_16": "Round of 16",
+    "QUARTER_FINALS": "Quarter Finals",
+    "SEMI_FINALS": "Semi Finals",
+    "THIRD_PLACE": "Third Place",
+    "FINAL": "Final"
+  },
+  "topScorers": {
+    "title": "Golden Boot",
+    "subtitleStatic": "FIFA World Cup 2026 · Candidate lists",
+    "rank": "#",
+    "player": "Player",
+    "topScorerCandidates": "Top Scorer Candidates",
+    "topAssistCandidates": "Top Assist Candidates",
+    "staticEmptyTitle": "List not supplied yet",
+    "staticEmptyBody": "The admin will publish the candidate list before the tournament starts.",
+    "staticNote": "These are the players you can choose from on your Profile page when placing your tournament bet."
+  },
+  "profile": {
+    "title": "My Profile",
+    "account": {
+      "heading": "Account",
+      "name": "Name",
+      "email": "Email",
+      "joined": "Joined",
+      "role": "Role"
+    },
+    "summary": {
+      "heading": "Bet Summary",
+      "tournamentWinner": "Tournament Winner",
+      "topScorer": "Top Scorer",
+      "topAssist": "Top Assist",
+      "matchPredictions": "Match Predictions",
+      "notSet": "Not set"
+    },
+    "predictions": {
+      "heading": "My Match Predictions",
+      "empty": "You haven't placed any match predictions yet.",
+      "emptySub": "Go to All Games and click on a match to place your bet."
+    },
+    "bets": {
+      "heading": "Tournament Bets",
+      "locked": "LOCKED",
+      "lockedNote": "The World Cup has started. Your tournament bets are locked.",
+      "editableNote": "You can change these until the tournament starts on June 11, 2026.",
+      "winnerLabel": "World Cup Winner",
+      "topScorerLabel": "Top Scorer",
+      "topAssistLabel": "Top Assist",
+      "winnerPlaceholder": "Pick a team",
+      "playerPlaceholder": "Pick a player",
+      "save": "Save Bets",
+      "saved": "Bets saved successfully!",
+      "loading": "loading…",
+      "loadError": "Could not load team/player data: {{error}}",
+      "playerListUnavailable": "Player list will be supplied by the admin."
+    },
+    "missingBets": "Missing bets",
+    "missing": {
+      "winner": "Tournament winner",
+      "topScorer": "Top scorer",
+      "topAssist": "Top assist"
+    }
+  },
+  "admin": {
+    "title": "Admin Panel",
+    "subtitle": "Manage user registrations and approvals",
+    "denied": "Access Denied",
+    "deniedBody": "You do not have permission to view this page.",
+    "stats": {
+      "pending": "Pending",
+      "approved": "Approved",
+      "rejected": "Rejected"
+    },
+    "section": {
+      "pending": "Pending Approvals",
+      "approved": "Approved Users",
+      "rejected": "Rejected Users"
+    },
+    "table": {
+      "name": "Name",
+      "email": "Email",
+      "winnerBet": "Winner Bet",
+      "topScorer": "Top Scorer",
+      "topAssist": "Top Assist",
+      "registered": "Registered",
+      "actions": "Actions"
+    },
+    "actions": {
+      "approve": "Approve",
+      "reject": "Reject",
+      "reapprove": "Re-approve",
+      "delete": "Delete user"
+    },
+    "empty": {
+      "pending": "No pending registrations.",
+      "approved": "No approved users."
+    },
+    "delete": {
+      "title": "Delete User",
+      "body": "Are you sure you want to permanently delete {{name}} ({{email}})?",
+      "warning": "This will also remove all their match predictions. This cannot be undone.",
+      "cancel": "Cancel",
+      "confirm": "Yes, Delete",
+      "deleting": "Deleting…"
+    }
+  },
+  "betModal": {
+    "title": "Place Your Prediction",
+    "cancel": "Cancel",
+    "save": "Save Prediction",
+    "incompleteTitle": "Incomplete prediction",
+    "incompleteBody": "Please enter a score for both teams.",
+    "savedTitle": "Prediction saved!",
+    "errorTitle": "Error",
+    "errorBody": "Failed to save prediction. Try again."
+  },
+  "liveBets": {
+    "title": "Live Predictions Revealed",
+    "subtitle": "Bets are shown once a match kicks off",
+    "noPredictions": "Nobody placed a prediction for this match.",
+    "table": {
+      "player": "Player",
+      "predictedScore": "Predicted Score",
+      "status": "Status"
+    },
+    "result": {
+      "exact": "Exact!",
+      "result": "Correct result",
+      "wrong": "Wrong",
+      "pending": "Pending",
+      "noBet": "No bet"
+    }
+  },
+  "common": {
+    "yes": "Yes",
+    "no": "No",
+    "loading": "Loading…",
+    "error": "Error",
+    "save": "Save",
+    "cancel": "Cancel",
+    "close": "Close",
+    "refresh": "Refresh",
+    "tryAgain": "Try again"
+  }
+}

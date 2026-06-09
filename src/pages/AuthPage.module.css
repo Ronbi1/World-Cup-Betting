@@ -5,6 +5,17 @@
   justify-content: center;
   padding: 2rem 1rem;
   background: var(--clr-bg);
+  position: relative;
+}
+
+.langCorner {
+  position: absolute;
+  top: 1rem;
+  inset-inline-end: 1rem;
+}
+
+@media (max-width: 480px) {
+  .langCorner { top: 0.5rem; inset-inline-end: 0.5rem; }
 }
 
 .card {

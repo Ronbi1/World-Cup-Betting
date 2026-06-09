@@ -1,0 +1,237 @@
+---
+description: World Cup 2026 Betting App — project context, stack and product rules
+alwaysApply: true
+---
+
+# World Cup 2026 Betting App
+
+## Your role
+You are a senior software engineer. Keep solutions simple, pragmatic, and well-explained. Prefer the smallest change that solves the problem. Reuse existing patterns before introducing new ones.
+
+---
+
+## What this app is (product intent — do not change without owner approval)
+A private, invite-only score-prediction game for FIFA World Cup 2026 (Jun 11 – Jul 19, 2026). Approved users predict match scores and tournament outcomes and compete on a live leaderboard. The admin approves registrations and recalculates scores. The app is shared with a small group of friends — **not a public product**.
+
+It must be:
+- Free to host (Vercel + Supabase free tiers — no paid Node host).
+- Installable as a PWA on iOS and Android.
+- Bilingual (English + Hebrew with full RTL).
+- Strict on rate limits — TheSportsDB free tier is 30 req/min. The serverless `/api/football/*` layer caches for 60 s and uses single-flight de-dupe to stay well under that.
+
+---
+
+## Stack — Vercel + Supabase only
+- **Frontend:** React 19 + Vite 7 + Mantine v8, deployed to **Vercel**.
+- **Database:** **Supabase** (Postgres). Tables: `users`, `predictions`.
+- **Backend logic:** Vercel **Serverless Functions** under `/api/*`. Do **not** use Railway or any other Node host — keep hosting to Vercel + Supabase only, free of charge.
+- **External APIs:** TheSportsDB v1 (free key `123` by default, kept server-side; FIFA World Cup is league `4429`, season `2026`), Resend (email, optional).
+- Secrets live in Vercel env vars. The browser only sees `VITE_*` public vars.
+- Passwords hashed with **bcryptjs** (pure JS — `bcrypt` native binary breaks on Vercel).
+- Auth is **JWT** (7-day expiry), signed server-side, attached by `serverApi` axios interceptor.
+
+## Mobile / PWA
+This is a **React web app, not React Native**. It must be installable as a **PWA** so users can "Add to Home Screen" on iOS and Android. Required: web manifest, `vite-plugin-pwa` service worker, iOS `apple-touch-icon` + `apple-mobile-web-app-*` meta tags, and 192/512 px maskable icons.
+
+## Hebrew language support (i18n)
+The app must support Hebrew. Use a single i18n layer (`react-i18next`) with `en` and `he` translations. Set `<html dir="rtl" lang="he">` when locale is Hebrew. All user-facing strings come from translation keys — never hard-code text in components.
+
+## Data fetching strategy
+Football fixtures only change between stages, not during them. Therefore:
+- **One API call per stage** (Group Stage, R32, R16, QF, SF, Third Place, Final). Cache the result client-side (`useMatches`) until the stage advances.
+- **Never refetch the full schedule on route change.**
+- TheSportsDB free V1 does **not** provide in-play / live status — events flip directly from `SCHEDULED` to `FINISHED`. The `useTodayMatches` hook therefore polls slowly (every 5 minutes) and on tab-visibility changes; there is no fast in-play polling. Live in-play scores would require a paid upgrade to TheSportsDB V2 ($9/mo).
+- The serverless `/api/football/*` proxy adds a 60 s in-memory cache + single-flight to absorb bursts. It also caches the per-team metadata (badges, short names) for the lifetime of the serverless instance.
+
+## Profile page (`/profile`) — required content
+1. **Account details:** name, email, joined date.
+2. **Bet Summary:**
+   - 🏆 Tournament Winner
+   - ⚽ Top Scorer
+   - 🎯 Top Assist
+   - 📝 Match Predictions — number of matches the user has placed a prediction on.
+3. **📋 My Match Predictions** — list every match the user predicted, formatted as `Mexico vs South Africa  0–0`. Sort by match kickoff date.
+4. **🎯 Tournament Bets** — editable **only before** the tournament starts (Jun 11, 2026). After kickoff, render as locked / read-only.
+   - 🏅 **World Cup Winner** — dropdown of all national teams playing in the World Cup (live football API).
+   - ⚽ **Top Scorer** — dropdown from a fixed list (`TOP_SCORERS_LIST`, supplied by user; leave placeholder until then).
+   - 🎯 **Top Assist** — dropdown from a fixed list (`TOP_ASSISTS_LIST`, supplied by user; leave placeholder until then).
+
+## General principles
+- Keep it simple — avoid premature abstraction and extra dependencies.
+- Reuse existing patterns: `AuthContext`, `serverApi`, the `useMatches` / `useTodayMatches` hooks, CSS modules.
+- Never expose service-role keys or third-party API tokens to the browser.
+- Validate inputs both client-side and server-side.
+- When in doubt, ask the user before introducing a new library or architectural change.
+
+---
+
+# Project state — what has been built (control file for agents)
+
+This section is a snapshot of the working architecture so any future agent can orient instantly without re-reading the whole repo. **Treat it as ground truth; if you change something here, update this section in the same commit.**
+
+## Repository layout
+```
+World-Cup/
+├── api/                          # Vercel Serverless Functions (single Express app)
+│   ├── [...slug].js              # Vercel catch-all entry → re-exports api/_app.js
+│   ├── _app.js                   # Express app, routes mounted at /api/*
+│   ├── _local-dev.js             # Standalone local server on :3000 (npm run dev:api)
+│   ├── package.json              # { "type": "commonjs" } — overrides root ESM
+│   ├── _lib/
+│   │   ├── supabase.js           # lazy Proxy client (service-role key)
+│   │   ├── football.js           # TheSportsDB v1 client: URL builder, cached
+│   │   │                         #   single-flight fetcher, transformEvent/Team,
+│   │   │                         #   status & stage mappers, teams cache,
+│   │   │                         #   fetchSeasonMatches / fetchTodayMatches /
+│   │   │                         #   fetchAllTeams / fetchFinishedMatches
+│   │   ├── auth.js               # requireAuth + requireAdmin middleware
+│   │   ├── errorHandler.js       # central error sanitizer
+│   │   ├── email.js              # Resend approval mail (no-op when key absent)
+│   │   └── scoring.js            # POINTS table + calcPoints(pred, match)
+│   └── _routes/
+│       ├── auth.routes.js        # POST /api/auth/{login,register}
+│       ├── users.routes.js       # GET / PATCH /:id/status / DELETE / PATCH /:id/bet
+│       ├── predictions.routes.js # GET (3 patterns) + POST upsert
+│       ├── scores.routes.js      # GET leaderboard / POST /recalculate
+│       └── football.routes.js    # /api/football/{matches,matches/today,teams}
+│                                 #   — typed named endpoints, NOT a generic proxy
+├── public/
+│   ├── favicon.svg
+│   ├── pwa-192.png  pwa-512.png
+│   ├── pwa-maskable-512.png      # 10% padding safe area
+│   └── apple-touch-icon.png      # 180x180
+├── src/
+│   ├── App.jsx                   # router + ProtectedRoute + legacy storage purge
+│   ├── main.jsx                  # MantineProvider + DirectionProvider + i18n bootstrap
+│   ├── i18n/
+│   │   ├── index.js              # i18next + LanguageDetector + html dir/lang sync
+│   │   └── locales/{en,he}.json  # ALL user-facing strings
+│   ├── pages/
+│   │   ├── LoginPage.jsx  RegisterPage.jsx
+│   │   ├── HomePage.jsx          # today's matches + leaderboard + admin recalc
+│   │   ├── AllGamesPage.jsx      # full schedule, stage tabs, status filter
+│   │   ├── ProfilePage.jsx       # 4 sections per the spec above
+│   │   ├── AdminPage.jsx         # approve / reject / delete + delete modal
+│   │   └── TopScorersPage.jsx    # Golden Boot — STATIC list from constants.js
+│   │                             #   (TheSportsDB free V1 has no /scorers endpoint)
+│   ├── components/
+│   │   ├── Navbar.jsx            # responsive hamburger + LanguageSwitcher
+│   │   ├── LanguageSwitcher.jsx  # EN / עב toggle
+│   │   ├── MantineDirectionSync.jsx  # bridges i18n → Mantine RTL
+│   │   ├── MatchCard.jsx  TeamFlag.jsx  SkeletonCard.jsx
+│   │   ├── BetModal.jsx          # Mantine Modal + NumberInput, upsert prediction
+│   │   ├── LiveBetsReveal.jsx    # everyone's predictions for started/finished matches
+│   │   └── LiveScoreBanner.jsx   # DORMANT — only renders for IN_PLAY matches, which
+│   │                             #   TheSportsDB free V1 never reports. Kept for the
+│   │                             #   day someone upgrades to V2 livescores.
+│   ├── context/AuthContext.jsx
+│   ├── hooks/{useMatches, useTodayMatches}.js
+│   ├── services/{footballService, serverApi}.js
+│   └── utils/constants.js        # ROLES, REG_STATUS, MATCH_STATUS, STAGE_ORDER,
+│                                 #   TOURNAMENT_START/ENDED, TOP_SCORERS_LIST, TOP_ASSISTS_LIST
+├── scripts/resize-icons.ps1      # one-shot PWA icon generator (PowerShell + GDI+)
+├── vite.config.js                # React + VitePWA + dev proxy /api → :3000
+├── vercel.json                   # SPA rewrite (excludes /api)
+├── eslint.config.js              # 3 layers: src ESM, vite.config ESM, api CJS
+└── package.json                  # root ESM, single dependency tree (frontend + backend)
+```
+
+## How requests flow
+| URL | In production (Vercel) | In dev (`npm run dev:all`) |
+|---|---|---|
+| `/` (and any non-API route) | static SPA from `dist/`, falls back to `index.html` via `vercel.json` rewrite | Vite dev server on `:5173` |
+| `/api/*` | `api/[...slug].js` serverless function → Express app | Vite proxies to `:3000` running `api/_local-dev.js` (same Express app) |
+
+The Express app inside the function is mounted **with the `/api/` prefix** because Vercel forwards `req.url` with the prefix intact. Local dev keeps full parity.
+
+## REST surface (under `/api`)
+| Method | Path | Auth | Purpose |
+|---|---|---|---|
+| GET  | `/api/health` | – | uptime probe |
+| POST | `/api/auth/register` | – | create user (status `PENDING`) |
+| POST | `/api/auth/login` | – | bcryptjs verify → JWT + sanitized user |
+| GET  | `/api/users` | admin | list all users |
+| PATCH| `/api/users/:id/status` | admin | approve / reject (sends Resend email on APPROVED) |
+| DELETE | `/api/users/:id` | admin | cascade-delete user + predictions |
+| PATCH| `/api/users/:id/bet` | self/admin | update tournament bet |
+| GET  | `/api/predictions` | user | `?userId=`, `?userId=&matchId=`, or `?matchIds=1,2,3` |
+| POST | `/api/predictions` | user | upsert one prediction |
+| GET  | `/api/scores` | user | leaderboard (cheap — just reads `users.scores`) |
+| POST | `/api/scores/recalculate` | admin | re-tally from finished matches; optional tournament bonuses |
+| GET  | `/api/football/matches` | user | all WC 2026 matches, normalized shape, cached 60 s |
+| GET  | `/api/football/matches/today` | user | matches kicking off today (UTC), normalized shape |
+| GET  | `/api/football/teams` | user | all WC 2026 teams (for the Tournament Winner dropdown) |
+
+## Scoring rules (single source of truth: `api/_lib/scoring.js`)
+| Outcome | Points |
+|---|---|
+| Exact score, total goals ≤ 4 | 3 |
+| Exact score, total goals ≥ 5 | 5 |
+| Correct result (winner/draw), wrong score | 1 |
+| Wrong result | 0 |
+| Tournament Winner (admin sets actual at tournament end) | 15 |
+| Top Scorer | 5 |
+| Top Assist | 5 |
+
+## Environment variables
+Set these in `.env` locally and in **Vercel project settings** for production.
+
+| Name | Where | Required |
+|---|---|---|
+| `SUPABASE_URL` | server | yes |
+| `SUPABASE_SERVICE_ROLE_KEY` | server | yes |
+| `JWT_SECRET` | server | yes |
+| `SPORTSDB_API_KEY` | server | optional — defaults to the public free key `123` (30 req/min). Register at thesportsdb.com for a private free key, or pay $9/mo for premium V2 (livescores) |
+| `RESEND_API_KEY` | server | optional (no-op when blank) |
+| `RESEND_FROM_EMAIL` | server | optional |
+| `CLIENT_ORIGIN` | server | optional — locks CORS in prod |
+| `VITE_API_BASE_URL` | browser | optional — leave blank to use same-origin `/api` |
+
+The browser **must never** see `SUPABASE_SERVICE_ROLE_KEY`, `SPORTSDB_API_KEY` (even though the default `123` is public), `RESEND_API_KEY`, or `JWT_SECRET`.
+
+## Conventions every agent must follow
+
+### Frontend
+- All user-visible text goes through `useTranslation()` and lives in both `locales/en.json` AND `locales/he.json`. **Never** add a key to one without the other.
+- Use logical CSS properties (`margin-inline-start/end`, `padding-inline-*`, `inset-inline-*`) so layouts flip cleanly in RTL. Avoid `margin-left/right` unless the side is intentionally physical.
+- Date/time formatting: `toLocaleDateString(locale, …)` where `locale = i18n.resolvedLanguage === 'he' ? 'he-IL' : 'en-GB'`.
+- Reuse: `AuthContext` (auth + users + scores), `serverApi` (axios with JWT + 401 handler), `useMatches` (session-cached schedule), `useTodayMatches` (smart polling).
+- CSS Modules only — no global classes, no Tailwind, no styled-components.
+- Mantine components must work in RTL — `MantineDirectionSync` already wires this; do not duplicate.
+
+### Backend (Vercel functions)
+- Files under `api/` are **CommonJS** (`require`/`module.exports`) — `api/package.json` enforces this. Files under `src/` are ESM.
+- Never call `createClient()` at module load. Use the lazy `supabase` Proxy from `api/_lib/supabase.js`.
+- Every TheSportsDB call MUST go through `fetchUpstream(url)` in `api/_lib/football.js` so it shares the 60 s cache + single-flight registry. Never call `axios.get('https://www.thesportsdb.com/...')` directly from a route file.
+- All external football data is normalized server-side via `transformEvent` / `transformTeam` in `api/_lib/football.js`. **Route handlers never leak TheSportsDB field names (`idEvent`, `strHomeTeam`, etc.) to the browser** — the frontend speaks the internal shape (`{ id, utcDate, status, stage, homeTeam: { name, crest, … }, score: { home, away, fullTime }, … }`).
+- Errors: throw or `next(err)`. The central handler in `_lib/errorHandler.js` sanitizes DB errors to a generic message; route-level errors with `err.status` pass through.
+- Auth: `requireAuth` first, `requireAdmin` second (it relies on `req.user`).
+- Users can only mutate their own data unless admin — every protected route enforces this server-side, even if the client already filtered.
+
+### PWA
+- Icons live in `public/`; the manifest is generated by `vite-plugin-pwa` from `vite.config.js`. To regenerate after replacing the source icon, run:
+  ```
+  powershell -ExecutionPolicy Bypass -File scripts/resize-icons.ps1
+  ```
+- The service worker explicitly excludes `/api/*` from navigation fallback, so dynamic backend calls always reach the network.
+
+### Adding a route
+1. Backend: append to (or create) the relevant file under `api/_routes/` and mount it in `api/_app.js`. Always pass `requireAuth` (and `requireAdmin` where appropriate).
+2. Frontend: add a method on `serverApi`, then call it from a hook or component. Translation keys for new UI strings go in BOTH locale files.
+3. Document the new endpoint in this control file's REST surface table.
+
+## Known follow-ups (pick these up as they unblock)
+- **`TOP_SCORERS_LIST` and `TOP_ASSISTS_LIST` are intentionally empty arrays** in `src/utils/constants.js`. The Profile page dropdowns AND the `TopScorersPage` both read from these lists. The owner will paste the final names; agents must not invent them.
+- TheSportsDB **WC 2026 fixtures may still be partial** in the free tier — the bracket fills in as FIFA finalizes draws. `AllGamesPage` shows a "Schedule Not Available Yet" empty state if the season returns no events.
+- **`MatchCard.IN_PLAY` / `PAUSED` states will not appear on TheSportsDB free V1.** Anything that depends on live in-play status (the dormant `LiveScoreBanner`, the "Live!" badge inside `LiveBetsReveal`) only lights up if the project ever moves to TheSportsDB V2 (premium $9/mo). `LiveBetsReveal` itself still works — it now reveals predictions when a match becomes `FINISHED`.
+- The admin must run **POST `/api/scores/recalculate`** after tournament end with `{ tournamentWinner, actualTopScorer, actualTopAssist }` to award the 15/5/5 bonus points. The HomePage admin panel exposes this UI.
+
+## Hard "do not"s
+- Do **not** re-introduce the deleted `server/` Express folder or any non-Vercel host.
+- Do **not** install `bcrypt` (native) — the project uses `bcryptjs`.
+- Do **not** hard-code English (or Hebrew) strings in JSX. Use `t('key')`.
+- Do **not** call TheSportsDB from the browser — always go through `/api/football/*`. The frontend has no business knowing field names like `idEvent` or `strHomeTeam`.
+- Do **not** re-introduce a generic pass-through proxy at `/api/football/*`. The proxy is intentionally narrow: a handful of typed, normalized endpoints so the upstream schema can be swapped without touching the frontend.
+- Do **not** invent player names for `TOP_SCORERS_LIST` / `TOP_ASSISTS_LIST`. The owner supplies them.
+- Do **not** add a new top-level dependency without first checking whether existing libs (Mantine, axios, react-router) already cover the need.
+- Do **not** edit the front-matter `description` of this file or the "Your role" / "What this app is" sections without explicit owner approval — those are product intent, not implementation detail.

@@ -27,13 +27,49 @@
   letter-spacing: -0.5px;
 }
 
+/* ── Hamburger button (mobile only) ───────────────────────────────────────── */
+.menuToggle {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 40px;
+  height: 40px;
+  min-height: 40px;
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+  margin-inline-start: auto;
+  gap: 4px;
+}
+
+.menuToggle span {
+  display: block;
+  width: 22px;
+  height: 2px;
+  background: var(--clr-text-primary);
+  border-radius: 2px;
+  transition: background 0.15s ease;
+}
+
+.menuToggle:hover span { background: var(--clr-accent); }
+
+/* ── Menu panel (links + userArea) ────────────────────────────────────────── */
+.menuPanel {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  flex: 1;
+}
+
 .links {
   display: flex;
   list-style: none;
   gap: 0.25rem;
   margin: 0;
   padding: 0;
-  flex-shrink: 0; /* don't stretch — keeps links away from userArea */
+  flex-shrink: 0;
 }
 
 .links a {
@@ -61,7 +97,7 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  margin-left: auto; /* pushes userArea to the far right */
+  margin-inline-start: auto;
   flex-shrink: 0;
 }
 
@@ -91,21 +127,60 @@
   border-color: transparent;
 }
 
-@media (max-width: 768px) {
-  .nav { padding: 0 1rem; gap: 0.5rem; }
-  .links a { padding: 0.35rem 0.65rem; font-size: 0.85rem; }
-}
-
-@media (max-width: 600px) {
-  .nav { padding: 0 0.75rem; gap: 0.4rem; height: 54px; }
-  .brandText { display: none; }
+/* ── Tablet ───────────────────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .nav { padding: 0 1rem; gap: 0.75rem; }
+  .links a { padding: 0.35rem 0.6rem; font-size: 0.85rem; }
   .username { display: none; }
-  .links { gap: 0.1rem; }
-  .links a { padding: 0.3rem 0.45rem; font-size: 0.75rem; }
-  .logoutBtn { padding: 0.3rem 0.6rem; font-size: 0.75rem; }
 }
 
-@media (max-width: 400px) {
-  .trophy { font-size: 1.1rem; }
-  .links a { padding: 0.25rem 0.35rem; font-size: 0.7rem; }
+/* ── Mobile: collapse links into a slide-down panel ───────────────────────── */
+@media (max-width: 700px) {
+  .nav { padding: 0 0.85rem; height: 56px; gap: 0.5rem; position: relative; }
+
+  .menuToggle { display: flex; }
+
+  .menuPanel {
+    position: absolute;
+    top: 100%;
+    inset-inline: 0;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    background: var(--clr-surface);
+    border-bottom: 1px solid var(--clr-border);
+    padding: 0;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.25s ease, padding 0.2s ease;
+  }
+
+  .menuOpen {
+    max-height: 480px;
+    padding: 0.75rem 0;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+  }
+
+  .links {
+    flex-direction: column;
+    gap: 0;
+    padding: 0 0.5rem;
+  }
+
+  .links a {
+    padding: 0.85rem 1rem;
+    font-size: 1rem;
+    border-radius: 8px;
+  }
+
+  .userArea {
+    flex-direction: row-reverse;
+    justify-content: space-between;
+    padding: 0.5rem 1rem 0.25rem;
+    border-top: 1px solid var(--clr-border);
+    margin-top: 0.5rem;
+    margin-inline-start: 0;
+  }
+
+  .username { display: inline; max-width: none; }
 }

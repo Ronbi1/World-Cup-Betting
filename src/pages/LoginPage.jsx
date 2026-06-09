@@ -1,10 +1,13 @@
 import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
+import LanguageSwitcher from '../components/LanguageSwitcher';
 import styles from './AuthPage.module.css';
 
 export default function LoginPage() {
   const { login } = useAuth();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
@@ -12,7 +15,7 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Show a friendly banner when the user was redirected here because their session expired
+  // ?reason=expired comes from the axios 401 interceptor in serverApi.js
   const sessionExpired = searchParams.get('reason') === 'expired';
 
   const handleChange = (e) => {
@@ -26,54 +29,57 @@ export default function LoginPage() {
     setLoading(true);
     const result = await login(form.email, form.password, form.rememberMe);
     setLoading(false);
-    if (result.success) {
-      navigate('/');
-    } else {
-      setError(result.error);
-    }
+    if (result.success) navigate('/');
+    else setError(result.error);
   };
 
   return (
     <div className={styles.wrapper}>
+      <div className={styles.langCorner}>
+        <LanguageSwitcher />
+      </div>
+
       <div className={styles.card}>
         <div className={styles.header}>
-          <span className={styles.trophy}>🏆</span>
-          <h1 className={styles.title}>World Cup 2026</h1>
-          <p className={styles.subtitle}>Sign in to your account</p>
+          <span className={styles.trophy} aria-hidden="true">🏆</span>
+          <h1 className={styles.title}>{t('auth.login.title')}</h1>
+          <p className={styles.subtitle}>{t('auth.login.subtitle')}</p>
         </div>
 
         {sessionExpired && (
           <div className={styles.warningBanner}>
-            ⏰ Your session has expired. Please sign in again.
+            {t('auth.login.sessionExpired')}
           </div>
         )}
         {error && <div className={styles.errorBanner}>{error}</div>}
 
         <form onSubmit={handleSubmit} className={styles.form}>
           <div className={styles.field}>
-            <label htmlFor="email">Email</label>
+            <label htmlFor="email">{t('auth.login.emailLabel')}</label>
             <input
               id="email"
               type="email"
               name="email"
               value={form.email}
               onChange={handleChange}
-              placeholder="you@example.com"
+              placeholder={t('auth.login.emailPlaceholder')}
               required
               autoFocus
+              autoComplete="email"
             />
           </div>
 
           <div className={styles.field}>
-            <label htmlFor="password">Password</label>
+            <label htmlFor="password">{t('auth.login.passwordLabel')}</label>
             <input
               id="password"
               type="password"
               name="password"
               value={form.password}
               onChange={handleChange}
-              placeholder="••••••••"
+              placeholder={t('auth.login.passwordPlaceholder')}
               required
+              autoComplete="current-password"
             />
           </div>
 
@@ -84,22 +90,18 @@ export default function LoginPage() {
               checked={form.rememberMe}
               onChange={handleChange}
             />
-            Keep me logged in
+            {t('auth.login.rememberMe')}
           </label>
 
           <button type="submit" disabled={loading} className={styles.submitBtn}>
-            {loading ? 'Signing in…' : 'Sign In'}
+            {loading ? t('auth.login.submitting') : t('auth.login.submit')}
           </button>
         </form>
 
         <p className={styles.switchLink}>
-          Don&apos;t have an account?{' '}
-          <Link to="/register">Request access</Link>
+          {t('auth.login.noAccount')}{' '}
+          <Link to="/register">{t('auth.login.requestAccess')}</Link>
         </p>
-
-        {/* <p className={styles.adminHint}>
-          <small>Demo admin: <code>admin@worldcup.com</code> / <code>Admin123!</code></small>
-        </p> */}
       </div>
     </div>
   );

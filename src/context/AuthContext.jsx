@@ -53,11 +53,13 @@ export function AuthProvider({ children }) {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchUsers();
   }, [fetchUsers]);
 
   // Fetch scores once on mount (when a user is logged in)
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (user) fetchScores();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);

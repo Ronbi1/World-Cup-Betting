@@ -1,26 +1,26 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { REG_STATUS } from '../utils/constants';
 import styles from './AdminPage.module.css';
 
-// ─── Confirm Delete Modal ─────────────────────────────────────────────────────
 function DeleteModal({ user, onConfirm, onCancel, loading }) {
+  const { t } = useTranslation();
   return (
     <div className={styles.modalOverlay} onClick={onCancel}>
       <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-        <h3 className={styles.modalTitle}>Delete User</h3>
+        <h3 className={styles.modalTitle}>{t('admin.delete.title')}</h3>
         <p className={styles.modalBody}>
-          Are you sure you want to permanently delete{' '}
-          <strong>{user.name}</strong> ({user.email})?
+          {t('admin.delete.body', { name: user.name, email: user.email })}
           <br />
-          <span className={styles.modalWarn}>This will also remove all their match predictions. This cannot be undone.</span>
+          <span className={styles.modalWarn}>{t('admin.delete.warning')}</span>
         </p>
         <div className={styles.modalActions}>
           <button className={styles.cancelBtn} onClick={onCancel} disabled={loading}>
-            Cancel
+            {t('admin.delete.cancel')}
           </button>
           <button className={styles.deleteConfirmBtn} onClick={onConfirm} disabled={loading}>
-            {loading ? 'Deleting…' : 'Yes, Delete'}
+            {loading ? t('admin.delete.deleting') : t('admin.delete.confirm')}
           </button>
         </div>
       </div>
@@ -28,31 +28,32 @@ function DeleteModal({ user, onConfirm, onCancel, loading }) {
   );
 }
 
-// ─── Main Page ────────────────────────────────────────────────────────────────
 export default function AdminPage() {
   const { users, updateUserStatus, deleteUser, isAdmin } = useAuth();
+  const { t, i18n } = useTranslation();
+  const locale = i18n.resolvedLanguage === 'he' ? 'he-IL' : 'en-GB';
 
-  const [confirmUser, setConfirmUser] = useState(null); // user to delete
-  const [deleting, setDeleting]       = useState(false);
+  const [confirmUser, setConfirmUser] = useState(null);
+  const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState('');
 
   if (!isAdmin) {
     return (
       <main className={styles.page}>
         <div className={styles.denied}>
-          <h2>Access Denied</h2>
-          <p>You do not have permission to view this page.</p>
+          <h2>{t('admin.denied')}</h2>
+          <p>{t('admin.deniedBody')}</p>
         </div>
       </main>
     );
   }
 
-  const pending  = users.filter((u) => u.status === REG_STATUS.PENDING);
+  const pending = users.filter((u) => u.status === REG_STATUS.PENDING);
   const approved = users.filter((u) => u.status === REG_STATUS.APPROVED);
   const rejected = users.filter((u) => u.status === REG_STATUS.REJECTED);
 
   const formatDate = (iso) =>
-    new Date(iso).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    new Date(iso).toLocaleDateString(locale, { day: '2-digit', month: 'short', year: 'numeric' });
 
   const handleDeleteConfirm = async () => {
     if (!confirmUser) return;
@@ -60,21 +61,18 @@ export default function AdminPage() {
     setDeleteError('');
     const result = await deleteUser(confirmUser.id);
     setDeleting(false);
-    if (result.success) {
-      setConfirmUser(null);
-    } else {
-      setDeleteError(result.error);
-    }
+    if (result.success) setConfirmUser(null);
+    else setDeleteError(result.error);
   };
 
-  // ── Shared row component ──────────────────────────────────────────────────
-  const UserRow = ({ u, showActions }) => (
+  // Shared row component (closure captures `t` and helpers)
+  const UserRow = ({ u, showActions, isRejected = false }) => (
     <tr>
       <td>{u.name}</td>
       <td>{u.email}</td>
       <td>{u.bet?.winningTeam ?? <span className={styles.na}>—</span>}</td>
-      <td>{u.bet?.topScorer  ?? <span className={styles.na}>—</span>}</td>
-      <td>{u.bet?.topAssist  ?? <span className={styles.na}>—</span>}</td>
+      <td>{u.bet?.topScorer ?? <span className={styles.na}>—</span>}</td>
+      <td>{u.bet?.topAssist ?? <span className={styles.na}>—</span>}</td>
       <td>{formatDate(u.createdAt)}</td>
       <td className={styles.actions}>
         {showActions && (
@@ -83,17 +81,19 @@ export default function AdminPage() {
               className={styles.approveBtn}
               onClick={() => updateUserStatus(u.id, REG_STATUS.APPROVED)}
             >
-              Approve
+              {isRejected ? t('admin.actions.reapprove') : t('admin.actions.approve')}
             </button>
-            <button
-              className={styles.rejectBtn}
-              onClick={() => updateUserStatus(u.id, REG_STATUS.REJECTED)}
-            >
-              Reject
-            </button>
+            {!isRejected && (
+              <button
+                className={styles.rejectBtn}
+                onClick={() => updateUserStatus(u.id, REG_STATUS.REJECTED)}
+              >
+                {t('admin.actions.reject')}
+              </button>
+            )}
           </>
         )}
-        {!showActions && (
+        {!showActions && !isRejected && (
           <span className={`${styles.statusBadge} ${u.status === REG_STATUS.APPROVED ? styles.approved : styles.rejected}`}>
             {u.status}
           </span>
@@ -101,7 +101,8 @@ export default function AdminPage() {
         <button
           className={styles.deleteBtn}
           onClick={() => { setDeleteError(''); setConfirmUser(u); }}
-          title="Delete user"
+          title={t('admin.actions.delete')}
+          aria-label={t('admin.actions.delete')}
         >
           🗑
         </button>
@@ -109,9 +110,20 @@ export default function AdminPage() {
     </tr>
   );
 
+  const tableHead = (
+    <tr>
+      <th>{t('admin.table.name')}</th>
+      <th>{t('admin.table.email')}</th>
+      <th>{t('admin.table.winnerBet')}</th>
+      <th>{t('admin.table.topScorer')}</th>
+      <th>{t('admin.table.topAssist')}</th>
+      <th>{t('admin.table.registered')}</th>
+      <th>{t('admin.table.actions')}</th>
+    </tr>
+  );
+
   return (
     <main className={styles.page}>
-      {/* Confirm delete modal */}
       {confirmUser && (
         <DeleteModal
           user={confirmUser}
@@ -123,43 +135,36 @@ export default function AdminPage() {
       {deleteError && <p className={styles.deleteError}>{deleteError}</p>}
 
       <div className={styles.header}>
-        <h1 className={styles.title}>Admin Panel</h1>
-        <p className={styles.sub}>Manage user registrations and approvals</p>
+        <h1 className={styles.title}>{t('admin.title')}</h1>
+        <p className={styles.sub}>{t('admin.subtitle')}</p>
       </div>
 
-      {/* Stats */}
       <div className={styles.stats}>
         <div className={styles.stat}>
           <span className={styles.statNum}>{pending.length}</span>
-          <span className={styles.statLabel}>Pending</span>
+          <span className={styles.statLabel}>{t('admin.stats.pending')}</span>
         </div>
         <div className={styles.stat}>
           <span className={styles.statNum}>{approved.length}</span>
-          <span className={styles.statLabel}>Approved</span>
+          <span className={styles.statLabel}>{t('admin.stats.approved')}</span>
         </div>
         <div className={styles.stat}>
           <span className={styles.statNum}>{rejected.length}</span>
-          <span className={styles.statLabel}>Rejected</span>
+          <span className={styles.statLabel}>{t('admin.stats.rejected')}</span>
         </div>
       </div>
 
-      {/* Pending approvals */}
       <section className={styles.section}>
         <h2 className={styles.sectionTitle}>
-          ⏳ Pending Approvals
+          ⏳ {t('admin.section.pending')}
           {pending.length > 0 && <span className={styles.badge}>{pending.length}</span>}
         </h2>
         {pending.length === 0 ? (
-          <p className={styles.empty}>No pending registrations.</p>
+          <p className={styles.empty}>{t('admin.empty.pending')}</p>
         ) : (
           <div className={styles.tableWrapper}>
             <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th>Name</th><th>Email</th><th>Winner Bet</th>
-                  <th>Top Scorer</th><th>Top Assist</th><th>Registered</th><th>Actions</th>
-                </tr>
-              </thead>
+              <thead>{tableHead}</thead>
               <tbody>
                 {pending.map((u) => <UserRow key={u.id} u={u} showActions />)}
               </tbody>
@@ -168,20 +173,14 @@ export default function AdminPage() {
         )}
       </section>
 
-      {/* Approved users */}
       <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>✅ Approved Users</h2>
+        <h2 className={styles.sectionTitle}>✅ {t('admin.section.approved')}</h2>
         {approved.length === 0 ? (
-          <p className={styles.empty}>No approved users.</p>
+          <p className={styles.empty}>{t('admin.empty.approved')}</p>
         ) : (
           <div className={styles.tableWrapper}>
             <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th>Name</th><th>Email</th><th>Winner Bet</th>
-                  <th>Top Scorer</th><th>Top Assist</th><th>Registered</th><th>Actions</th>
-                </tr>
-              </thead>
+              <thead>{tableHead}</thead>
               <tbody>
                 {approved.map((u) => <UserRow key={u.id} u={u} showActions={false} />)}
               </tbody>
@@ -190,44 +189,14 @@ export default function AdminPage() {
         )}
       </section>
 
-      {/* Rejected users */}
       {rejected.length > 0 && (
         <section className={styles.section}>
-          <h2 className={styles.sectionTitle}>❌ Rejected Users</h2>
+          <h2 className={styles.sectionTitle}>❌ {t('admin.section.rejected')}</h2>
           <div className={styles.tableWrapper}>
             <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th>Name</th><th>Email</th><th>Winner Bet</th>
-                  <th>Top Scorer</th><th>Top Assist</th><th>Registered</th><th>Actions</th>
-                </tr>
-              </thead>
+              <thead>{tableHead}</thead>
               <tbody>
-                {rejected.map((u) => (
-                  <tr key={u.id}>
-                    <td>{u.name}</td>
-                    <td>{u.email}</td>
-                    <td>{u.bet?.winningTeam ?? <span className={styles.na}>—</span>}</td>
-                    <td>{u.bet?.topScorer  ?? <span className={styles.na}>—</span>}</td>
-                    <td>{u.bet?.topAssist  ?? <span className={styles.na}>—</span>}</td>
-                    <td>{new Date(u.createdAt).toLocaleDateString('en-GB')}</td>
-                    <td className={styles.actions}>
-                      <button
-                        className={styles.approveBtn}
-                        onClick={() => updateUserStatus(u.id, REG_STATUS.APPROVED)}
-                      >
-                        Re-approve
-                      </button>
-                      <button
-                        className={styles.deleteBtn}
-                        onClick={() => { setDeleteError(''); setConfirmUser(u); }}
-                        title="Delete user"
-                      >
-                        🗑
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {rejected.map((u) => <UserRow key={u.id} u={u} showActions isRejected />)}
               </tbody>
             </table>
           </div>

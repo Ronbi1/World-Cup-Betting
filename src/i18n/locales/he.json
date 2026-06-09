@@ -1,0 +1,266 @@
+{
+  "app": {
+    "title": "הימורי גביע העולם 2026",
+    "tagline": "גביע העולם 2026 · 11 ביוני – 19 ביולי 2026 · ארה״ב, קנדה ומקסיקו"
+  },
+  "lang": {
+    "switch": "שפה",
+    "english": "English",
+    "hebrew": "עברית"
+  },
+  "nav": {
+    "home": "בית",
+    "games": "כל המשחקים",
+    "scorers": "מלך השערים",
+    "profile": "הפרופיל שלי",
+    "admin": "ניהול",
+    "logout": "התנתקות"
+  },
+  "auth": {
+    "login": {
+      "title": "גביע העולם 2026",
+      "subtitle": "התחברות לחשבון שלך",
+      "emailLabel": "אימייל",
+      "emailPlaceholder": "you@example.com",
+      "passwordLabel": "סיסמה",
+      "passwordPlaceholder": "••••••••",
+      "rememberMe": "השאר אותי מחובר",
+      "submit": "התחבר",
+      "submitting": "מתחבר…",
+      "noAccount": "אין לך חשבון?",
+      "requestAccess": "בקש גישה",
+      "sessionExpired": "תוקף ההתחברות פג. אנא התחבר/י שוב."
+    },
+    "register": {
+      "title": "בקשה להצטרף",
+      "subtitle": "המנהל יאשר את חשבונך",
+      "nameLabel": "שם תצוגה",
+      "namePlaceholder": "השם שלך",
+      "emailLabel": "אימייל",
+      "emailPlaceholder": "you@example.com",
+      "passwordLabel": "סיסמה",
+      "passwordPlaceholder": "לפחות 6 תווים",
+      "confirmPasswordLabel": "אימות סיסמה",
+      "confirmPasswordPlaceholder": "הקלד/י סיסמה שוב",
+      "submit": "שלח בקשה",
+      "submitting": "שולח…",
+      "passwordMismatch": "הסיסמאות אינן תואמות.",
+      "passwordTooShort": "הסיסמה חייבת להכיל לפחות 6 תווים.",
+      "haveAccount": "יש לך כבר חשבון?",
+      "signIn": "התחברות",
+      "successTitle": "הבקשה נשלחה!",
+      "successBody": "החשבון שלך ממתין לאישור מנהל. לאחר האישור, התחבר/י וקבע/י את ההימורים שלך לטורניר מדף הפרופיל.",
+      "backToLogin": "חזרה להתחברות"
+    }
+  },
+  "home": {
+    "welcomeBack": "ברוך שובך, {{name}}",
+    "howItWorks": "איך מהמרים?",
+    "rules": {
+      "intro": "נחש/י את התוצאה של כל משחק לפני השריקה. ככל שהניחושים מדויקים יותר, צוברים יותר נקודות.",
+      "exactScore": "תוצאה מדויקת – ניחוש התוצאה הסופית בדיוק → 3 נק׳",
+      "exactScoreHigh": "תוצאה מדויקת (5+ שערים) – משחק עתיר שערים בתוצאה מדויקת → 5 נק׳",
+      "correctResult": "מנצח נכון – המנצח/תיקו נכון אך התוצאה לא → 1 נק׳",
+      "tournamentWinner": "אלוף הטורניר – ניחוש זוכה גביע העולם → 15 נק׳",
+      "topScorer": "מלך השערים – ניחוש זוכה הנעל הזהב → 5 נק׳",
+      "topAssist": "מלך הבישולים – ניחוש שיא הבישולים → 5 נק׳"
+    },
+    "todayMatches": "המשחקים של היום",
+    "noMatchesToday": "אין משחקים מתוכננים להיום.",
+    "noMatchesTodaySub": "ניתן לראות את כל המשחקים בעמוד \"כל המשחקים\".",
+    "loadError": "טעינת משחקי היום נכשלה.",
+    "leaderboard": "טבלת המובילים",
+    "recalc": "חשב נקודות מחדש",
+    "recalcCalculating": "מחשב…",
+    "recalcSuccess": "הנקודות עודכנו!",
+    "bonusToggle": "בונוס סוף טורניר",
+    "bonusNote": "אופציונלי — מלא רק בסיום הטורניר כדי להעניק נקודות בונוס:",
+    "bonusWinningTeam": "הנבחרת המנצחת (15 נק׳)",
+    "bonusTopScorer": "שם מלך השערים (5 נק׳)",
+    "bonusTopAssist": "שם מלך הבישולים (5 נק׳)",
+    "leaderboardEmpty": "אין משתתפים עדיין."
+  },
+  "leaderboard": {
+    "rank": "#",
+    "player": "שחקן",
+    "winnerBet": "ניחוש מנצח",
+    "topScorer": "מלך שערים",
+    "topAssist": "מלך בישולים",
+    "exact": "מדויקים",
+    "results": "מנצחים",
+    "points": "נק׳",
+    "you": "אתה"
+  },
+  "matchCard": {
+    "vs": "נגד",
+    "halfTime": "מחצית"
+  },
+  "matchStatus": {
+    "scheduled": "טרם",
+    "live": "חי",
+    "halfTime": "מחצית",
+    "finished": "סיום",
+    "postponed": "נדחה",
+    "cancelled": "בוטל"
+  },
+  "allGames": {
+    "title": "כל המשחקים",
+    "subtitle": "גביע העולם 2026 · לוח מלא",
+    "filter": {
+      "all": "הכל",
+      "today": "היום ({{count}})",
+      "upcoming": "קרובים",
+      "finished": "הסתיימו"
+    },
+    "noMatchesFilter": "אין משחקים שתואמים את הסינון הנוכחי.",
+    "loadError": "טעינת המשחקים נכשלה: {{error}}",
+    "scheduleNotAvailable": "לוח המשחקים טרם זמין",
+    "scheduleNotAvailableBody": "לוח משחקי גביע העולם 2026 טרם פורסם. נסה/י שוב סמוך לתחילת הטורניר ב-11 ביוני 2026."
+  },
+  "stages": {
+    "GROUP_STAGE": "שלב הבתים",
+    "ROUND_OF_32": "שלב ה-32",
+    "ROUND_OF_16": "שמינית הגמר",
+    "QUARTER_FINALS": "רבע הגמר",
+    "SEMI_FINALS": "חצי הגמר",
+    "THIRD_PLACE": "משחק על מקום שלישי",
+    "FINAL": "הגמר"
+  },
+  "topScorers": {
+    "title": "הנעל הזהב",
+    "subtitleStatic": "גביע העולם 2026 · רשימות מועמדים",
+    "rank": "#",
+    "player": "שחקן",
+    "topScorerCandidates": "מועמדים למלך השערים",
+    "topAssistCandidates": "מועמדים למלך הבישולים",
+    "staticEmptyTitle": "הרשימה טרם פורסמה",
+    "staticEmptyBody": "המנהל יפרסם את רשימת המועמדים לפני תחילת הטורניר.",
+    "staticNote": "אלו השחקנים שניתן לבחור מהם בעמוד הפרופיל בעת ביצוע הימור הטורניר."
+  },
+  "profile": {
+    "title": "הפרופיל שלי",
+    "account": {
+      "heading": "פרטי חשבון",
+      "name": "שם",
+      "email": "אימייל",
+      "joined": "תאריך הצטרפות",
+      "role": "תפקיד"
+    },
+    "summary": {
+      "heading": "סיכום הימורים",
+      "tournamentWinner": "אלוף הטורניר",
+      "topScorer": "מלך השערים",
+      "topAssist": "מלך הבישולים",
+      "matchPredictions": "ניחושי משחקים",
+      "notSet": "לא נבחר"
+    },
+    "predictions": {
+      "heading": "הניחושים שלי",
+      "empty": "עדיין לא ביצעת ניחושים.",
+      "emptySub": "עבור/י ל\"כל המשחקים\" ולחץ/י על משחק כדי לבחור תוצאה."
+    },
+    "bets": {
+      "heading": "הימורי טורניר",
+      "locked": "נעול",
+      "lockedNote": "הטורניר התחיל. הימורי הטורניר שלך נעולים.",
+      "editableNote": "ניתן לשנות את ההימורים עד תחילת הטורניר ב-11 ביוני 2026.",
+      "winnerLabel": "אלוף גביע העולם",
+      "topScorerLabel": "מלך השערים",
+      "topAssistLabel": "מלך הבישולים",
+      "winnerPlaceholder": "בחר/י נבחרת",
+      "playerPlaceholder": "בחר/י שחקן",
+      "save": "שמור הימורים",
+      "saved": "ההימורים נשמרו בהצלחה!",
+      "loading": "טוען…",
+      "loadError": "לא ניתן לטעון את הנבחרות והשחקנים: {{error}}",
+      "playerListUnavailable": "רשימת השחקנים תסופק על-ידי המנהל."
+    },
+    "missingBets": "הימורים חסרים",
+    "missing": {
+      "winner": "אלוף הטורניר",
+      "topScorer": "מלך השערים",
+      "topAssist": "מלך הבישולים"
+    }
+  },
+  "admin": {
+    "title": "פאנל מנהל",
+    "subtitle": "ניהול הרשמות ואישורי משתמשים",
+    "denied": "אין הרשאה",
+    "deniedBody": "אין לך הרשאה לצפות בעמוד זה.",
+    "stats": {
+      "pending": "ממתינים",
+      "approved": "מאושרים",
+      "rejected": "נדחו"
+    },
+    "section": {
+      "pending": "ממתינים לאישור",
+      "approved": "משתמשים מאושרים",
+      "rejected": "משתמשים שנדחו"
+    },
+    "table": {
+      "name": "שם",
+      "email": "אימייל",
+      "winnerBet": "ניחוש מנצח",
+      "topScorer": "מלך שערים",
+      "topAssist": "מלך בישולים",
+      "registered": "תאריך הרשמה",
+      "actions": "פעולות"
+    },
+    "actions": {
+      "approve": "אשר",
+      "reject": "דחה",
+      "reapprove": "אשר מחדש",
+      "delete": "מחק משתמש"
+    },
+    "empty": {
+      "pending": "אין הרשמות ממתינות.",
+      "approved": "אין משתמשים מאושרים."
+    },
+    "delete": {
+      "title": "מחיקת משתמש",
+      "body": "האם למחוק לצמיתות את {{name}} ({{email}})?",
+      "warning": "פעולה זו תמחק גם את כל הניחושים של המשתמש ואין דרך לחזור ממנה.",
+      "cancel": "ביטול",
+      "confirm": "כן, מחק",
+      "deleting": "מוחק…"
+    }
+  },
+  "betModal": {
+    "title": "ניחוש תוצאה",
+    "cancel": "ביטול",
+    "save": "שמור ניחוש",
+    "incompleteTitle": "ניחוש חסר",
+    "incompleteBody": "יש להזין תוצאה לשתי הנבחרות.",
+    "savedTitle": "הניחוש נשמר!",
+    "errorTitle": "שגיאה",
+    "errorBody": "שמירת הניחוש נכשלה. נסה/י שוב."
+  },
+  "liveBets": {
+    "title": "ניחושים נחשפים",
+    "subtitle": "ההימורים נחשפים כשהמשחק מתחיל",
+    "noPredictions": "אף אחד לא ניחש את המשחק הזה.",
+    "table": {
+      "player": "שחקן",
+      "predictedScore": "תוצאה מנוחשת",
+      "status": "סטטוס"
+    },
+    "result": {
+      "exact": "בול!",
+      "result": "מנצח נכון",
+      "wrong": "טעות",
+      "pending": "ממתין",
+      "noBet": "אין הימור"
+    }
+  },
+  "common": {
+    "yes": "כן",
+    "no": "לא",
+    "loading": "טוען…",
+    "error": "שגיאה",
+    "save": "שמור",
+    "cancel": "ביטול",
+    "close": "סגור",
+    "refresh": "רענן",
+    "tryAgain": "נסה שוב"
+  }
+}
