@@ -64,7 +64,9 @@ export default function LiveScoreBanner({ matches, lastUpdated, onRefresh }) {
                 ) : (
                   <span className={styles.inPlayBadge}>
                     <span className={styles.dot} />
-                    {t('matchStatus.live')}
+                    {match.timeElapsed
+                      ? `${match.timeElapsed}'`
+                      : t('matchStatus.live')}
                   </span>
                 )}
               </div>

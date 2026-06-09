@@ -6,6 +6,7 @@ import MatchCard from '../components/MatchCard';
 import SkeletonCard from '../components/SkeletonCard';
 import BetModal from '../components/BetModal';
 import LiveBetsReveal from '../components/LiveBetsReveal';
+import LiveScoreBanner from '../components/LiveScoreBanner';
 import { MATCH_STATUS, STAGE_ORDER } from '../utils/constants';
 import styles from './AllGamesPage.module.css';
 
@@ -32,7 +33,7 @@ const isToday = (utcDate) => {
 };
 
 export default function AllGamesPage() {
-  const { matches, loading, error } = useMatches();
+  const { matches, loading, error, lastUpdated, refresh } = useMatches();
   const { user, users } = useAuth();
   const { t } = useTranslation();
   const [activeStage, setActiveStage] = useState('GROUP_STAGE');
@@ -79,6 +80,14 @@ export default function AllGamesPage() {
         <h1 className={styles.title}>{t('allGames.title')}</h1>
         <p className={styles.sub}>{t('allGames.subtitle')}</p>
       </div>
+
+      {!loading && matches.length > 0 && (
+        <LiveScoreBanner
+          matches={matches}
+          lastUpdated={lastUpdated}
+          onRefresh={refresh}
+        />
+      )}
 
       <div className={styles.stageTabs}>
         {loading

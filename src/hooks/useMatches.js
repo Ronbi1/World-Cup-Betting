@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { fetchMatches, parseApiError } from '../services/footballService';
 
 /**
@@ -18,6 +18,29 @@ export function useMatches() {
   const [matches, setMatches] = useState(cache.data ?? []);
   const [loading, setLoading] = useState(cache.data === null);
   const [error, setError] = useState(cache.error);
+  const [lastUpdated, setLastUpdated] = useState(cache.data ? new Date() : null);
+
+  const refresh = useCallback(async () => {
+    cache.data = null;
+    cache.error = null;
+    cache.promise = fetchMatches();
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await cache.promise;
+      cache.data = data;
+      cache.error = null;
+      setMatches(data);
+      setLastUpdated(new Date());
+    } catch (err) {
+      const msg = parseApiError(err);
+      cache.error = msg;
+      cache.promise = null;
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     // Already have cached data — nothing to do
@@ -39,6 +62,7 @@ export function useMatches() {
         cache.error = null;
         if (!cancelled) {
           setMatches(data);
+          setLastUpdated(new Date());
         }
       } catch (err) {
         const msg = parseApiError(err);
@@ -54,7 +78,7 @@ export function useMatches() {
     return () => { cancelled = true; };
   }, []);
 
-  return { matches, loading, error };
+  return { matches, loading, error, lastUpdated, refresh };
 }
 
 /** Call this to manually bust the cache (e.g. after admin enters results) */

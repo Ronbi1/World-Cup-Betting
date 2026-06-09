@@ -7,13 +7,20 @@ import MatchCard from '../components/MatchCard';
 import SkeletonCard from '../components/SkeletonCard';
 import BetModal from '../components/BetModal';
 import LiveBetsReveal from '../components/LiveBetsReveal';
+import LiveScoreBanner from '../components/LiveScoreBanner';
 import styles from './HomePage.module.css';
 
 export default function HomePage() {
   const { user, users, scores, isAdmin, recalculateScores } = useAuth();
   const { t } = useTranslation();
 
-  const { matches: todayMatches, loading: loadingMatches, error: matchError } = useTodayMatches();
+  const {
+    matches: todayMatches,
+    loading: loadingMatches,
+    error: matchError,
+    lastUpdated,
+    refresh: refreshMatches,
+  } = useTodayMatches();
 
   const [selectedMatch, setSelectedMatch] = useState(null);
   const [modalOpened, setModalOpened] = useState(false);
@@ -76,6 +83,14 @@ export default function HomePage() {
 
   return (
     <main className={styles.page}>
+      {!loadingMatches && todayMatches.length > 0 && (
+        <LiveScoreBanner
+          matches={todayMatches}
+          lastUpdated={lastUpdated}
+          onRefresh={refreshMatches}
+        />
+      )}
+
       <section className={styles.welcome}>
         <h1 className={styles.welcomeTitle}>
           <Trans

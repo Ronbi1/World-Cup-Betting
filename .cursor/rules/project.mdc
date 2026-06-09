@@ -17,7 +17,7 @@ It must be:
 - Free to host (Vercel + Supabase free tiers — no paid Node host).
 - Installable as a PWA on iOS and Android.
 - Bilingual (English + Hebrew with full RTL).
-- Strict on rate limits — TheSportsDB free tier is 30 req/min. The serverless `/api/football/*` layer caches for 60 s and uses single-flight de-dupe to stay well under that.
+- Strict on rate limits — worldcup26.ir may return 429. The serverless `/api/football/*` layer caches games for 30 s (teams longer) and uses single-flight de-dupe to stay polite.
 
 ---
 
@@ -25,7 +25,7 @@ It must be:
 - **Frontend:** React 19 + Vite 7 + Mantine v8, deployed to **Vercel**.
 - **Database:** **Supabase** (Postgres). Tables: `users`, `predictions`.
 - **Backend logic:** Vercel **Serverless Functions** under `/api/*`. Do **not** use Railway or any other Node host — keep hosting to Vercel + Supabase only, free of charge.
-- **External APIs:** TheSportsDB v1 (free key `123` by default, kept server-side; FIFA World Cup is league `4429`, season `2026`), Resend (email, optional).
+- **External APIs:** [worldcup26.ir](https://worldcup26.ir/api-docs/) (WC 2026 fixtures + live scores; optional JWT service account kept server-side), Resend (email, optional).
 - Secrets live in Vercel env vars. The browser only sees `VITE_*` public vars.
 - Passwords hashed with **bcryptjs** (pure JS — `bcrypt` native binary breaks on Vercel).
 - Auth is **JWT** (7-day expiry), signed server-side, attached by `serverApi` axios interceptor.
@@ -40,8 +40,8 @@ The app must support Hebrew. Use a single i18n layer (`react-i18next`) with `en`
 Football fixtures only change between stages, not during them. Therefore:
 - **One API call per stage** (Group Stage, R32, R16, QF, SF, Third Place, Final). Cache the result client-side (`useMatches`) until the stage advances.
 - **Never refetch the full schedule on route change.**
-- TheSportsDB free V1 does **not** provide in-play / live status — events flip directly from `SCHEDULED` to `FINISHED`. The `useTodayMatches` hook therefore polls slowly (every 5 minutes) and on tab-visibility changes; there is no fast in-play polling. Live in-play scores would require a paid upgrade to TheSportsDB V2 ($9/mo).
-- The serverless `/api/football/*` proxy adds a 60 s in-memory cache + single-flight to absorb bursts. It also caches the per-team metadata (badges, short names) for the lifetime of the serverless instance.
+- worldcup26.ir exposes live status via `time_elapsed` + `finished`. `useTodayMatches` polls adaptively: 30 s during `IN_PLAY`/`PAUSED`, 60 s within 15 min of kickoff, 5 min otherwise, plus refetch on tab visibility.
+- The serverless `/api/football/*` proxy adds a 30 s games cache + single-flight to absorb bursts. Team metadata (flags, names) is cached for the lifetime of the serverless instance.
 
 ## Profile page (`/profile`) — required content
 1. **Account details:** name, email, joined date.
@@ -79,8 +79,8 @@ World-Cup/
 │   ├── package.json              # { "type": "commonjs" } — overrides root ESM
 │   ├── _lib/
 │   │   ├── supabase.js           # lazy Proxy client (service-role key)
-│   │   ├── football.js           # TheSportsDB v1 client: URL builder, cached
-│   │   │                         #   single-flight fetcher, transformEvent/Team,
+│   │   ├── football.js           # worldcup26.ir client: optional JWT auth,
+│   │   │                         #   cached single-flight fetcher, transformGame/Team,
 │   │   │                         #   status & stage mappers, teams cache,
 │   │   │                         #   fetchSeasonMatches / fetchTodayMatches /
 │   │   │                         #   fetchAllTeams / fetchFinishedMatches
@@ -121,9 +121,7 @@ World-Cup/
 │   │   ├── MatchCard.jsx  TeamFlag.jsx  SkeletonCard.jsx
 │   │   ├── BetModal.jsx          # Mantine Modal + NumberInput, upsert prediction
 │   │   ├── LiveBetsReveal.jsx    # everyone's predictions for started/finished matches
-│   │   └── LiveScoreBanner.jsx   # DORMANT — only renders for IN_PLAY matches, which
-│   │                             #   TheSportsDB free V1 never reports. Kept for the
-│   │                             #   day someone upgrades to V2 livescores.
+│   │   └── LiveScoreBanner.jsx   # live score strip on HomePage (IN_PLAY / PAUSED)
 │   ├── context/AuthContext.jsx
 │   ├── hooks/{useMatches, useTodayMatches}.js
 │   ├── services/{footballService, serverApi}.js
@@ -158,7 +156,7 @@ The Express app inside the function is mounted **with the `/api/` prefix** becau
 | POST | `/api/predictions` | user | upsert one prediction |
 | GET  | `/api/scores` | user | leaderboard (cheap — just reads `users.scores`) |
 | POST | `/api/scores/recalculate` | admin | re-tally from finished matches; optional tournament bonuses |
-| GET  | `/api/football/matches` | user | all WC 2026 matches, normalized shape, cached 60 s |
+| GET  | `/api/football/matches` | user | all WC 2026 matches (104), normalized shape, cached 30 s |
 | GET  | `/api/football/matches/today` | user | matches kicking off today (UTC), normalized shape |
 | GET  | `/api/football/teams` | user | all WC 2026 teams (for the Tournament Winner dropdown) |
 
@@ -181,13 +179,15 @@ Set these in `.env` locally and in **Vercel project settings** for production.
 | `SUPABASE_URL` | server | yes |
 | `SUPABASE_SERVICE_ROLE_KEY` | server | yes |
 | `JWT_SECRET` | server | yes |
-| `SPORTSDB_API_KEY` | server | optional — defaults to the public free key `123` (30 req/min). Register at thesportsdb.com for a private free key, or pay $9/mo for premium V2 (livescores) |
+| `WC26_API_BASE_URL` | server | optional — defaults to `https://worldcup26.ir` |
+| `WC26_API_EMAIL` | server | optional — service account for upstream JWT if required |
+| `WC26_API_PASSWORD` | server | optional — paired with `WC26_API_EMAIL` |
 | `RESEND_API_KEY` | server | optional (no-op when blank) |
 | `RESEND_FROM_EMAIL` | server | optional |
 | `CLIENT_ORIGIN` | server | optional — locks CORS in prod |
 | `VITE_API_BASE_URL` | browser | optional — leave blank to use same-origin `/api` |
 
-The browser **must never** see `SUPABASE_SERVICE_ROLE_KEY`, `SPORTSDB_API_KEY` (even though the default `123` is public), `RESEND_API_KEY`, or `JWT_SECRET`.
+The browser **must never** see `SUPABASE_SERVICE_ROLE_KEY`, `WC26_API_PASSWORD`, `RESEND_API_KEY`, or `JWT_SECRET`.
 
 ## Conventions every agent must follow
 
@@ -202,8 +202,8 @@ The browser **must never** see `SUPABASE_SERVICE_ROLE_KEY`, `SPORTSDB_API_KEY` (
 ### Backend (Vercel functions)
 - Files under `api/` are **CommonJS** (`require`/`module.exports`) — `api/package.json` enforces this. Files under `src/` are ESM.
 - Never call `createClient()` at module load. Use the lazy `supabase` Proxy from `api/_lib/supabase.js`.
-- Every TheSportsDB call MUST go through `fetchUpstream(url)` in `api/_lib/football.js` so it shares the 60 s cache + single-flight registry. Never call `axios.get('https://www.thesportsdb.com/...')` directly from a route file.
-- All external football data is normalized server-side via `transformEvent` / `transformTeam` in `api/_lib/football.js`. **Route handlers never leak TheSportsDB field names (`idEvent`, `strHomeTeam`, etc.) to the browser** — the frontend speaks the internal shape (`{ id, utcDate, status, stage, homeTeam: { name, crest, … }, score: { home, away, fullTime }, … }`).
+- Every worldcup26.ir call MUST go through `wc26Request()` / `fetchUpstream()` in `api/_lib/football.js` so it shares the cache + single-flight registry. Never call `axios.get('https://worldcup26.ir/...')` directly from a route file.
+- All external football data is normalized server-side via `transformGame` / `transformTeam` in `api/_lib/football.js`. **Route handlers never leak upstream field names (`home_team_id`, `time_elapsed`, etc.) to the browser** — the frontend speaks the internal shape (`{ id, utcDate, status, stage, homeTeam: { name, crest, … }, score: { home, away, fullTime }, … }`).
 - Errors: throw or `next(err)`. The central handler in `_lib/errorHandler.js` sanitizes DB errors to a generic message; route-level errors with `err.status` pass through.
 - Auth: `requireAuth` first, `requireAdmin` second (it relies on `req.user`).
 - Users can only mutate their own data unless admin — every protected route enforces this server-side, even if the client already filtered.
@@ -222,15 +222,15 @@ The browser **must never** see `SUPABASE_SERVICE_ROLE_KEY`, `SPORTSDB_API_KEY` (
 
 ## Known follow-ups (pick these up as they unblock)
 - **`TOP_SCORERS_LIST` and `TOP_ASSISTS_LIST` are intentionally empty arrays** in `src/utils/constants.js`. The Profile page dropdowns AND the `TopScorersPage` both read from these lists. The owner will paste the final names; agents must not invent them.
-- TheSportsDB **WC 2026 fixtures may still be partial** in the free tier — the bracket fills in as FIFA finalizes draws. `AllGamesPage` shows a "Schedule Not Available Yet" empty state if the season returns no events.
-- **`MatchCard.IN_PLAY` / `PAUSED` states will not appear on TheSportsDB free V1.** Anything that depends on live in-play status (the dormant `LiveScoreBanner`, the "Live!" badge inside `LiveBetsReveal`) only lights up if the project ever moves to TheSportsDB V2 (premium $9/mo). `LiveBetsReveal` itself still works — it now reveals predictions when a match becomes `FINISHED`.
+- Knockout bracket slots in worldcup26.ir may show placeholder labels (`Winner Match 74`, etc.) until teams are determined. `AllGamesPage` shows a "Schedule Not Available Yet" empty state if `/get/games` returns no events.
+- **Match IDs are worldcup26 `1`–`104`**, not TheSportsDB `idEvent` values. Any predictions stored under old IDs will not join to the new schedule.
 - The admin must run **POST `/api/scores/recalculate`** after tournament end with `{ tournamentWinner, actualTopScorer, actualTopAssist }` to award the 15/5/5 bonus points. The HomePage admin panel exposes this UI.
 
 ## Hard "do not"s
 - Do **not** re-introduce the deleted `server/` Express folder or any non-Vercel host.
 - Do **not** install `bcrypt` (native) — the project uses `bcryptjs`.
 - Do **not** hard-code English (or Hebrew) strings in JSX. Use `t('key')`.
-- Do **not** call TheSportsDB from the browser — always go through `/api/football/*`. The frontend has no business knowing field names like `idEvent` or `strHomeTeam`.
+- Do **not** call worldcup26.ir from the browser — always go through `/api/football/*`. The frontend has no business knowing upstream field names like `home_team_id` or `time_elapsed`.
 - Do **not** re-introduce a generic pass-through proxy at `/api/football/*`. The proxy is intentionally narrow: a handful of typed, normalized endpoints so the upstream schema can be swapped without touching the frontend.
 - Do **not** invent player names for `TOP_SCORERS_LIST` / `TOP_ASSISTS_LIST`. The owner supplies them.
 - Do **not** add a new top-level dependency without first checking whether existing libs (Mantine, axios, react-router) already cover the need.
