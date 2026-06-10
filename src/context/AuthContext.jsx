@@ -9,11 +9,9 @@ import { extractApiError } from '../utils/apiErrors';
 // "useAuth must be used inside <AuthProvider>").
 import { AuthContext } from './useAuth';
 
-// ─── Session helpers (logged-in user stays in localStorage) ───────────────────
-// Persistence is unconditional now — the user object lives in localStorage
-// for as long as the JWT does, so a browser refresh never logs the user out
-// while the token is still valid. The "Remember me" checkbox on the login
-// form is preserved in the UI but no longer gates persistence.
+// ─── Session helpers (wc_user is a non-sensitive UI cache only) ─────────────
+// The JWT lives in the HttpOnly wc_session cookie. wc_user hydrates the UI
+// instantly on refresh while /auth/me validates the cookie in the background.
 const loadSession = () => {
   try {
     const raw = localStorage.getItem(STORAGE_KEYS.USER);
@@ -44,12 +42,12 @@ export function AuthProvider({ children }) {
   const [scores, setScores]       = useState([]); // [{ userId, points, correctResults, exactScores }]
   const [loadingUsers, setLoadingUsers] = useState(true);
 
-  // authReady starts true if there is no token at all (nothing to verify),
-  // otherwise false until /auth/me resolves once. ProtectedRoute waits for
-  // this gate so a valid logged-in user is never bounced to /login mid-boot.
-  const [authReady, setAuthReady] = useState(() => !localStorage.getItem('wc_token'));
+  // Always false on boot — /auth/me must run once to validate the cookie.
+  // ProtectedRoute waits for authReady so a valid logged-in user is never
+  // bounced to /login mid-boot.
+  const [authReady, setAuthReady] = useState(false);
 
-  // ── Boot: verify the token via /api/auth/me, refresh cached user ──────────
+  // ── Boot: validate HttpOnly cookie via /api/auth/me ───────────────────────
   // StrictMode-safe: the `cancelled` flag + cleanup is the sole de-dup
   // mechanism. A previous version also used a useRef guard to short-circuit
   // the second mount, but that combined with StrictMode's
@@ -61,43 +59,33 @@ export function AuthProvider({ children }) {
   // effects, so only one /auth/me request is made.
   //
   // Failure modes:
-  //   • 401 / 403 → token invalid or user no longer APPROVED. Clear locally
-  //     and let the React render redirect to /login naturally. We do NOT
-  //     trigger window.location.href here — serverApi's 401 interceptor is
-  //     told to skip /auth/me so there's no double-redirect, no loop.
-  //   • Network / 5xx → keep cached user, surface a console warning, mark
+  //   • 401 / 403 → cookie invalid or user no longer APPROVED. Clear cache
+  //     and let the React render redirect to /login naturally.
+  //   • Network / 5xx → keep cached wc_user, surface a console warning, mark
   //     auth ready so the app is usable; next real API call will surface
   //     any real auth issue through the normal interceptor path.
   useEffect(() => {
-    const token = localStorage.getItem('wc_token');
-    if (!token) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setUser(null);
-      saveSession(null);
-      setAuthReady(true);
-      return;
-    }
+    // Legacy: purge pre-cookie JWT from localStorage (one-time re-login).
+    localStorage.removeItem('wc_token');
 
     let cancelled = false;
     (async () => {
       try {
+        // /auth/me always returns 200: { user } when logged in, { user: null }
+        // when not. Avoids browser 401 console noise on every cold boot.
         const { data } = await serverApi.get('/auth/me');
         if (cancelled) return;
-        const fresh = sessionFromServer(data.user);
-        setUser(fresh);
-        saveSession(fresh);
-      } catch (err) {
-        if (cancelled) return;
-        const status = err?.response?.status;
-        if (status === 401 || status === 403) {
-          // Token is invalid or user no longer approved — full cleanup.
-          localStorage.removeItem('wc_token');
+        if (data.user) {
+          const fresh = sessionFromServer(data.user);
+          setUser(fresh);
+          saveSession(fresh);
+        } else {
           saveSession(null);
           setUser(null);
-        } else {
-          // Transient — keep cached user (if any).
-          console.warn('[AuthContext] /auth/me probe failed (non-401):', err?.message);
         }
+      } catch (err) {
+        if (cancelled) return;
+        console.warn('[AuthContext] /auth/me probe failed:', err?.message);
       } finally {
         if (!cancelled) setAuthReady(true);
       }
@@ -147,18 +135,10 @@ export function AuthProvider({ children }) {
   }, [user?.id]);
 
   // ── Login ──────────────────────────────────────────────────────────────────
-  // rememberMe is kept as an argument for API compatibility with LoginPage,
-  // but persistence is now unconditional — the user stays logged in until
-  // they explicitly log out or the JWT expires (the axios 401 interceptor
-  // then redirects them to /login?reason=expired).
-  const login = useCallback(async (email, password /* rememberMe */) => {
+  const login = useCallback(async (email, password, rememberMe = false) => {
     try {
-      const { data } = await serverApi.post('/auth/login', { email, password });
-      const { token, user: userData } = data;
-
-      localStorage.setItem('wc_token', token);
-
-      const sessionUser = sessionFromServer(userData);
+      const { data } = await serverApi.post('/auth/login', { email, password, rememberMe });
+      const sessionUser = sessionFromServer(data.user);
 
       setUser(sessionUser);
       saveSession(sessionUser);
@@ -170,7 +150,6 @@ export function AuthProvider({ children }) {
         setLoadingUsers(false);
       }
 
-      // Load leaderboard scores for everyone
       fetchScores();
 
       return { success: true };
@@ -190,12 +169,16 @@ export function AuthProvider({ children }) {
   }, []);
 
   // ── Logout ─────────────────────────────────────────────────────────────────
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
+    try {
+      await serverApi.post('/auth/logout');
+    } catch (err) {
+      console.warn('[AuthContext] logout request failed:', err?.message);
+    }
     setUser(null);
     setUsers([]);
     setScores([]);
     saveSession(null);
-    localStorage.removeItem('wc_token');
   }, []);
 
   // ── Admin: approve / reject ────────────────────────────────────────────────

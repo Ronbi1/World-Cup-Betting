@@ -9,25 +9,20 @@ import { STORAGE_KEYS } from '../utils/constants';
  *   • Local dev (vite)      → "/api" (Vite proxies to http://localhost:3000)
  *   • Custom hosting        → set VITE_API_BASE_URL to a full URL.
  *
- * The JWT token is auto-attached to every request.
+ * Auth is via HttpOnly wc_session cookie (withCredentials: true).
  */
 const serverApi = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
   timeout: 10_000,
+  withCredentials: true,
   headers: { 'Content-Type': 'application/json' },
-});
-
-serverApi.interceptors.request.use((config) => {
-  const token = localStorage.getItem('wc_token');
-  if (token) config.headers['Authorization'] = `Bearer ${token}`;
-  return config;
 });
 
 serverApi.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      const hadToken = !!localStorage.getItem('wc_token');
+      const hadSession = !!localStorage.getItem(STORAGE_KEYS.USER);
       const url = error.config?.url || '';
       // Anti-loop: /auth/me is the boot validation probe used by
       // AuthContext. If it fails with 401/403, AuthContext does its own
@@ -36,9 +31,8 @@ serverApi.interceptors.response.use(
       // hard reload, restart auth boot, and risk a redirect loop.
       const isAuthMeProbe = url.endsWith('/auth/me') || url.includes('/auth/me?');
 
-      localStorage.removeItem('wc_token');
       localStorage.removeItem(STORAGE_KEYS.USER);
-      if (hadToken && !isAuthMeProbe) {
+      if (hadSession && !isAuthMeProbe) {
         window.location.href = '/login?reason=expired';
       }
     }

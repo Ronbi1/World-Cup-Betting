@@ -3,7 +3,8 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { randomUUID } = require('crypto');
 const { supabase } = require('../_lib/supabase');
-const { requireAuth } = require('../_lib/auth');
+const { extractToken, decodeToken } = require('../_lib/auth');
+const { setSessionCookie, clearSessionCookie } = require('../_lib/sessionCookie');
 
 const router = express.Router();
 
@@ -54,7 +55,7 @@ async function migratePassword(userId, plainPassword) {
 // POST /api/auth/login
 router.post('/login', async (req, res, next) => {
   try {
-    const { email, password } = req.body || {};
+    const { email, password, rememberMe } = req.body || {};
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password are required.' });
     }
@@ -82,7 +83,9 @@ router.post('/login', async (req, res, next) => {
       return res.status(403).json({ error: 'Your registration was rejected. Contact the admin.' });
     }
 
-    return res.status(200).json({ token: signToken(user), user: sanitizeUser(user) });
+    const token = signToken(user);
+    setSessionCookie(res, token, { rememberMe: !!rememberMe });
+    return res.status(200).json({ user: sanitizeUser(user) });
   } catch (err) {
     next(err);
   }
@@ -144,26 +147,34 @@ router.post('/register', async (req, res, next) => {
   }
 });
 
-// GET /api/auth/me — verify the JWT and return the fresh sanitized user.
-// Used by the frontend on app boot to:
-//   1. Keep the user logged in across page refresh.
-//   2. Catch tokens that are still valid but belong to users whose row has
-//      been deleted or whose status was flipped to REJECTED post-issuance.
-//   3. Surface up-to-date `bet` / `scores` / `status` immediately on reload
-//      instead of trusting potentially stale localStorage.
-router.get('/me', requireAuth, async (req, res, next) => {
+// POST /api/auth/logout — clear the HttpOnly session cookie.
+router.post('/logout', (_req, res) => {
+  clearSessionCookie(res);
+  return res.status(200).json({ ok: true });
+});
+
+// GET /api/auth/me — session probe for app boot.
+// Always returns 200 so the browser does not log a 401 on every cold start
+// when no wc_session cookie exists. { user: null } means not logged in.
+router.get('/me', async (req, res, next) => {
   try {
+    const token = extractToken(req);
+    const decoded = decodeToken(token);
+
+    if (!decoded) {
+      if (token) clearSessionCookie(res);
+      return res.status(200).json({ user: null });
+    }
+
     const { data: user, error } = await supabase
       .from('users')
       .select('id, email, name, role, status, created_at, bet, scores')
-      .eq('id', req.user.id)
+      .eq('id', decoded.id)
       .single();
 
-    if (error || !user) {
-      return res.status(403).json({ error: 'User not found or no longer active.' });
-    }
-    if (user.status !== 'APPROVED') {
-      return res.status(403).json({ error: 'Your account is not approved.' });
+    if (error || !user || user.status !== 'APPROVED') {
+      clearSessionCookie(res);
+      return res.status(200).json({ user: null });
     }
 
     return res.status(200).json({ user: sanitizeUser(user) });

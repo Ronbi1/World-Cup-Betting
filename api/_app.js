@@ -3,6 +3,7 @@
 // project rule mandates Vercel + Supabase only, no separate Node host.
 const express = require('express');
 const cors = require('cors');
+const cookieParser = require('cookie-parser');
 
 const authRoutes = require('./_routes/auth.routes');
 const usersRoutes = require('./_routes/users.routes');
@@ -21,6 +22,7 @@ app.use(
     allowedHeaders: ['Content-Type', 'Authorization'],
   })
 );
+app.use(cookieParser());
 app.use(express.json({ limit: '256kb' }));
 
 // Vercel forwards req.url with the full /api/* prefix intact. Mount routers

@@ -31,14 +31,15 @@ export const STAGE_ORDER = [
 ];
 
 // ─── Local storage keys ──────────────────────────────────────────────────────
-// Only keys actively used. Legacy keys (wc_users_db, wc_bets,
-// wc_match_predictions, wc_scores) belonged to the pre-backend era and are
-// purged from localStorage on app boot (see App.jsx).
+// wc_user is a non-sensitive UI cache only — the JWT lives in the HttpOnly
+// wc_session cookie. Legacy keys are purged from localStorage on app boot
+// (see App.jsx).
 export const STORAGE_KEYS = {
   USER: 'wc_user',
 };
 
 export const LEGACY_STORAGE_KEYS = [
+  'wc_token',
   'wc_users_db',
   'wc_match_predictions',
   'wc_bets',

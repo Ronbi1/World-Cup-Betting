@@ -1,13 +1,38 @@
 // JWT auth middleware shared by every protected route.
 const jwt = require('jsonwebtoken');
+const { COOKIE_NAME } = require('./sessionCookie');
 
-function requireAuth(req, res, next) {
+function extractToken(req) {
+  const cookieToken = req.cookies?.[COOKIE_NAME];
+  if (cookieToken) return cookieToken;
+
   const header = req.headers['authorization'];
-  if (!header || !header.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'Authentication required.' });
+  if (header && header.startsWith('Bearer ')) {
+    return header.split(' ')[1] || null;
   }
 
-  const token = header.split(' ')[1];
+  return null;
+}
+
+// Soft decode for GET /auth/me session probe — returns null on missing/invalid token.
+function decodeToken(token) {
+  if (!token) return null;
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    return {
+      id: decoded.id,
+      email: decoded.email,
+      name: decoded.name,
+      role: decoded.role,
+      status: decoded.status,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function requireAuth(req, res, next) {
+  const token = extractToken(req);
   if (!token) {
     return res.status(401).json({ error: 'Authentication required.' });
   }
@@ -40,4 +65,4 @@ function requireAdmin(req, res, next) {
   next();
 }
 
-module.exports = { requireAuth, requireAdmin };
+module.exports = { requireAuth, requireAdmin, extractToken, decodeToken };
