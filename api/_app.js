@@ -1,5 +1,5 @@
 // Single Express app shared by every Vercel Serverless invocation and by the
-// local dev server (api/_local-dev.js). Every backend route lives here — the
+// local dev server (dev-server.cjs). Every backend route lives here — the
 // project rule mandates Vercel + Supabase only, no separate Node host.
 const express = require('express');
 const cors = require('cors');

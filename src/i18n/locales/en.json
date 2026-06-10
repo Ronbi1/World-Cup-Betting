@@ -22,6 +22,8 @@
     "pageSubtitle": "Everything you need to know about how the pool works.",
     "howScoringWorksTitle": "How Scoring Updates",
     "howScoringWorksBody": "Once a match finishes upstream, the leaderboard updates automatically within about a minute. There is no need for an admin to recalculate after every match — the recalculate button is only used at the end of the tournament to award the winner / top scorer / top assist bonuses.",
+    "exactScoreBonusTitle": "Exact-Score Bonus",
+    "exactScoreBonusBody": "Once you reach 3 exact-score predictions, you receive a one-time +3 point bonus. The bonus is awarded once and does not increase as you accumulate more exact-score hits.",
     "privacyTitle": "Predictions Privacy",
     "privacyBody": "Other participants' predictions are kept private until kickoff. The moment the match starts (by kickoff time or live status), everyone's predictions become visible on the homepage Live Predictions panel."
   },
@@ -70,6 +72,7 @@
       "exactScore": "Exact Score — predict the exact final score → 3 pts",
       "exactScoreHigh": "Exact Score (5+ goals) — high-scoring game, exact score → 5 pts",
       "correctResult": "Correct Result — right winner or draw, wrong score → 1 pt",
+      "exactScoreBonus": "Exact-Score Bonus — 3 or more exact-score hits across the tournament → one-time +3 pts",
       "tournamentWinner": "Tournament Winner — pick the World Cup champion → 15 pts",
       "topScorer": "Top Scorer — pick the Golden Boot winner → 5 pts",
       "topAssist": "Top Assist — pick the most-assists player → 5 pts"
@@ -98,7 +101,9 @@
     "exact": "Exact",
     "results": "Results",
     "points": "Pts",
-    "you": "you"
+    "you": "you",
+    "exactBonusBadge": "+3",
+    "exactBonusTooltip": "One-time +3 bonus for reaching 3 exact-score predictions."
   },
   "matchCard": {
     "vs": "vs",

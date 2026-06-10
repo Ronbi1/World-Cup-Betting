@@ -274,3 +274,28 @@
   .table th, .table td { padding: 0.4rem 0.4rem; }
   .playerName { max-width: 110px; }
 }
+
+/* One-time +3 exact-score bonus chip — subtle gold pill rendered next to
+   `points` when row.exactScoreBonus > 0. PR C will replace the literal
+   hex values with a --clr-accent-gold token. */
+.pointsCell {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.4rem;
+}
+
+.bonusChip {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.65rem;
+  font-weight: 700;
+  line-height: 1;
+  padding: 2px 6px;
+  border-radius: 999px;
+  color: #b8860b;
+  background: rgba(212, 175, 55, 0.12);
+  border: 1px solid rgba(212, 175, 55, 0.4);
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+}

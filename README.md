@@ -62,12 +62,13 @@ Missing predictions are treated as a **virtual 0-0** at scoring time — no DB r
 | Email | Resend (optional) |
 | Auth | JWT (7-day) + bcryptjs hashed passwords. Boot-time validation via `GET /api/auth/me` keeps login sticky across refresh. |
 
+The browser never calls worldcup26.ir directly — every football request goes through a narrow, typed `/api/football/*` endpoint (`matches`, `matches/today`, `teams`) so the upstream schema can change without touching the frontend, and credentials never leak.
+
 ```
 World-Cup/
 ├── api/                          # Vercel Serverless Functions (single Express app)
-│   ├── [...slug].js              # Vercel catch-all entry  → exports api/_app.js
+│   ├── index.js                  # Vercel function entry → re-exports api/_app.js
 │   ├── _app.js                   # Express app (mounted at /api/*)
-│   ├── _local-dev.js             # Local Node dev server (port 3000)
 │   ├── _lib/                     # supabase, football, auth, scoring, email, errors
 │   └── _routes/                  # auth, users, predictions, scores, football
 ├── public/
@@ -75,14 +76,15 @@ World-Cup/
 │   ├── pwa-192.png  pwa-512.png  pwa-maskable-512.png  apple-touch-icon.png
 │   └── favicon.svg
 ├── src/
-│   ├── pages/                    # Login, Register, Home, AllGames, Profile, Admin, TopScorers
+│   ├── pages/                    # Login, Register, Home, AllGames, Profile, Admin, TopScorers, Rules
 │   ├── components/               # MatchCard, BetModal, LiveBetsReveal, LanguageSwitcher, …
-│   ├── context/AuthContext.jsx
+│   ├── context/                  # AuthContext.jsx + useAuth.js (hook + Context split)
 │   ├── hooks/{useMatches, useTodayMatches}.js
 │   ├── i18n/                     # i18next bootstrap + locales/{en,he}.json
 │   ├── services/{footballService, serverApi}.js
-│   └── utils/constants.js
+│   └── utils/{constants, matchTime}.js
 ├── scripts/resize-icons.ps1      # one-shot PWA icon resizer (PowerShell + GDI+)
+├── dev-server.cjs                # Local Express dev server (port 3000) — npm run dev:api
 ├── vite.config.js                # Vite + PWA + dev proxy /api → :3000
 ├── vercel.json                   # SPA rewrite (excludes /api)
 └── package.json
@@ -144,6 +146,17 @@ VITE_API_BASE_URL=            # leave blank in dev (uses Vite proxy)
 
 > In production these go into **Vercel project settings → Environment Variables**.
 
+#### `CLIENT_ORIGIN`
+The deployed app URL — for example `https://wc-bets.example.com` (no trailing slash). Two consumers:
+
+1. **CORS allow-list** in [`api/_app.js`](api/_app.js) — when set, the Express CORS middleware locks `Access-Control-Allow-Origin` to this URL. When unset, it reflects whatever origin the request came from (defense-in-depth still requires a valid JWT).
+2. **Absolute `/login` link in approval emails** in [`api/_lib/email.js`](api/_lib/email.js) — without `CLIENT_ORIGIN`, the email contains a relative `/login` path, which only resolves correctly if the recipient already has the app open.
+
+Leave blank locally. Set per-environment (Production, optionally Preview) in the Vercel dashboard.
+
+#### Secrets boundary
+Only variables prefixed with `VITE_` are bundled into the browser by Vite. Every secret in this project — `SUPABASE_SERVICE_ROLE_KEY`, `JWT_SECRET`, `WC26_API_PASSWORD`, `RESEND_API_KEY` — is **unprefixed** and read exclusively by the serverless functions under `/api`. The only `VITE_*` variable in the codebase today is `VITE_API_BASE_URL`, which holds a URL, not a secret. **Never prefix a real secret with `VITE_`** — it would ship to every visitor's browser bundle.
+
 ### 5. Seed the admin user
 Run from `World-Cup/`:
 ```bash
@@ -162,6 +175,10 @@ npm run dev:all
 ```
 Vite → `http://localhost:5173`, API → `http://localhost:3000` (proxied automatically).
 Health check: `http://localhost:3000/api/health`.
+
+The API alone can be started with `npm run dev:api`, which runs [`dev-server.cjs`](dev-server.cjs) — a small Express harness that mounts the same `api/_app.js` used in production on port 3000.
+
+Run unit tests: `npm test` (Vitest — scoring rules in [`tests/scoring.test.js`](tests/scoring.test.js)).
 
 ---
 

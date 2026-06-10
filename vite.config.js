@@ -40,8 +40,8 @@ export default defineConfig({
   server: {
     proxy: {
       // Forward /api/* to the local Vercel-equivalent Express app
-      // (api/_local-dev.js → port 3000). In production Vercel routes
-      // /api/* directly to api/[...slug].js — no proxy needed.
+      // (dev-server.cjs → port 3000). In production Vercel routes
+      // /api/* directly to api/index.js — no proxy needed.
       '/api': {
         target: 'http://localhost:3000',
         changeOrigin: true,

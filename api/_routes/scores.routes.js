@@ -102,7 +102,8 @@ router.post('/recalculate', requireAuth, requireAdmin, async (req, res, next) =>
     // result (override > previous persisted) so future recalcs without
     // overrides still see the last admin-supplied actuals.
     const updates = users.map((u) => {
-      const row = leaderboardById.get(u.id) ?? { points: 0, correctResults: 0, exactScores: 0 };
+      const row = leaderboardById.get(u.id)
+        ?? { points: 0, correctResults: 0, exactScores: 0, exactScoreBonus: 0 };
       const persisted = readTournamentBonus(u);
       const nextBonus = {
         winner: overrides.winner ?? persisted.winner,
@@ -117,6 +118,7 @@ router.post('/recalculate', requireAuth, requireAdmin, async (req, res, next) =>
             points: row.points,
             correctResults: row.correctResults,
             exactScores: row.exactScores,
+            exactScoreBonus: row.exactScoreBonus ?? 0,
             tournamentBonus: nextBonus,
           },
         })

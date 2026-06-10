@@ -90,6 +90,7 @@ export default function HomePage() {
             points: s?.points ?? 0,
             correctResults: s?.correctResults ?? 0,
             exactScores: s?.exactScores ?? 0,
+            exactScoreBonus: s?.exactScoreBonus ?? 0,
             isCurrentUser: false,
           };
         })
@@ -100,6 +101,7 @@ export default function HomePage() {
         points: s.points ?? 0,
         correctResults: s.correctResults ?? 0,
         exactScores: s.exactScores ?? 0,
+        exactScoreBonus: s.exactScoreBonus ?? 0,
         isCurrentUser: s.userId === user?.id,
       }))
   ).sort((a, b) => b.points - a.points || b.exactScores - a.exactScores);
@@ -252,7 +254,20 @@ export default function HomePage() {
                       <td className={styles.colTopAssist}>{row.bet?.topAssist ?? <span className={styles.missing}>—</span>}</td>
                       <td className={styles.center}>{row.exactScores}</td>
                       <td className={styles.center}>{row.correctResults}</td>
-                      <td className={styles.points}>{row.points}</td>
+                      <td className={styles.points}>
+                        <span className={styles.pointsCell}>
+                          <span>{row.points}</span>
+                          {row.exactScoreBonus > 0 && (
+                            <span
+                              className={styles.bonusChip}
+                              title={t('leaderboard.exactBonusTooltip')}
+                              aria-label={t('leaderboard.exactBonusTooltip')}
+                            >
+                              {t('leaderboard.exactBonusBadge')}
+                            </span>
+                          )}
+                        </span>
+                      </td>
                     </tr>
                   ))}
                 </tbody>

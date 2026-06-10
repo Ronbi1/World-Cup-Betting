@@ -9,7 +9,141 @@
 
 ---
 
-## Latest session / current state (Wed Jun 10, 2026 — evening QA pass)
+## Latest session / current state (Wed Jun 10, 2026 — late evening — PR A + PR B landed)
+
+**Newest section. Always wins over anything below it when they conflict.**
+
+Two PRs were implemented and validated locally; both are still in the
+working tree (uncommitted) so the owner can review the diffs before
+committing.
+
+### Roadmap status
+
+| PR | Title | Status |
+|---|---|---|
+| **PR A** | Docs / env cleanup | **✅ done — uncommitted** |
+| **PR B** | One-time +3 exact-score bonus + Rules page + EN/HE i18n | **✅ done — uncommitted** |
+| PR B.1 | Unit tests for `computeLeaderboard` (scoring) | ⏳ not started |
+| PR C | Match cards + World Cup visual language (additive gold token only) | ⏳ not started |
+| PR D | Leaderboard podium + mobile leaderboard card list | ⏳ not started |
+| PR E | Exact-score spotlight (`GET /api/spotlight`, Asia/Jerusalem cutoff) | ⏳ not started |
+| PR F | Mobile bottom-tab nav | ⏳ not started — keep last; do **not** touch safe-area CSS preemptively |
+
+Full umbrella plan with per-PR scope is at
+[`.cursor/plans/phase-2-2.5-3-plan_6324729b.plan.md`](./plans/phase-2-2.5-3-plan_6324729b.plan.md).
+Detailed PR B plan (for reference / regression diff) is at
+[`.cursor/plans/pr-b-exact-score-bonus_80553aa8.plan.md`](./plans/pr-b-exact-score-bonus_80553aa8.plan.md).
+
+### PR A — what shipped (docs + stale-reference sweep)
+
+Pure documentation. Zero runtime code touched. Files modified:
+
+- [`README.md`](../README.md) — architecture tree corrected (`api/index.js` + `dev-server.cjs`, dropped `_local-dev.js`); added `RulesPage`, `useAuth.js`, `matchTime.js` to the src tree; new "Architecture" prose line about the worldcup26.ir proxy boundary; new `CLIENT_ORIGIN` subsection (CORS + email link consumers); new "Secrets boundary" subsection; "Run in dev" note about `npm run dev:api` → `dev-server.cjs`.
+- [`.cursor/rules/project.mdc`](./rules/project.mdc) — repository-layout block refreshed (`index.js`, `dev-server.cjs`, `RulesPage`, `context/` split into `AuthContext.jsx` + `useAuth.js`, `utils/matchTime.js`, kickoff-locked `BetModal` note, `hasMatchStarted`, `computeLeaderboard`). Request-flow table updated.
+- [`vite.config.js`](../vite.config.js) — proxy comment now references `dev-server.cjs` + `api/index.js`.
+- [`api/_app.js`](../api/_app.js) — header comment now references `dev-server.cjs`.
+
+**Explicitly NOT touched in PR A** (intentional):
+- Local `.env` — gitignored, user-owned. Still has a stale `SPORTSDB_API_KEY=` line and an outdated comment block mentioning `api/_local-dev.js`. Owner deletes/edits manually.
+- This `SESSION_HANDOFF.md` file — transient log; was left alone by PR A. (The current edit you're reading is PR-A-aware though.)
+- `.env.example` — already clean before PR A (no `SPORTSDB_API_KEY`, includes `CLIENT_ORIGIN`).
+- `TopScorersPage.jsx` "TheSportsDB free V1" inline comment — cosmetic, skipped.
+
+### PR B — what shipped (one-time +3 exact-score bonus)
+
+Product rule (locked by the owner): in this app **virtual 0-0 is the
+default prediction state**, not a forgotten/missing prediction. Every
+match is treated as 0-0 for every user unless the user actively changes
+it. Therefore a default 0-0 that hits exactly counts as an exact-score
+hit, and so it counts toward the new +3 threshold as well.
+
+Formula:
+
+```js
+exactScoreBonus = exactScores >= 3 ? 3 : 0    // one-time, never stacks
+```
+
+- 0/1/2 exact hits → +0
+- 3 exact hits → +3
+- 4/6/9/12+ exact hits → still +3
+
+Files modified (+85 / −5 lines total across 7 files):
+
+- [`api/_lib/scoring.js`](../api/_lib/scoring.js) — added `EXACT_SCORE_BONUS_MIN: 3` and `EXACT_SCORE_BONUS: 3` to `POINTS`; computed `exactScoreBonus` after the per-match loop (using the existing `exactScores` field — **no** new `savedExactScores` counter, per product rule); added it to `points`; returned it on each row. `calcPoints`, the virtual 0-0 default, and the tournament-bonus block are untouched.
+- [`api/_routes/scores.routes.js`](../api/_routes/scores.routes.js) — persisted `exactScoreBonus` in the `POST /scores/recalculate` snapshot with `?? 0` fallback; defaulted the fallback row. No DB migration; pre-existing `users.scores` rows continue to work because read path is dynamic.
+- [`src/pages/HomePage.jsx`](../src/pages/HomePage.jsx) — both leaderboard mappers (admin branch + non-admin branch) now carry `exactScoreBonus`. Inside the points cell, a subtle `+3` chip renders only when `row.exactScoreBonus > 0` (with `title` + `aria-label` for the tooltip).
+- [`src/pages/HomePage.module.css`](../src/pages/HomePage.module.css) — appended `.pointsCell` flex wrapper + `.bonusChip` pill. RTL-safe (no `margin-left/right`). Literal gold tint (`#d4af37` / `#b8860b`) on purpose — PR C introduces `--clr-accent-gold` and PR C/D will refactor this chip to consume the token.
+- [`src/pages/RulesPage.jsx`](../src/pages/RulesPage.jsx) — new `<li>` in the rules list between `correctResult` and `tournamentWinner`; new "Exact-Score Bonus" section card between "How Scoring Updates" and "Predictions Privacy".
+- [`src/i18n/locales/en.json`](../src/i18n/locales/en.json) and [`src/i18n/locales/he.json`](../src/i18n/locales/he.json) — five new keys each: `home.rules.exactScoreBonus`, `rules.exactScoreBonusTitle`, `rules.exactScoreBonusBody`, `leaderboard.exactBonusBadge`, `leaderboard.exactBonusTooltip`.
+
+`/api/scores` response shape now: `{ userId, name, points, correctResults, exactScores, exactScoreBonus }`. The bonus is **already folded into `points`** — downstream consumers don't need to add it again.
+
+### PR B — explicitly NOT changed (guardrails)
+
+- `calcPoints` (per-match scoring).
+- Virtual 0-0 default at `api/_lib/scoring.js:120-121`.
+- `readTournamentBonus` + the tournament-bonus block.
+- `POST /api/predictions` kickoff lock + `MAX_PREDICTION_SCORE = 20`.
+- `AuthContext`, `useAuth`, `/api/auth/me`.
+- PWA safe-area CSS.
+- `/api/scores` read-only contract + 30 s cache.
+- Any design tokens (`--clr-accent` stays indigo; gold token comes in PR C).
+- MatchCard, podium, bottom nav, spotlight — all later PRs.
+
+### Lint / build status
+
+| Check | After PR A | After PR B |
+|---|---|---|
+| `npm run lint` | exit 0 | exit 0 |
+| `npm run build` | exit 0 (910 modules, 8.68 s, same chunk-size warning) | exit 0 (910 modules, 13.50 s, same chunk-size warning) |
+
+### Working tree (uncommitted)
+
+```
+M .cursor/rules/project.mdc        (PR A)
+M README.md                        (PR A)
+M api/_app.js                      (PR A)
+M vite.config.js                   (PR A)
+M api/_lib/scoring.js              (PR B)
+M api/_routes/scores.routes.js     (PR B)
+M src/i18n/locales/en.json         (PR B)
+M src/i18n/locales/he.json         (PR B)
+M src/pages/HomePage.jsx           (PR B)
+M src/pages/HomePage.module.css    (PR B)
+M src/pages/RulesPage.jsx          (PR B)
+```
+
+Owner is reviewing diffs before committing. **Do not commit on the owner's
+behalf** unless explicitly asked.
+
+### Manual verification still owed for PR B
+
+- 0/1/2 exact hits → no chip, `points` unchanged from pre-deploy.
+- Exactly 3 exact hits → `+3` chip appears next to `points`; total = previous + 3.
+- 4th exact hit lands → chip still `+3`; `points` grow only by that match's per-match score.
+- Tournament bonus still works independently for a user with a correct winner pick.
+- Hebrew leaderboard renders the chip on the inline-end side with the Hebrew tooltip.
+- After one `POST /scores/recalculate`, a `users.scores` JSON row contains `exactScoreBonus`.
+
+### Next PR — PR B.1 (unit tests for scoring)
+
+Owner asked for this as the next step. Scope (paraphrased from the umbrella plan §11 question 5):
+
+- Add a minimal test runner (Vitest is the natural choice — already compatible with the Vite toolchain; nothing else in the repo runs tests today).
+- Table-driven test for `computeLeaderboard` covering at minimum:
+  - 0 / 1 / 2 / 3 / 4 / 6 / 9 / 12 exact hits → expected `exactScoreBonus` of 0/0/0/3/3/3/3/3 and correct `points` delta.
+  - Virtual 0-0 contributing to exact-score count when the real result is 0-0.
+  - Tournament-bonus override + persisted-bonus merge unaffected by the new bonus.
+  - Empty inputs (`users: []`, `finishedMatches: []`, `predictions: []`) — no throws, returns `[]`.
+- Add a `test` script in `package.json`. Ensure it lints clean alongside the existing `eslint .` step.
+- Document the new test command in `README.md` (single line in §"Run in dev").
+- Do **not** start PR C in the same PR.
+
+PR C onwards is gated behind the owner's explicit go-ahead.
+
+---
+
+## Older session — current state (Wed Jun 10, 2026 — evening QA pass)
 
 A targeted QA+fixes pass. Highlights:
 
@@ -173,6 +307,13 @@ longer used anywhere in code**. The local `.env` still has a stale
 `SPORTSDB_API_KEY=` line — it's harmless (nothing reads it) but can be
 deleted on the next edit pass.
 
+> **Update (PR A, Jun 10 late evening):** all tracked-source references to
+> `SPORTSDB_API_KEY`, `api/_local-dev.js`, and `api/[...slug].js` have been
+> cleaned. The only remaining mentions are historical paragraphs in this
+> handoff file (kept on purpose so older context still makes sense). The
+> stale `SPORTSDB_API_KEY=` line in the local `.env` is owner-managed —
+> not auto-edited.
+
 ### Lint / build status
 
 | Check | Result |
@@ -191,7 +332,11 @@ deleted on the next edit pass.
 
 ### Pending items (Jun 10)
 
-Ordered by what to do first:
+Ordered by what to do first.
+
+> **Roadmap status as of late-evening (PR A + PR B done):** see the
+> *Roadmap status* table in the newest section at the top of this file
+> for PR C–F + PR B.1.
 
 1. **🟡 Verify the Jun 11 opener (tomorrow) appears via `/api/football/matches`.**
    Mexico vs USA. If worldcup26 hasn't published it yet, `AllGamesPage`
@@ -201,19 +346,23 @@ Ordered by what to do first:
    `src/utils/constants.js` are still empty arrays on purpose. The Profile
    page dropdowns and `TopScorersPage` both read from these. The owner will
    paste the final list — **do not invent names**.
-3. **🟡 `README.md` and `src/pages/TopScorersPage.jsx` comments still
-   reference TheSportsDB v1.** The code is correct (it uses worldcup26.ir
-   via the backend), but the prose hasn't been updated. Low priority,
-   purely cosmetic.
+3. **✅ Done by PR A.** `README.md` no longer references TheSportsDB or
+   stale `[...slug].js`/`_local-dev.js` paths. The
+   `src/pages/TopScorersPage.jsx` inline comment was intentionally skipped
+   (cosmetic only).
 4. **🟢 Production Vercel deploy.** Not yet done. Copy every variable
    listed above into Vercel project settings; root directory must be
    `World-Cup-Betting/`. The `api/index.js` function + Vite build should
-   deploy without further changes.
+   deploy without further changes. **`CLIENT_ORIGIN` must be set in
+   Production** (CORS lock + absolute `/login` link in approval emails) —
+   see the README "CLIENT_ORIGIN" subsection added by PR A.
 5. **🟢 Tournament-end bonus.** When the WC ends, an admin must
    `POST /api/scores/recalculate` with
    `{ tournamentWinner, actualTopScorer, actualTopAssist }` to award
    the 15/5/5 bonus points. The HomePage admin panel exposes this — the
-   trophy 🏆 toggle reveals the bonus form.
+   trophy 🏆 toggle reveals the bonus form. The PR B one-time +3
+   exact-score bonus is independent — already folded into `points` on
+   every read of `/api/scores`, no admin action required.
 
 ### Hard "do not"s — currently valid
 

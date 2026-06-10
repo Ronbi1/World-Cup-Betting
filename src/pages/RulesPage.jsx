@@ -29,6 +29,10 @@ export default function RulesPage() {
             <span>{t('home.rules.correctResult')}</span>
           </li>
           <li>
+            <span className={styles.icon} aria-hidden="true">🎯</span>
+            <span>{t('home.rules.exactScoreBonus')}</span>
+          </li>
+          <li>
             <span className={styles.icon} aria-hidden="true">🏆</span>
             <span>{t('home.rules.tournamentWinner')}</span>
           </li>
@@ -46,6 +50,11 @@ export default function RulesPage() {
       <section className={styles.card}>
         <h2 className={styles.sectionTitle}>ℹ️ {t('rules.howScoringWorksTitle')}</h2>
         <p className={styles.body}>{t('rules.howScoringWorksBody')}</p>
+      </section>
+
+      <section className={styles.card}>
+        <h2 className={styles.sectionTitle}>🎯 {t('rules.exactScoreBonusTitle')}</h2>
+        <p className={styles.body}>{t('rules.exactScoreBonusBody')}</p>
       </section>
 
       <section className={styles.card}>

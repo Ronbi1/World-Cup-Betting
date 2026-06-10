@@ -73,9 +73,8 @@ This section is a snapshot of the working architecture so any future agent can o
 ```
 World-Cup/
 ├── api/                          # Vercel Serverless Functions (single Express app)
-│   ├── [...slug].js              # Vercel catch-all entry → re-exports api/_app.js
+│   ├── index.js                  # Vercel function entry → re-exports api/_app.js
 │   ├── _app.js                   # Express app, routes mounted at /api/*
-│   ├── _local-dev.js             # Standalone local server on :3000 (npm run dev:api)
 │   ├── package.json              # { "type": "commonjs" } — overrides root ESM
 │   ├── _lib/
 │   │   ├── supabase.js           # lazy Proxy client (service-role key)
@@ -83,16 +82,17 @@ World-Cup/
 │   │   │                         #   cached single-flight fetcher, transformGame/Team,
 │   │   │                         #   status & stage mappers, teams cache,
 │   │   │                         #   fetchSeasonMatches / fetchTodayMatches /
-│   │   │                         #   fetchAllTeams / fetchFinishedMatches
+│   │   │                         #   fetchAllTeams / fetchFinishedMatches,
+│   │   │                         #   hasMatchStarted (shared kickoff predicate)
 │   │   ├── auth.js               # requireAuth + requireAdmin middleware
 │   │   ├── errorHandler.js       # central error sanitizer
 │   │   ├── email.js              # Resend approval mail (no-op when key absent)
-│   │   └── scoring.js            # POINTS table + calcPoints(pred, match)
+│   │   └── scoring.js            # POINTS table + calcPoints + computeLeaderboard
 │   └── _routes/
-│       ├── auth.routes.js        # POST /api/auth/{login,register}
+│       ├── auth.routes.js        # POST /api/auth/{login,register} + GET /me
 │       ├── users.routes.js       # GET / PATCH /:id/status / DELETE / PATCH /:id/bet
-│       ├── predictions.routes.js # GET (3 patterns) + POST upsert
-│       ├── scores.routes.js      # GET leaderboard / POST /recalculate
+│       ├── predictions.routes.js # GET (3 patterns) + POST upsert (kickoff-locked)
+│       ├── scores.routes.js      # GET leaderboard (30 s cache) / POST /recalculate
 │       └── football.routes.js    # /api/football/{matches,matches/today,teams}
 │                                 #   — typed named endpoints, NOT a generic proxy
 ├── public/
@@ -112,22 +112,29 @@ World-Cup/
 │   │   ├── AllGamesPage.jsx      # full schedule, stage tabs, status filter
 │   │   ├── ProfilePage.jsx       # 4 sections per the spec above
 │   │   ├── AdminPage.jsx         # approve / reject / delete + delete modal
-│   │   └── TopScorersPage.jsx    # Golden Boot — STATIC list from constants.js
-│   │                             #   (TheSportsDB free V1 has no /scorers endpoint)
+│   │   ├── TopScorersPage.jsx    # Golden Boot — STATIC list from constants.js
+│   │   │                         #   (upstream provider has no /scorers endpoint)
+│   │   └── RulesPage.jsx         # scoring rules + scoring-update cadence + privacy
 │   ├── components/
 │   │   ├── Navbar.jsx            # responsive hamburger + LanguageSwitcher
 │   │   ├── LanguageSwitcher.jsx  # EN / עב toggle
 │   │   ├── MantineDirectionSync.jsx  # bridges i18n → Mantine RTL
 │   │   ├── MatchCard.jsx  TeamFlag.jsx  SkeletonCard.jsx
 │   │   ├── BetModal.jsx          # Mantine Modal + NumberInput, upsert prediction
+│   │   │                         #   (locked, read-only view after kickoff)
 │   │   ├── LiveBetsReveal.jsx    # everyone's predictions for started/finished matches
 │   │   └── LiveScoreBanner.jsx   # live score strip on HomePage (IN_PLAY / PAUSED)
-│   ├── context/AuthContext.jsx
+│   ├── context/
+│   │   ├── AuthContext.jsx       # AuthProvider (sole export — Fast-Refresh-safe)
+│   │   └── useAuth.js            # Context object + useAuth hook
 │   ├── hooks/{useMatches, useTodayMatches}.js
 │   ├── services/{footballService, serverApi}.js
-│   └── utils/constants.js        # ROLES, REG_STATUS, MATCH_STATUS, STAGE_ORDER,
-│                                 #   TOURNAMENT_START/ENDED, TOP_SCORERS_LIST, TOP_ASSISTS_LIST
+│   └── utils/
+│       ├── constants.js          # ROLES, REG_STATUS, MATCH_STATUS, STAGE_ORDER,
+│       │                         #   TOURNAMENT_START/ENDED, TOP_SCORERS/ASSISTS_LIST
+│       └── matchTime.js          # shared client-side hasMatchStarted helper
 ├── scripts/resize-icons.ps1      # one-shot PWA icon generator (PowerShell + GDI+)
+├── dev-server.cjs                # Standalone local server on :3000 (npm run dev:api)
 ├── vite.config.js                # React + VitePWA + dev proxy /api → :3000
 ├── vercel.json                   # SPA rewrite (excludes /api)
 ├── eslint.config.js              # 3 layers: src ESM, vite.config ESM, api CJS
@@ -138,7 +145,7 @@ World-Cup/
 | URL | In production (Vercel) | In dev (`npm run dev:all`) |
 |---|---|---|
 | `/` (and any non-API route) | static SPA from `dist/`, falls back to `index.html` via `vercel.json` rewrite | Vite dev server on `:5173` |
-| `/api/*` | `api/[...slug].js` serverless function → Express app | Vite proxies to `:3000` running `api/_local-dev.js` (same Express app) |
+| `/api/*` | `api/index.js` serverless function → Express app | Vite proxies to `:3000` running `dev-server.cjs` (same Express app) |
 
 The Express app inside the function is mounted **with the `/api/` prefix** because Vercel forwards `req.url` with the prefix intact. Local dev keeps full parity.
 

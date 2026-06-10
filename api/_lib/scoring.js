@@ -12,6 +12,12 @@
 //   Top scorer     →  5 pts
 //   Top assist     →  5 pts
 //
+// Leaderboard bonus (one-time, applied at compute time):
+//   Reaching at least 3 exact-score hits across the tournament → +3 pts.
+//   The bonus is awarded once and does NOT stack as more exact-score hits
+//   accumulate. Because 0-0 is the default prediction state in this app,
+//   virtual 0-0 exact hits count toward the threshold just like saved ones.
+//
 // Missing prediction handling:
 //   A user who never saved a prediction for a finished match is treated
 //   as having predicted 0-0 (virtual default). No DB rows are created;
@@ -26,6 +32,8 @@ const POINTS = {
   TOURNAMENT_WINNER: 15,
   TOP_SCORER: 5,
   TOP_ASSIST: 5,
+  EXACT_SCORE_BONUS_MIN: 3,
+  EXACT_SCORE_BONUS: 3,
 };
 
 function outcome(home, away) {
@@ -87,7 +95,8 @@ const normalize = (s) => (s ?? '').toString().trim().toLowerCase();
 //     persisted bonus. Otherwise the per-user persisted bonus is used.
 //
 // Returns:
-//   [{ userId, name, points, correctResults, exactScores }, ...]
+//   [{ userId, name, points, correctResults, exactScores, exactScoreBonus }, ...]
+//   exactScoreBonus is 0 or POINTS.EXACT_SCORE_BONUS — already included in `points`.
 function computeLeaderboard({ users, finishedMatches, predictions, tournamentOverrides = null }) {
   const safeUsers = Array.isArray(users) ? users : [];
   const safeMatches = Array.isArray(finishedMatches) ? finishedMatches : [];
@@ -116,6 +125,15 @@ function computeLeaderboard({ users, finishedMatches, predictions, tournamentOve
       if (r.exact) exactScores += 1;
     }
 
+    // One-time exact-score bonus. Awarded as soon as the user reaches the
+    // threshold; does NOT stack. Computed at the leaderboard level so per-match
+    // scoring (calcPoints) stays untouched.
+    const exactScoreBonus =
+      exactScores >= POINTS.EXACT_SCORE_BONUS_MIN
+        ? POINTS.EXACT_SCORE_BONUS
+        : 0;
+    points += exactScoreBonus;
+
     // Tournament bonus: admin overrides win, otherwise read persisted.
     const persisted = readTournamentBonus(u);
     const winnerActual = tournamentOverrides?.winner ?? persisted.winner;
@@ -139,6 +157,7 @@ function computeLeaderboard({ users, finishedMatches, predictions, tournamentOve
       points,
       correctResults,
       exactScores,
+      exactScoreBonus,
     });
   }
 
