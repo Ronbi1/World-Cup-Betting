@@ -3,6 +3,7 @@ import { useTranslation, Trans } from 'react-i18next';
 import { useAuth } from '../context/useAuth';
 import { REG_STATUS, MATCH_STATUS } from '../utils/constants';
 import { useTodayMatches } from '../hooks/useTodayMatches';
+import { useMinuteTick } from '../hooks/useMinuteTick';
 import MatchCard from '../components/MatchCard';
 import SkeletonCard from '../components/SkeletonCard';
 import BetModal from '../components/BetModal';
@@ -30,6 +31,11 @@ export default function HomePage() {
     lastUpdated,
     refresh: refreshMatches,
   } = useTodayMatches({ onMatchFinished: handleMatchFinished });
+
+  // Single shared minute-tick for all MatchCards rendered on this page.
+  // Each card uses it to compute its own countdown text without spawning
+  // its own interval.
+  const now = useMinuteTick();
 
   // Opportunistic 60 s leaderboard poll while any match is live. Pairs
   // with the 30 s server cache, so concurrent calls are cheap.
@@ -152,7 +158,9 @@ export default function HomePage() {
           )}
           {!loadingMatches && todayMatches.length > 0 && (
             <div className={styles.matchList}>
-              {todayMatches.map((m) => <MatchCard key={m.id} match={m} compact onClick={handleMatchClick} />)}
+              {todayMatches.map((m) => (
+                <MatchCard key={m.id} match={m} compact onClick={handleMatchClick} now={now} />
+              ))}
             </div>
           )}
         </section>

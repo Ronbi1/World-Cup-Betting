@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import TeamFlag from './TeamFlag';
 import styles from './MatchCard.module.css';
 import { MATCH_STATUS } from '../utils/constants';
-import { formatMatchDate, formatMatchTime } from '../utils/matchTime';
+import { formatMatchDate, formatMatchTime, formatKickoffCountdown } from '../utils/matchTime';
 
 const statusKey = (status) => {
   switch (status) {
@@ -15,7 +15,11 @@ const statusKey = (status) => {
   }
 };
 
-export default function MatchCard({ match, compact = false, onClick }) {
+// `now` is supplied by the parent list page via `useMinuteTick()` so every
+// card on the page re-renders against the same instant once per minute,
+// avoiding N independent intervals. Standalone callers (e.g. tests, future
+// solo use) can omit `now` and the helper falls back to `Date.now()`.
+export default function MatchCard({ match, compact = false, onClick, now }) {
   const { t, i18n } = useTranslation();
   const locale = i18n.resolvedLanguage === 'he' ? 'he-IL' : 'en-GB';
 
@@ -27,6 +31,20 @@ export default function MatchCard({ match, compact = false, onClick }) {
   const isLive =
     match.status === MATCH_STATUS.IN_PLAY || match.status === MATCH_STATUS.PAUSED;
   const isKnockoutStage = match.stage && match.stage !== 'GROUP_STAGE';
+
+  // Only show a countdown for upcoming matches. Postponed/cancelled keep
+  // their badge and skip the countdown to avoid a misleading "Starts in
+  // 3d" next to a "PPD" badge. `formatKickoffCountdown` also returns null
+  // once kickoff is in the past, so live/finished naturally suppress.
+  //
+  // When `now` is omitted by the caller, the helper falls back to its
+  // own `Date.now()` default; we deliberately don't read the clock here
+  // in render to keep this component pure (react-hooks/purity rule).
+  const isUpcoming =
+    match.status === MATCH_STATUS.SCHEDULED || match.status === MATCH_STATUS.TIMED;
+  const countdownText = isUpcoming
+    ? formatKickoffCountdown(match.utcDate, t, now)
+    : null;
 
   return (
     <article
@@ -40,6 +58,9 @@ export default function MatchCard({ match, compact = false, onClick }) {
         <span className={`${styles.statusBadge} ${styles[stCls]}`}>{t(`matchStatus.${stKey}`)}</span>
         <span className={styles.date}>{formatDate(match.utcDate)}</span>
         {!isFinished && <span className={styles.time}>{formatTime(match.utcDate)}</span>}
+        {countdownText && (
+          <span className={styles.countdown}>{countdownText}</span>
+        )}
         {isKnockoutStage && (
           <span className={styles.stageBadge}>{t(`stages.${match.stage}`)}</span>
         )}

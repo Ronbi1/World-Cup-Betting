@@ -1,8 +1,9 @@
 .skeleton {
   background: var(--clr-surface);
   border: 1px solid var(--clr-border);
-  border-radius: 12px;
+  border-radius: 14px;
   padding: 1rem 1.25rem;
+  box-shadow: var(--shadow-card);
 }
 
 .compact { padding: 0.65rem 1rem; }

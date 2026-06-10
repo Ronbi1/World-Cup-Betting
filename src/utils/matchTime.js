@@ -76,3 +76,47 @@ export function isMatchToday(utcDate) {
   const todayDay = ISRAEL_DAY_FMT.format(new Date());
   return matchDay === todayDay;
 }
+
+// Pure helper: how long until kickoff, broken into days/hours/minutes.
+// Returns null when the match has already started (delta <= 0), the kickoff
+// is missing, or the date can't be parsed — callers should fall back to the
+// status badge in those cases. The delta is computed in absolute UTC
+// milliseconds, so the answer is independent of the device timezone.
+//
+// `now` defaults to `Date.now()`; list pages should pass a shared minute-tick
+// value instead so every card on the page re-evaluates from the same instant.
+const MS_PER_MINUTE = 60_000;
+const MS_PER_HOUR = 60 * MS_PER_MINUTE;
+const MS_PER_DAY = 24 * MS_PER_HOUR;
+
+export function getKickoffCountdown(utcDate, now = Date.now()) {
+  if (!utcDate) return null;
+  const kickoff = new Date(utcDate).getTime();
+  if (!Number.isFinite(kickoff)) return null;
+  const totalMs = kickoff - now;
+  if (totalMs <= 0) return null;
+
+  const days = Math.floor(totalMs / MS_PER_DAY);
+  const hours = Math.floor((totalMs % MS_PER_DAY) / MS_PER_HOUR);
+  const minutes = Math.floor((totalMs % MS_PER_HOUR) / MS_PER_MINUTE);
+
+  return { totalMs, days, hours, minutes };
+}
+
+// i18n-aware countdown string: "Starts in 2d 4h" / "מתחיל בעוד 2 ימים ו־4 שעות".
+// Returns null when no countdown should be shown — the caller can use that
+// signal to skip rendering entirely. The `t` argument is a react-i18next
+// translator; keys live under `matchCard.countdown.*` in both locales.
+export function formatKickoffCountdown(utcDate, t, now = Date.now()) {
+  const parts = getKickoffCountdown(utcDate, now);
+  if (!parts) return null;
+
+  const { totalMs, days, hours, minutes } = parts;
+
+  if (totalMs < MS_PER_MINUTE) return t('matchCard.countdown.soon');
+  if (totalMs < MS_PER_HOUR) return t('matchCard.countdown.minutes', { minutes });
+  if (totalMs < MS_PER_DAY) {
+    return t('matchCard.countdown.hoursMinutes', { hours, minutes });
+  }
+  return t('matchCard.countdown.daysHours', { days, hours });
+}

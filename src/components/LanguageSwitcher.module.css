@@ -27,7 +27,7 @@
 .btn:hover { color: var(--clr-text-primary); background: rgba(255, 255, 255, 0.04); }
 
 .btn.active {
-  background: var(--clr-accent);
+  background: var(--grad-cyan);
   color: #fff;
 }
 

@@ -6,20 +6,24 @@
 
 .welcome {
   margin-bottom: 1.75rem;
+  background: var(--grad-hero);
+  border-radius: 18px;
+  padding: 1.75rem 1.5rem;
+  box-shadow: var(--shadow-hero);
 }
 
 .welcomeTitle {
   font-size: 1.6rem;
   font-weight: 800;
-  color: var(--clr-text-primary);
+  color: #fff;
   margin: 0 0 0.3rem;
 }
 
-.accent { color: var(--clr-accent); }
+.accent { color: var(--clr-accent-gold); }
 
 .welcomeSub {
   font-size: 0.9rem;
-  color: var(--clr-text-secondary);
+  color: rgba(255, 255, 255, 0.85);
   margin: 0;
 }
 
@@ -35,8 +39,14 @@
 .card {
   background: var(--clr-surface);
   border: 1px solid var(--clr-border);
-  border-radius: 14px;
+  border-radius: 16px;
   padding: 1.25rem;
+  box-shadow: var(--shadow-card);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.card:hover {
+  box-shadow: var(--shadow-card-hover);
 }
 
 .sectionTitle {
@@ -45,7 +55,9 @@
   color: var(--clr-text-primary);
   margin: 0 0 1rem;
   padding-bottom: 0.6rem;
+  padding-inline-start: 0.75rem;
   border-bottom: 1px solid var(--clr-border);
+  border-inline-start: 3px solid var(--clr-accent-cyan);
 }
 
 .comingSoon { font-size: 0.8rem; color: var(--clr-muted); margin: 0; }
@@ -94,22 +106,30 @@
   border-bottom: 1px solid var(--clr-border);
   margin-bottom: 0.75rem;
 }
-.leaderboardHeader .sectionTitle { border-bottom: none; padding-bottom: 0; }
+.leaderboardHeader .sectionTitle {
+  border-bottom: none;
+  padding-bottom: 0;
+  border-inline-start-color: var(--clr-accent-gold);
+}
 
 .recalcBtn {
-  background: var(--clr-surface-raised);
-  border: 1px solid var(--clr-border);
-  color: var(--clr-text-secondary);
-  border-radius: 8px;
-  padding: 0.3rem 0.85rem;
+  background: var(--grad-primary-btn);
+  border: none;
+  color: #fff;
+  border-radius: 10px;
+  padding: 0.35rem 0.95rem;
   font-size: 0.8rem;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
-  transition: background 0.15s, color 0.15s;
+  transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
   white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(249, 115, 22, 0.3);
 }
-.recalcBtn:hover { background: var(--clr-accent); color: #fff; border-color: var(--clr-accent); }
-.recalcBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+.recalcBtn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(249, 115, 22, 0.4);
+}
+.recalcBtn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 
 .recalcMsg {
   font-size: 0.8rem;
@@ -124,9 +144,9 @@
   padding: 0.3rem 0.6rem;
   font-size: 0.85rem;
   cursor: pointer;
-  transition: background 0.15s;
+  transition: background 0.15s, border-color 0.15s;
 }
-.recalcToggleBtn:hover { background: var(--clr-accent); border-color: var(--clr-accent); }
+.recalcToggleBtn:hover { background: rgba(56, 189, 248, 0.15); border-color: var(--clr-accent); }
 
 .bonusForm {
   padding: 0.75rem 0 0.25rem;
@@ -173,12 +193,13 @@
 .table th {
   text-align: start;
   padding: 0.5rem 0.75rem;
-  color: var(--clr-muted);
-  font-weight: 600;
+  color: var(--clr-accent-cyan);
+  font-weight: 700;
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  border-bottom: 1px solid var(--clr-border);
+  border-bottom: 2px solid var(--clr-border);
+  background: rgba(56, 189, 248, 0.06);
   white-space: nowrap;
 }
 
@@ -189,10 +210,11 @@
   vertical-align: middle;
 }
 
+.table tbody tr:nth-child(even) td { background: rgba(33, 50, 89, 0.45); }
 .table tbody tr:last-child td { border-bottom: none; }
-.table tbody tr:hover td { background: var(--clr-surface-raised); }
+.table tbody tr:hover td { background: rgba(56, 189, 248, 0.08); }
 
-.currentUserRow td { background: rgba(99, 102, 241, 0.08); }
+.currentUserRow td { background: rgba(56, 189, 248, 0.12) !important; }
 .currentUserRow td:first-child { border-inline-start: 3px solid var(--clr-accent); }
 
 .rank { font-size: 1rem; text-align: center; width: 40px; }
@@ -220,7 +242,7 @@
 }
 .youTag {
   font-size: 0.65rem;
-  background: var(--clr-accent);
+  background: var(--grad-cyan);
   color: #fff;
   padding: 1px 5px;
   border-radius: 999px;
@@ -260,8 +282,9 @@
 
 @media (max-width: 600px) {
   .page { padding: 1rem 0.85rem; }
+  .welcome { padding: 1.25rem 1.1rem; border-radius: 14px; }
   .welcomeTitle { font-size: 1.3rem; }
-  .card { padding: 1rem; border-radius: 10px; }
+  .card { padding: 1rem; border-radius: 12px; }
   .table { font-size: 0.8rem; }
   .table th, .table td { padding: 0.45rem 0.5rem; }
   .rank { width: 28px; }

@@ -107,7 +107,13 @@
   },
   "matchCard": {
     "vs": "נגד",
-    "halfTime": "מחצית"
+    "halfTime": "מחצית",
+    "countdown": {
+      "soon": "מתחיל בקרוב",
+      "minutes": "מתחיל בעוד {{minutes}} דקות",
+      "hoursMinutes": "מתחיל בעוד {{hours}} שעות ו־{{minutes}} דקות",
+      "daysHours": "מתחיל בעוד {{days}} ימים ו־{{hours}} שעות"
+    }
   },
   "matchStatus": {
     "scheduled": "טרם",

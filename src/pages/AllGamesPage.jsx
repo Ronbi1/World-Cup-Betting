@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMatches } from '../hooks/useMatches';
+import { useMinuteTick } from '../hooks/useMinuteTick';
 import { useAuth } from '../context/useAuth';
 import MatchCard from '../components/MatchCard';
 import SkeletonCard from '../components/SkeletonCard';
@@ -31,6 +32,11 @@ export default function AllGamesPage() {
   const [filterStatus, setFilterStatus] = useState('ALL');
   const [selectedMatch, setSelectedMatch] = useState(null);
   const [modalOpened, setModalOpened] = useState(false);
+
+  // Single shared minute-tick for every MatchCard on the page — see
+  // src/hooks/useMinuteTick.js. Passed as a prop into every card below so
+  // countdowns re-evaluate in lock-step without per-card intervals.
+  const now = useMinuteTick();
 
   const handleMatchClick = (match) => {
     setSelectedMatch(match);
@@ -155,7 +161,7 @@ export default function AllGamesPage() {
                       .sort((a, b) => new Date(a.utcDate) - new Date(b.utcDate))
                       .map((m) => (
                         <div key={m.id} className={isMatchToday(m.utcDate) ? styles.todayHighlight : ''}>
-                          <MatchCard match={m} onClick={handleMatchClick} />
+                          <MatchCard match={m} onClick={handleMatchClick} now={now} />
                         </div>
                       ))}
                   </div>

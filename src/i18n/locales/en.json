@@ -107,7 +107,13 @@
   },
   "matchCard": {
     "vs": "vs",
-    "halfTime": "Half-time"
+    "halfTime": "Half-time",
+    "countdown": {
+      "soon": "Starts soon",
+      "minutes": "Starts in {{minutes}}m",
+      "hoursMinutes": "Starts in {{hours}}h {{minutes}}m",
+      "daysHours": "Starts in {{days}}d {{hours}}h"
+    }
   },
   "matchStatus": {
     "scheduled": "SCH",

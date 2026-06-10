@@ -4,7 +4,9 @@
   align-items: center;
   justify-content: center;
   padding: 2rem 1rem;
-  background: var(--clr-bg);
+  background:
+    radial-gradient(ellipse 70% 50% at 50% 0%, rgba(6, 182, 212, 0.15) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 80% 100%, rgba(37, 99, 235, 0.12) 0%, transparent 55%);
   position: relative;
 }
 
@@ -23,8 +25,9 @@
   max-width: 440px;
   background: var(--clr-surface);
   border: 1px solid var(--clr-border);
-  border-radius: 16px;
+  border-radius: 20px;
   padding: 2rem;
+  box-shadow: var(--shadow-card);
 }
 
 .header {
@@ -157,19 +160,23 @@
 .submitBtn {
   margin-top: 0.5rem;
   padding: 0.65rem;
-  border-radius: 8px;
-  background: var(--clr-accent);
+  border-radius: 10px;
+  background: var(--grad-primary-btn);
   color: #fff;
   font-size: 1rem;
   font-weight: 700;
   border: none;
   cursor: pointer;
-  transition: opacity 0.15s, transform 0.1s;
+  transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
+  box-shadow: 0 2px 10px rgba(249, 115, 22, 0.35);
 }
 
-.submitBtn:hover { opacity: 0.9; }
+.submitBtn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(249, 115, 22, 0.45);
+}
 .submitBtn:active { transform: scale(0.98); }
-.submitBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+.submitBtn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 
 .switchLink {
   text-align: center;
@@ -198,7 +205,7 @@
 
 @media (max-width: 480px) {
   .wrapper { padding: 1rem 0.75rem; align-items: flex-start; padding-top: 1.5rem; }
-  .card { padding: 1.5rem 1.25rem; border-radius: 12px; }
+  .card { padding: 1.5rem 1.25rem; border-radius: 16px; }
   .title { font-size: 1.35rem; }
   .trophy { font-size: 2rem; }
   .submitBtn { font-size: 0.95rem; padding: 0.7rem; }

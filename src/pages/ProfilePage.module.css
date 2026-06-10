@@ -24,8 +24,9 @@
 .card {
   background: var(--clr-surface);
   border: 1px solid var(--clr-border);
-  border-radius: 14px;
+  border-radius: 16px;
   padding: 1.25rem;
+  box-shadow: var(--shadow-card);
 }
 
 .cardTitle {
@@ -34,7 +35,9 @@
   color: var(--clr-text-primary);
   margin: 0 0 1rem;
   padding-bottom: 0.6rem;
+  padding-inline-start: 0.75rem;
   border-bottom: 1px solid var(--clr-border);
+  border-inline-start: 3px solid var(--clr-accent-cyan);
   display: flex;
   align-items: center;
   gap: 0.6rem;
@@ -83,12 +86,12 @@
 /* Reminder box */
 .reminderBox {
   margin-top: 1rem;
-  background: #422006;
-  border: 1px solid #92400e;
-  border-radius: 8px;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  border-radius: 10px;
   padding: 0.75rem 1rem;
   font-size: 0.85rem;
-  color: #fbbf24;
+  color: var(--clr-accent-amber);
 }
 
 .missingList { margin: 0.35rem 0 0; padding-left: 1.2rem; color: #fde68a; }
@@ -137,22 +140,26 @@
 .field select:disabled { opacity: 0.5; }
 
 .betError { color: #fca5a5; font-size: 0.875rem; margin: 0; }
-.betSuccess { color: #4ade80; font-size: 0.875rem; margin: 0; }
+.betSuccess { color: var(--clr-accent-green); font-size: 0.875rem; margin: 0; }
 
 .saveBtn {
   align-self: flex-start;
   padding: 0.55rem 1.5rem;
-  border-radius: 8px;
-  background: var(--clr-accent);
+  border-radius: 10px;
+  background: var(--grad-success-btn);
   color: #fff;
   font-size: 0.95rem;
   font-weight: 700;
   border: none;
   cursor: pointer;
-  transition: opacity 0.15s;
+  transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
+  box-shadow: 0 2px 10px rgba(34, 197, 94, 0.3);
 }
-.saveBtn:hover { opacity: 0.85; }
-.saveBtn:disabled { opacity: 0.4; cursor: not-allowed; }
+.saveBtn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(34, 197, 94, 0.4);
+}
+.saveBtn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
 
 /* Locked bets */
 .lockedMsg { font-size: 0.9rem; color: var(--clr-text-secondary); }
@@ -164,7 +171,7 @@
 .predCount {
   margin-inline-start: auto;
   font-size: 0.7rem;
-  background: var(--clr-accent);
+  background: var(--grad-cyan);
   color: #fff;
   padding: 1px 8px;
   border-radius: 999px;
@@ -221,9 +228,9 @@
   font-size: 1rem;
   color: var(--clr-accent);
   letter-spacing: 0.05em;
-  background: var(--clr-surface-raised);
-  border: 1px solid var(--clr-border);
-  border-radius: 6px;
+  background: rgba(56, 189, 248, 0.1);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  border-radius: 8px;
   padding: 2px 10px;
   white-space: nowrap;
 }
@@ -236,7 +243,7 @@
 @media (max-width: 640px) {
   .page { padding: 1rem 0.85rem; }
   .title { font-size: 1.3rem; }
-  .card { padding: 1rem; border-radius: 10px; }
+  .card { padding: 1rem; border-radius: 12px; }
   .predRow { grid-template-columns: 60px 1fr auto; gap: 0.5rem; padding: 0.6rem 0.25rem; font-size: 0.9rem; }
   .saveBtn { width: 100%; text-align: center; }
   .field select { font-size: 0.9rem; padding: 0.5rem 0.75rem; }

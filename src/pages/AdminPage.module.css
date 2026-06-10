@@ -33,16 +33,20 @@
   min-width: 120px;
   background: var(--clr-surface);
   border: 1px solid var(--clr-border);
-  border-radius: 12px;
+  border-radius: 14px;
   padding: 1rem;
   text-align: center;
+  box-shadow: var(--shadow-card);
 }
 
 .statNum {
   display: block;
   font-size: 2rem;
   font-weight: 800;
-  color: var(--clr-accent);
+  background: var(--grad-cyan);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .statLabel {
@@ -55,9 +59,10 @@
 .section {
   background: var(--clr-surface);
   border: 1px solid var(--clr-border);
-  border-radius: 14px;
+  border-radius: 16px;
   padding: 1.25rem;
   margin-bottom: 1.5rem;
+  box-shadow: var(--shadow-card);
 }
 
 .sectionTitle {
@@ -66,14 +71,16 @@
   color: var(--clr-text-primary);
   margin: 0 0 1rem;
   padding-bottom: 0.6rem;
+  padding-inline-start: 0.75rem;
   border-bottom: 1px solid var(--clr-border);
+  border-inline-start: 3px solid var(--clr-accent-cyan);
   display: flex;
   align-items: center;
   gap: 0.5rem;
 }
 
 .badge {
-  background: #c2410c;
+  background: var(--clr-accent-orange);
   color: #fff;
   font-size: 0.7rem;
   padding: 2px 7px;
@@ -94,12 +101,13 @@
 .table th {
   text-align: left;
   padding: 0.5rem 0.75rem;
-  color: var(--clr-muted);
-  font-weight: 600;
+  color: var(--clr-accent-cyan);
+  font-weight: 700;
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  border-bottom: 1px solid var(--clr-border);
+  border-bottom: 2px solid var(--clr-border);
+  background: rgba(56, 189, 248, 0.06);
 }
 
 .table td {
@@ -108,8 +116,9 @@
   color: var(--clr-text-secondary);
 }
 
+.table tbody tr:nth-child(even) td { background: rgba(33, 50, 89, 0.35); }
 .table tbody tr:last-child td { border-bottom: none; }
-.table tbody tr:hover td { background: var(--clr-surface-raised); }
+.table tbody tr:hover td { background: rgba(56, 189, 248, 0.08); }
 
 .na { color: var(--clr-muted); }
 
@@ -117,25 +126,33 @@
 
 .approveBtn, .rejectBtn {
   padding: 0.25rem 0.75rem;
-  border-radius: 6px;
+  border-radius: 8px;
   border: none;
   font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
-  transition: opacity 0.15s;
+  transition: transform 0.15s, opacity 0.15s;
 }
 
-.approveBtn { background: #14532d; color: #4ade80; }
-.approveBtn:hover { opacity: 0.8; }
-.rejectBtn { background: #450a0a; color: #fca5a5; }
-.rejectBtn:hover { opacity: 0.8; }
+.approveBtn {
+  background: var(--grad-success-btn);
+  color: #fff;
+  box-shadow: 0 2px 6px rgba(34, 197, 94, 0.25);
+}
+.approveBtn:hover { transform: translateY(-1px); opacity: 0.95; }
+.rejectBtn {
+  background: linear-gradient(135deg, #991b1b 0%, #7f1d1d 100%);
+  color: #fca5a5;
+  box-shadow: 0 2px 6px rgba(127, 29, 29, 0.3);
+}
+.rejectBtn:hover { transform: translateY(-1px); opacity: 0.95; }
 
 /* ── Delete button (trash icon) ─────────────────────────────────────────── */
 .deleteBtn {
   background: transparent;
   border: 1px solid #7f1d1d;
   color: #fca5a5;
-  border-radius: 6px;
+  border-radius: 8px;
   padding: 0.2rem 0.45rem;
   font-size: 0.85rem;
   cursor: pointer;
@@ -170,7 +187,7 @@
 .modal {
   background: var(--clr-surface);
   border: 1px solid var(--clr-border);
-  border-radius: 14px;
+  border-radius: 16px;
   padding: 1.75rem;
   max-width: 420px;
   width: 100%;
@@ -241,8 +258,8 @@
   text-transform: uppercase;
 }
 
-.approved { background: #14532d; color: #4ade80; }
-.rejected { background: #450a0a; color: #fca5a5; }
+.approved { background: rgba(22, 163, 74, 0.25); color: var(--clr-accent-green); }
+.rejected { background: rgba(127, 29, 29, 0.35); color: #fca5a5; }
 
 @media (max-width: 768px) {
   .stats { gap: 0.75rem; }
@@ -253,7 +270,7 @@
 @media (max-width: 600px) {
   .page { padding: 1rem 0.85rem; }
   .title { font-size: 1.3rem; }
-  .section { padding: 1rem; border-radius: 10px; }
+  .section { padding: 1rem; border-radius: 12px; }
   .stats { flex-wrap: wrap; }
   .stat { flex: 1 1 calc(50% - 0.75rem); min-width: 0; }
   /* Collapse table — hide less critical columns on small screens */

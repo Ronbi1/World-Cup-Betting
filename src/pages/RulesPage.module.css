@@ -22,9 +22,10 @@
 .card {
   background: var(--clr-surface);
   border: 1px solid var(--clr-border);
-  border-radius: 14px;
+  border-radius: 16px;
   padding: 1.25rem 1.5rem;
   margin-bottom: 1.25rem;
+  box-shadow: var(--shadow-card);
 }
 
 .sectionTitle {
@@ -33,7 +34,9 @@
   color: var(--clr-text-primary);
   margin: 0 0 0.85rem;
   padding-bottom: 0.6rem;
+  padding-inline-start: 0.75rem;
   border-bottom: 1px solid var(--clr-border);
+  border-inline-start: 3px solid var(--clr-accent-cyan);
 }
 
 .intro {
@@ -69,6 +72,13 @@
   padding: 0.6rem 0.75rem;
   background: var(--clr-surface-raised);
   border-radius: 10px;
+  border-inline-start: 3px solid var(--clr-accent-cyan);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.rulesList li:hover {
+  transform: translateX(2px);
+  box-shadow: 0 2px 8px rgba(56, 189, 248, 0.1);
 }
 
 .icon {
@@ -80,6 +90,6 @@
 @media (max-width: 600px) {
   .page { padding: 1rem 0.85rem; }
   .title { font-size: 1.3rem; }
-  .card { padding: 1rem 1.1rem; border-radius: 10px; }
+  .card { padding: 1rem 1.1rem; border-radius: 12px; }
   .rulesList li { font-size: 0.88rem; padding: 0.5rem 0.65rem; }
 }

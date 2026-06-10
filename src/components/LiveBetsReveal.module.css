@@ -30,8 +30,14 @@
 .matchBlock {
   background: var(--clr-surface);
   border: 1px solid var(--clr-border);
-  border-radius: 12px;
+  border-radius: 14px;
   overflow: hidden;
+  box-shadow: var(--shadow-card);
+  transition: box-shadow 0.2s;
+}
+
+.matchBlock:hover {
+  box-shadow: var(--shadow-card-hover);
 }
 
 /* ── Match header (live score bar) ───────────────────────────────────────── */
@@ -94,7 +100,7 @@
 .scoreTextLive {
   font-size: 1.2rem;
   font-weight: 800;
-  color: #4ade80;
+  color: var(--clr-accent-green);
   font-family: var(--font-mono);
 }
 
@@ -107,8 +113,8 @@
   letter-spacing: 0.05em;
 }
 
-.htBadge { background: #1e3a5f; color: #60a5fa; }
-.ftBadge { background: #1e3a5f; color: #60a5fa; }
+.htBadge { background: rgba(37, 99, 235, 0.2); color: var(--clr-accent); }
+.ftBadge { background: rgba(37, 99, 235, 0.2); color: var(--clr-accent); }
 
 /* ── No predictions notice ───────────────────────────────────────────────── */
 .noPreds {
@@ -132,8 +138,9 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--clr-muted);
-  border-bottom: 1px solid var(--clr-border);
+  color: var(--clr-accent-cyan);
+  border-bottom: 2px solid var(--clr-border);
+  background: rgba(56, 189, 248, 0.06);
 }
 
 .thScore { text-align: center; }
@@ -146,13 +153,14 @@
   vertical-align: middle;
 }
 
+.predsTable tbody tr:nth-child(even) td { background: rgba(33, 50, 89, 0.35); }
 .predsTable tbody tr:last-child td { border-bottom: none; }
-.predsTable tbody tr:hover td { background: var(--clr-surface-raised); }
+.predsTable tbody tr:hover td { background: rgba(56, 189, 248, 0.08); }
 
 /* Row highlight states */
-.row_exact td   { background: rgba(74, 222, 128, 0.06); }
-.row_result td  { background: rgba(96, 165, 250, 0.05); }
-.row_wrong td   { background: rgba(248, 113, 113, 0.04); }
+.row_exact td   { background: rgba(74, 222, 128, 0.08) !important; }
+.row_result td  { background: rgba(96, 165, 250, 0.07) !important; }
+.row_wrong td   { background: rgba(248, 113, 113, 0.06) !important; }
 .youRow td:first-child { border-left: 3px solid var(--clr-accent); }
 
 /* Player cell */
@@ -169,7 +177,7 @@
 
 .youTag {
   font-size: 0.62rem;
-  background: var(--clr-accent);
+  background: var(--grad-cyan);
   color: #fff;
   padding: 1px 5px;
   border-radius: 999px;
@@ -183,7 +191,7 @@
   display: inline-block;
   background: var(--clr-surface-raised);
   border: 1px solid var(--clr-border);
-  border-radius: 6px;
+  border-radius: 8px;
   padding: 2px 10px;
   font-family: var(--font-mono);
   font-weight: 700;
@@ -211,10 +219,10 @@
   color: var(--clr-muted);
 }
 
-.badge_exact   { background: #14532d; color: #4ade80; }
-.badge_result  { background: #1e3a5f; color: #60a5fa; }
-.badge_wrong   { background: #450a0a; color: #f87171; }
-.badge_pending { background: #422006; color: #fbbf24; }
+.badge_exact   { background: rgba(22, 163, 74, 0.25); color: var(--clr-accent-green); }
+.badge_result  { background: rgba(37, 99, 235, 0.2); color: var(--clr-accent); }
+.badge_wrong   { background: rgba(127, 29, 29, 0.35); color: #f87171; }
+.badge_pending { background: rgba(245, 158, 11, 0.15); color: var(--clr-accent-amber); }
 
 @media (max-width: 768px) {
   .predsTable th, .predsTable td { padding: 0.45rem 0.75rem; }

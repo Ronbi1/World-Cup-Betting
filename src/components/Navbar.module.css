@@ -12,8 +12,9 @@
   padding-left:   max(1.5rem, var(--safe-area-inset-left));
   padding-right:  max(1.5rem, var(--safe-area-inset-right));
   height: calc(60px + var(--safe-area-inset-top));
-  background: var(--clr-surface);
+  background: var(--grad-navbar);
   border-bottom: 1px solid var(--clr-border);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
   position: sticky;
   top: 0;
   z-index: 100;
@@ -31,7 +32,10 @@
 .brandText {
   font-weight: 800;
   font-size: 1.1rem;
-  color: var(--clr-accent);
+  background: var(--grad-cyan);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
   letter-spacing: -0.5px;
 }
 
@@ -83,7 +87,7 @@
 .links a {
   display: block;
   padding: 0.35rem 0.85rem;
-  border-radius: 6px;
+  border-radius: 8px;
   color: var(--clr-text-secondary);
   text-decoration: none;
   font-size: 0.9rem;
@@ -92,13 +96,14 @@
 }
 
 .links a:hover {
-  background: var(--clr-surface-raised);
+  background: rgba(56, 189, 248, 0.1);
   color: var(--clr-text-primary);
 }
 
 .active {
-  background: var(--clr-surface-raised) !important;
+  background: rgba(56, 189, 248, 0.18) !important;
   color: var(--clr-accent) !important;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.15);
 }
 
 .userArea {
@@ -120,13 +125,13 @@
 
 .logoutBtn {
   padding: 0.3rem 0.85rem;
-  border-radius: 6px;
+  border-radius: 8px;
   border: 1px solid var(--clr-border);
   background: transparent;
   color: var(--clr-text-secondary);
   font-size: 0.85rem;
   cursor: pointer;
-  transition: background 0.15s, color 0.15s;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
 
 .logoutBtn:hover {
@@ -166,7 +171,7 @@
     flex-direction: column;
     align-items: stretch;
     gap: 0;
-    background: var(--clr-surface);
+    background: var(--clr-bg-mid);
     border-bottom: 1px solid var(--clr-border);
     padding: 0;
     max-height: 0;
@@ -177,7 +182,7 @@
   .menuOpen {
     max-height: 480px;
     padding: 0.75rem 0;
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
   }
 
   .links {
