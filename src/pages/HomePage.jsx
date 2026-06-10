@@ -37,7 +37,7 @@ export default function HomePage() {
   // Each card uses it to compute its own countdown text without spawning
   // its own interval.
   const now = useMinuteTick();
-  const { predictions, upsertPrediction } = useUserPredictions(user?.id);
+  const { predictions, upsertPrediction } = useUserPredictions();
 
   // Opportunistic 60 s leaderboard poll while any match is live. Pairs
   // with the 30 s server cache, so concurrent calls are cheap.

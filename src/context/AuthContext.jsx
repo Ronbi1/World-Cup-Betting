@@ -35,11 +35,21 @@ const sessionFromServer = (userData) => ({
   scores:    userData.scores,
 });
 
+function rowsToPredictionsMap(rows) {
+  const map = {};
+  (rows ?? []).forEach((row) => {
+    map[row.match_id] = { home: row.home, away: row.away };
+  });
+  return map;
+}
+
 // ─── Provider ─────────────────────────────────────────────────────────────────
 export function AuthProvider({ children }) {
   const [user, setUser]           = useState(loadSession);
   const [users, setUsers]         = useState([]);
   const [scores, setScores]       = useState([]); // [{ userId, points, correctResults, exactScores }]
+  const [predictions, setPredictions] = useState({}); // { [matchId]: { home, away } }
+  const [loadingPredictions, setLoadingPredictions] = useState(false);
   const [loadingUsers, setLoadingUsers] = useState(true);
 
   // Always false on boot — /auth/me must run once to validate the cookie.
@@ -122,17 +132,59 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
+  // ── Load this user's match predictions (private — server enforces owner) ───
+  const fetchUserPredictions = useCallback(async (userId) => {
+    if (!userId) {
+      setPredictions({});
+      return;
+    }
+    setLoadingPredictions(true);
+    try {
+      const { data } = await serverApi.get('/predictions', { params: { userId } });
+      setPredictions(rowsToPredictionsMap(data));
+    } catch (err) {
+      console.error('[AuthContext] fetchUserPredictions error:', err.message);
+    } finally {
+      setLoadingPredictions(false);
+    }
+  }, []);
+
+  const upsertPrediction = useCallback((matchId, pred) => {
+    setPredictions((prev) => ({ ...prev, [String(matchId)]: pred }));
+  }, []);
+
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchUsers();
   }, [fetchUsers]);
 
-  // Fetch scores once on mount (when a user is logged in)
+  // Fetch scores + predictions once auth is confirmed for this user.
   useEffect(() => {
+    if (!authReady || !user?.id) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (user) fetchScores();
+    fetchScores();
+    fetchUserPredictions(user.id);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id]);
+  }, [authReady, user?.id]);
+
+  // Mobile PWA / iOS Safari: refetch predictions when the app returns from
+  // background or bfcache — the per-page hook cache could miss a cold resume.
+  useEffect(() => {
+    if (!authReady || !user?.id) return undefined;
+
+    const refetchIfVisible = () => {
+      if (document.visibilityState === 'visible') {
+        fetchUserPredictions(user.id);
+      }
+    };
+
+    document.addEventListener('visibilitychange', refetchIfVisible);
+    window.addEventListener('pageshow', refetchIfVisible);
+    return () => {
+      document.removeEventListener('visibilitychange', refetchIfVisible);
+      window.removeEventListener('pageshow', refetchIfVisible);
+    };
+  }, [authReady, user?.id, fetchUserPredictions]);
 
   // ── Login ──────────────────────────────────────────────────────────────────
   const login = useCallback(async (email, password, rememberMe = false) => {
@@ -151,12 +203,13 @@ export function AuthProvider({ children }) {
       }
 
       fetchScores();
+      fetchUserPredictions(sessionUser.id);
 
       return { success: true };
     } catch (err) {
       return { success: false, error: extractApiError(err, 'Login failed. Please try again.') };
     }
-  }, [fetchUsers, fetchScores]);
+  }, [fetchUsers, fetchScores, fetchUserPredictions]);
 
   // ── Register ───────────────────────────────────────────────────────────────
   const register = useCallback(async ({ email, password, name, winningTeam, topScorer, topAssist }) => {
@@ -178,6 +231,7 @@ export function AuthProvider({ children }) {
     setUser(null);
     setUsers([]);
     setScores([]);
+    setPredictions({});
     saveSession(null);
   }, []);
 
@@ -251,6 +305,10 @@ export function AuthProvider({ children }) {
     user: freshUser,
     users,
     scores,
+    predictions,
+    loadingPredictions,
+    upsertPrediction,
+    refreshPredictions: () => fetchUserPredictions(freshUser?.id),
     loadingUsers,
     authReady,
     login,
@@ -263,7 +321,7 @@ export function AuthProvider({ children }) {
     refreshScores: fetchScores,
     isAdmin: freshUser?.role === ROLES.ADMIN,
     refreshUsers: fetchUsers,
-  }), [freshUser, users, scores, loadingUsers, authReady, login, logout, register, updateUserStatus, deleteUser, updateBet, recalculateScores, fetchScores, fetchUsers]);
+  }), [freshUser, users, scores, predictions, loadingPredictions, upsertPrediction, fetchUserPredictions, loadingUsers, authReady, login, logout, register, updateUserStatus, deleteUser, updateBet, recalculateScores, fetchScores, fetchUsers]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

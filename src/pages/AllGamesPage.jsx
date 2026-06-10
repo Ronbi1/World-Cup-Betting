@@ -38,7 +38,7 @@ export default function AllGamesPage() {
   // src/hooks/useMinuteTick.js. Passed as a prop into every card below so
   // countdowns re-evaluate in lock-step without per-card intervals.
   const now = useMinuteTick();
-  const { predictions, upsertPrediction } = useUserPredictions(user?.id);
+  const { predictions, upsertPrediction } = useUserPredictions();
 
   const handleMatchClick = (match) => {
     setSelectedMatch(match);

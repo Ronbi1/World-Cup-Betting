@@ -72,7 +72,24 @@
 
 .date { color: var(--clr-text-secondary); }
 .time { color: var(--clr-accent); font-weight: 600; }
-.group { margin-left: auto; color: var(--clr-text-secondary); }
+.group { margin-inline-start: auto; color: var(--clr-text-secondary); }
+
+/* Saved prediction chip — compact inline badge, classic sans-serif. */
+.yourPickMeta {
+  font-size: 0.62rem;
+  font-weight: 500;
+  font-family: var(--font-sans);
+  color: var(--clr-accent-gold-deep);
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--clr-accent-gold-bg);
+  border: 1px solid var(--clr-accent-gold-border);
+  direction: ltr;
+  unicode-bidi: isolate;
+  white-space: nowrap;
+  line-height: 1.35;
+  letter-spacing: 0.01em;
+}
 
 /* Countdown to kickoff — small, dimmed chip that lives inside the .meta
    row. Logical padding keeps RTL Hebrew flowing naturally; nowrap keeps
@@ -125,6 +142,15 @@
   color: var(--clr-accent-green);
 }
 
+/* Upcoming match where the user already saved a prediction — gold score
+   replaces "vs" so the pick is obvious on small screens. */
+.scorePrediction {
+  color: var(--clr-accent-gold-deep);
+  font-size: 1.25rem;
+  font-family: var(--font-sans);
+  font-weight: 700;
+}
+
 .ht {
   margin-top: 0.5rem;
   font-size: 0.75rem;
@@ -137,23 +163,30 @@
 }
 
 .yourPick {
-  margin-top: 0.5rem;
-  font-size: 0.72rem;
-  font-weight: 600;
+  margin: 0.35rem auto 0;
+  width: fit-content;
+  font-size: 0.62rem;
+  font-weight: 500;
+  font-family: var(--font-sans);
   color: var(--clr-accent-gold-deep);
   text-align: center;
-  padding: 3px 10px;
+  padding: 1px 7px;
   border-radius: 999px;
   background: var(--clr-accent-gold-bg);
   border: 1px solid var(--clr-accent-gold-border);
-  font-family: var(--font-mono);
   direction: ltr;
+  unicode-bidi: isolate;
+  line-height: 1.35;
+  letter-spacing: 0.01em;
 }
 
 @media (max-width: 600px) {
   .card { padding: 0.85rem 1rem; }
   .teamName { font-size: 0.88rem; }
   .score { font-size: 1.2rem; min-width: 56px; }
+  .scorePrediction { font-size: 1.1rem; }
+  .yourPickMeta { font-size: 0.58rem; padding: 1px 6px; }
+  .yourPick { font-size: 0.58rem; padding: 1px 6px; }
 }
 
 @media (max-width: 480px) {

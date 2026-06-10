@@ -98,28 +98,12 @@
   background: rgba(56, 189, 248, 0.08);
 }
 
-/* Top 3 highlight */
-.topThree td {
-  background: rgba(56, 189, 248, 0.06);
-}
-
-.topThree:first-child td {
-  background: linear-gradient(90deg, rgba(212, 175, 55, 0.12) 0%, rgba(212, 175, 55, 0.04) 100%);
-}
-
-/* Rank cell */
-.rank {
-  text-align: center;
-  font-size: 1.1rem;
-  width: 48px;
-  font-weight: 700;
-}
-
 /* Player cell */
 .playerCell {
   display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .playerName {
@@ -128,40 +112,38 @@
   font-size: 0.95rem;
 }
 
-.nationality {
-  font-size: 0.75rem;
+.youRow td {
+  background: rgba(56, 189, 248, 0.1) !important;
+}
+
+.youTag {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--clr-accent-cyan);
+  background: rgba(56, 189, 248, 0.15);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  border-radius: 4px;
+  padding: 0.1rem 0.35rem;
+}
+
+.na {
   color: var(--clr-muted);
 }
 
-/* Team cell */
-.teamCell {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+.shimmerName {
+  display: inline-block;
+  width: 120px;
+  height: 0.9rem;
+  border-radius: 4px;
 }
 
-.teamName {
-  font-size: 0.875rem;
-  color: var(--clr-text-secondary);
-  white-space: nowrap;
-}
-
-/* Stats */
-.goals {
-  text-align: center;
-  font-weight: 800;
-  font-size: 1.1rem;
-  background: var(--grad-cyan);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  font-family: var(--font-mono);
-}
-
-.stat {
-  text-align: center;
-  font-family: var(--font-mono);
-  color: var(--clr-text-secondary);
+.shimmerPick {
+  display: inline-block;
+  width: 160px;
+  height: 0.9rem;
+  border-radius: 4px;
 }
 
 /* Skeleton shimmer */

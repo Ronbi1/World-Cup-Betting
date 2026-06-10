@@ -2,10 +2,41 @@ const express = require('express');
 const { supabase } = require('../_lib/supabase');
 const { requireAuth, requireAdmin } = require('../_lib/auth');
 const { sendApprovalEmail } = require('../_lib/email');
+const { isTournamentStarted } = require('../_lib/tournament');
 
 const router = express.Router();
 
 const VALID_STATUSES = ['PENDING', 'APPROVED', 'REJECTED'];
+
+// GET /api/users/tournament-bets — approved users' top scorer/assist picks.
+// Defense-in-depth: only available after tournament kickoff so pre-start
+// picks stay private (mirrors predictions.routes.js match-kickoff gate).
+router.get('/tournament-bets', requireAuth, async (req, res, next) => {
+  try {
+    if (!isTournamentStarted()) {
+      return res.status(403).json({ error: 'Tournament bets are not visible until the tournament begins.' });
+    }
+
+    const { data, error } = await supabase
+      .from('users')
+      .select('id, name, bet')
+      .eq('status', 'APPROVED')
+      .order('name', { ascending: true });
+
+    if (error) throw error;
+
+    const rows = (data ?? []).map((u) => ({
+      id: u.id,
+      name: u.name,
+      topScorer: u.bet?.topScorer ?? null,
+      topAssist: u.bet?.topAssist ?? null,
+    }));
+
+    res.json(rows);
+  } catch (err) {
+    next(err);
+  }
+});
 
 // GET /api/users — admin only, never returns password
 router.get('/', requireAuth, requireAdmin, async (req, res, next) => {
@@ -104,6 +135,10 @@ router.patch('/:id/bet', requireAuth, async (req, res, next) => {
     const { id } = req.params;
     if (req.user.id !== id && req.user.role !== 'ADMIN') {
       return res.status(403).json({ error: 'You can only update your own bet.' });
+    }
+
+    if (isTournamentStarted()) {
+      return res.status(403).json({ error: 'Tournament bets are locked after kickoff.' });
     }
 
     const { winningTeam, topScorer, topAssist } = req.body || {};

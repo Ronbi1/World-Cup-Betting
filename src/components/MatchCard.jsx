@@ -47,6 +47,7 @@ export default function MatchCard({ match, compact = false, onClick, now, userPr
     : null;
 
   const hasUserPrediction = userPrediction != null;
+  const showPredictedScoreInCenter = isUpcoming && hasUserPrediction;
 
   return (
     <article
@@ -67,6 +68,11 @@ export default function MatchCard({ match, compact = false, onClick, now, userPr
           <span className={styles.stageBadge}>{t(`stages.${match.stage}`)}</span>
         )}
         {match.group && <span className={styles.group}>{match.group}</span>}
+        {hasUserPrediction && (
+          <span className={styles.yourPickMeta}>
+            {t('matchCard.yourPick', { home: userPrediction.home, away: userPrediction.away })}
+          </span>
+        )}
       </div>
 
       <div className={styles.teams}>
@@ -75,10 +81,12 @@ export default function MatchCard({ match, compact = false, onClick, now, userPr
           <span className={styles.teamName}>{match.homeTeam.shortName}</span>
         </div>
 
-        <div className={`${styles.score} ${isLive ? styles.scoreLive : ''}`}>
+        <div className={`${styles.score} ${isLive ? styles.scoreLive : ''} ${showPredictedScoreInCenter ? styles.scorePrediction : ''}`}>
           {isFinished || isLive
             ? `${match.score.home ?? 0} – ${match.score.away ?? 0}`
-            : t('matchCard.vs')}
+            : showPredictedScoreInCenter
+              ? `${userPrediction.home} – ${userPrediction.away}`
+              : t('matchCard.vs')}
         </div>
 
         <div className={`${styles.team} ${styles.teamRight}`}>
@@ -93,7 +101,7 @@ export default function MatchCard({ match, compact = false, onClick, now, userPr
         </p>
       )}
 
-      {hasUserPrediction && (
+      {hasUserPrediction && (isFinished || isLive) && (
         <p className={styles.yourPick}>
           {t('matchCard.yourPick', { home: userPrediction.home, away: userPrediction.away })}
         </p>

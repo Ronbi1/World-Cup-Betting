@@ -149,14 +149,13 @@
   },
   "topScorers": {
     "title": "Golden Boot",
-    "subtitleStatic": "FIFA World Cup 2026 · Candidate lists",
-    "rank": "#",
-    "player": "Player",
-    "topScorerCandidates": "Top Scorer Candidates",
-    "topAssistCandidates": "Top Assist Candidates",
-    "staticEmptyTitle": "List not supplied yet",
-    "staticEmptyBody": "The admin will publish the candidate list before the tournament starts.",
-    "staticNote": "These are the players you can choose from on your Profile page when placing your tournament bet."
+    "subtitle": "FIFA World Cup 2026 · Everyone's tournament picks",
+    "hiddenTitle": "Predictions hidden until kickoff",
+    "hiddenBody": "Top scorer and top assist picks stay private until the World Cup begins on June 11, 2026. Make your picks on your Profile page before then.",
+    "tableUser": "Player",
+    "tableTopScorer": "Top Scorer",
+    "tableTopAssist": "Top Assist",
+    "fetchError": "Could not load tournament picks. Please try again later."
   },
   "profile": {
     "title": "My Profile",
