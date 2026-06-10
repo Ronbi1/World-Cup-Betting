@@ -70,12 +70,12 @@
     "rules": {
       "intro": "Predict the score of every World Cup match before it kicks off. The more accurate your predictions, the more points you earn.",
       "exactScore": "Exact Score — predict the exact final score → 3 pts",
-      "exactScoreHigh": "Exact Score (5+ goals) — high-scoring game, exact score → 5 pts",
+      "exactScoreHigh": "Exact Score (4+ goals) — high-scoring game, exact score → 5 pts",
       "correctResult": "Correct Result — right winner or draw, wrong score → 1 pt",
       "exactScoreBonus": "Exact-Score Bonus — 3 or more exact-score hits across the tournament → one-time +3 pts",
       "tournamentWinner": "Tournament Winner — pick the World Cup champion → 15 pts",
-      "topScorer": "Top Scorer — pick the Golden Boot winner → 5 pts",
-      "topAssist": "Top Assist — pick the most-assists player → 5 pts"
+      "topScorer": "Top Scorer — pick the Golden Boot winner → 15 pts",
+      "topAssist": "Top Assist — pick the most-assists player → 15 pts"
     },
     "todayMatches": "Today's Matches",
     "noMatchesToday": "No matches scheduled for today.",
@@ -88,8 +88,8 @@
     "bonusToggle": "Tournament bonus",
     "bonusNote": "Optional — fill in only at end of tournament to award bonus points:",
     "bonusWinningTeam": "Winning team (15 pts)",
-    "bonusTopScorer": "Top scorer name (5 pts)",
-    "bonusTopAssist": "Top assist name (5 pts)",
+    "bonusTopScorer": "Top scorer name (15 pts)",
+    "bonusTopAssist": "Top assist name (15 pts)",
     "leaderboardEmpty": "No participants yet."
   },
   "leaderboard": {

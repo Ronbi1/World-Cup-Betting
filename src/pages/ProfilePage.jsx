@@ -9,6 +9,7 @@ import {
   TOP_ASSISTS_LIST,
 } from '../utils/constants';
 import serverApi from '../services/serverApi';
+import { formatMatchDate } from '../utils/matchTime';
 import styles from './ProfilePage.module.css';
 
 export default function ProfilePage() {
@@ -198,7 +199,7 @@ export default function ProfilePage() {
                 const homeName = match?.homeTeam?.shortName ?? match?.homeTeam?.name ?? '—';
                 const awayName = match?.awayTeam?.shortName ?? match?.awayTeam?.name ?? '—';
                 const dateStr = match
-                  ? new Date(match.utcDate).toLocaleDateString(locale, {
+                  ? formatMatchDate(match.utcDate, locale, {
                       day: '2-digit', month: 'short',
                     })
                   : '';

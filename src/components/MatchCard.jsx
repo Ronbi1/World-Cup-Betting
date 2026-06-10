@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import TeamFlag from './TeamFlag';
 import styles from './MatchCard.module.css';
 import { MATCH_STATUS } from '../utils/constants';
+import { formatMatchDate, formatMatchTime } from '../utils/matchTime';
 
 const statusKey = (status) => {
   switch (status) {
@@ -18,10 +19,8 @@ export default function MatchCard({ match, compact = false, onClick }) {
   const { t, i18n } = useTranslation();
   const locale = i18n.resolvedLanguage === 'he' ? 'he-IL' : 'en-GB';
 
-  const formatDate = (utcDate) =>
-    new Date(utcDate).toLocaleDateString(locale, { day: '2-digit', month: 'short', year: 'numeric' });
-  const formatTime = (utcDate) =>
-    new Date(utcDate).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
+  const formatDate = (utcDate) => formatMatchDate(utcDate, locale);
+  const formatTime = (utcDate) => formatMatchTime(utcDate, locale);
 
   const { key: stKey, cls: stCls } = statusKey(match.status);
   const isFinished = match.status === MATCH_STATUS.FINISHED;

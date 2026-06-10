@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/useAuth';
 import serverApi from '../services/serverApi';
 import { extractApiError } from '../utils/apiErrors';
-import { hasMatchStarted } from '../utils/matchTime';
+import { hasMatchStarted, formatMatchDate } from '../utils/matchTime';
 import TeamFlag from './TeamFlag';
 import styles from './BetModal.module.css';
 
@@ -228,7 +228,7 @@ export default function BetModal({ match, opened, onClose }) {
   if (!match) return null;
 
   const formatDate = (utcDate) =>
-    new Date(utcDate).toLocaleDateString(locale, {
+    formatMatchDate(utcDate, locale, {
       weekday: 'short', day: '2-digit', month: 'short', year: 'numeric',
     });
 

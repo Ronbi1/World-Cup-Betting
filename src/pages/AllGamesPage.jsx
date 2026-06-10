@@ -8,6 +8,7 @@ import BetModal from '../components/BetModal';
 import LiveBetsReveal from '../components/LiveBetsReveal';
 import LiveScoreBanner from '../components/LiveScoreBanner';
 import { MATCH_STATUS, STAGE_ORDER } from '../utils/constants';
+import { isMatchToday } from '../utils/matchTime';
 import styles from './AllGamesPage.module.css';
 
 const groupMatchesByStageAndGroup = (matches) => {
@@ -20,16 +21,6 @@ const groupMatchesByStageAndGroup = (matches) => {
     stageMap[stage][group].push(match);
   }
   return stageMap;
-};
-
-const isToday = (utcDate) => {
-  const d = new Date(utcDate);
-  const now = new Date();
-  return (
-    d.getFullYear() === now.getFullYear() &&
-    d.getMonth() === now.getMonth() &&
-    d.getDate() === now.getDate()
-  );
 };
 
 export default function AllGamesPage() {
@@ -55,7 +46,7 @@ export default function AllGamesPage() {
   const filteredGroups = {};
   for (const [group, groupMatches] of Object.entries(currentStageGroups)) {
     const filtered = groupMatches.filter((m) => {
-      if (filterStatus === 'TODAY') return isToday(m.utcDate);
+      if (filterStatus === 'TODAY') return isMatchToday(m.utcDate);
       if (filterStatus === 'FINISHED') return m.status === MATCH_STATUS.FINISHED;
       if (filterStatus === 'UPCOMING')
         return m.status === MATCH_STATUS.SCHEDULED || m.status === MATCH_STATUS.TIMED;
@@ -64,7 +55,7 @@ export default function AllGamesPage() {
     if (filtered.length > 0) filteredGroups[group] = filtered;
   }
 
-  const todayCount = matches.filter((m) => isToday(m.utcDate)).length;
+  const todayCount = matches.filter((m) => isMatchToday(m.utcDate)).length;
 
   const filterLabel = (f) => {
     if (f === 'ALL') return t('allGames.filter.all');
@@ -163,7 +154,7 @@ export default function AllGamesPage() {
                     {groupMatches
                       .sort((a, b) => new Date(a.utcDate) - new Date(b.utcDate))
                       .map((m) => (
-                        <div key={m.id} className={isToday(m.utcDate) ? styles.todayHighlight : ''}>
+                        <div key={m.id} className={isMatchToday(m.utcDate) ? styles.todayHighlight : ''}>
                           <MatchCard match={m} onClick={handleMatchClick} />
                         </div>
                       ))}

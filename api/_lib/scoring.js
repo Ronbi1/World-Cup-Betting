@@ -2,15 +2,15 @@
 // any future test harness.
 //
 // Match predictions:
-//   Exact score (≤4 total goals)  → 3 pts
-//   Exact score (≥5 total goals)  → 5 pts (3 base + 2 high-scoring bonus)
+//   Exact score (≤3 total goals)  → 3 pts
+//   Exact score (≥4 total goals)  → 5 pts (3 base + 2 high-scoring bonus)
 //   Correct result (not exact)    → 1 pt
 //   Wrong result                  → 0 pts
 //
 // Tournament bets (applied once, at end of tournament):
 //   Winning team   → 15 pts
-//   Top scorer     →  5 pts
-//   Top assist     →  5 pts
+//   Top scorer     → 15 pts
+//   Top assist     → 15 pts
 //
 // Leaderboard bonus (one-time, applied at compute time):
 //   Reaching at least 3 exact-score hits across the tournament → +3 pts.
@@ -27,11 +27,11 @@
 const POINTS = {
   EXACT_BASE: 3,
   HIGH_SCORING_BONUS: 2,
-  HIGH_SCORING_MIN: 5,
+  HIGH_SCORING_MIN: 4,
   CORRECT_RESULT: 1,
   TOURNAMENT_WINNER: 15,
-  TOP_SCORER: 5,
-  TOP_ASSIST: 5,
+  TOP_SCORER: 15,
+  TOP_ASSIST: 15,
   EXACT_SCORE_BONUS_MIN: 3,
   EXACT_SCORE_BONUS: 3,
 };

@@ -152,7 +152,11 @@ describe('computeLeaderboard — virtual 0-0 default prediction', () => {
 });
 
 describe('computeLeaderboard — high-scoring + correct-result paths', () => {
-  it('high-scoring exact (4-3, total 7) awards EXACT_BASE + HIGH_SCORING_BONUS = 5 pts', () => {
+  it('HIGH_SCORING_MIN is 4 — the threshold is goals >= 4, not >= 5', () => {
+    expect(POINTS.HIGH_SCORING_MIN).toBe(4);
+  });
+
+  it('high-scoring exact (4-3, total 7) — well above threshold, awards EXACT_BASE + HIGH_SCORING_BONUS = 5 pts', () => {
     const userId = 'u-high';
     const [row] = computeLeaderboard({
       users: [makeUser(userId)],
@@ -161,6 +165,42 @@ describe('computeLeaderboard — high-scoring + correct-result paths', () => {
     });
     expect(row.exactScores).toBe(1);
     expect(row.points).toBe(POINTS.EXACT_BASE + POINTS.HIGH_SCORING_BONUS);
+    expect(row.points).toBe(5);
+  });
+
+  it('2-2 exact (total 4) — AT the threshold, awards high-scoring 5 pts', () => {
+    const userId = 'u-2-2';
+    const [row] = computeLeaderboard({
+      users: [makeUser(userId)],
+      finishedMatches: [makeMatch(1, 2, 2)],
+      predictions: [makePrediction(userId, 1, 2, 2)],
+    });
+    expect(row.exactScores).toBe(1);
+    expect(row.points).toBe(5);
+    expect(row.points).toBe(POINTS.EXACT_BASE + POINTS.HIGH_SCORING_BONUS);
+  });
+
+  it('3-1 exact (total 4, asymmetric) — AT the threshold, awards high-scoring 5 pts', () => {
+    const userId = 'u-3-1';
+    const [row] = computeLeaderboard({
+      users: [makeUser(userId)],
+      finishedMatches: [makeMatch(1, 3, 1)],
+      predictions: [makePrediction(userId, 1, 3, 1)],
+    });
+    expect(row.exactScores).toBe(1);
+    expect(row.points).toBe(5);
+  });
+
+  it('2-1 exact (total 3) — JUST BELOW the threshold, awards normal exact 3 pts', () => {
+    const userId = 'u-2-1';
+    const [row] = computeLeaderboard({
+      users: [makeUser(userId)],
+      finishedMatches: [makeMatch(1, 2, 1)],
+      predictions: [makePrediction(userId, 1, 2, 1)],
+    });
+    expect(row.exactScores).toBe(1);
+    expect(row.points).toBe(3);
+    expect(row.points).toBe(POINTS.EXACT_BASE);
   });
 
   it('correct-result-only (predict 2-1, actual 1-0) awards 1 pt, no exact, correct flag set', () => {
@@ -205,6 +245,38 @@ describe('computeLeaderboard — high-scoring + correct-result paths', () => {
 });
 
 describe('computeLeaderboard — tournament bonus coexists with exactScoreBonus', () => {
+  it('tournament bonus point values are 15 each (winner, top scorer, top assist)', () => {
+    expect(POINTS.TOURNAMENT_WINNER).toBe(15);
+    expect(POINTS.TOP_SCORER).toBe(15);
+    expect(POINTS.TOP_ASSIST).toBe(15);
+  });
+
+  it('Top Scorer override awards exactly 15 pts (no winner, no top assist)', () => {
+    const userId = 'u-ts-15';
+    const users = [makeUser(userId, { bet: { topScorer: 'Messi' } })];
+    const [row] = computeLeaderboard({
+      users,
+      finishedMatches: [],
+      predictions: [],
+      tournamentOverrides: { topScorer: 'Messi' },
+    });
+    expect(row.points).toBe(15);
+    expect(row.points).toBe(POINTS.TOP_SCORER);
+  });
+
+  it('Top Assist override awards exactly 15 pts (no winner, no top scorer)', () => {
+    const userId = 'u-ta-15';
+    const users = [makeUser(userId, { bet: { topAssist: 'De Bruyne' } })];
+    const [row] = computeLeaderboard({
+      users,
+      finishedMatches: [],
+      predictions: [],
+      tournamentOverrides: { topAssist: 'De Bruyne' },
+    });
+    expect(row.points).toBe(15);
+    expect(row.points).toBe(POINTS.TOP_ASSIST);
+  });
+
   it('3 exact hits + correct tournament winner pick → both bonuses fold into points', () => {
     const userId = 'u-coexist';
     const { finishedMatches, predictions } = buildExactHitFixture(userId, 3);
