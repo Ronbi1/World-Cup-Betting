@@ -9,13 +9,180 @@
 
 ---
 
-## Latest session / current state (Wed Jun 10, 2026 — late evening — PR A + PR B landed)
+## Latest session / current state (Wed Jun 10, 2026 — late night — PR B.1 + PR C + PR B.2 landed and committed)
 
 **Newest section. Always wins over anything below it when they conflict.**
 
-Two PRs were implemented and validated locally; both are still in the
-working tree (uncommitted) so the owner can review the diffs before
-committing.
+Working tree is **clean**. Four PRs landed since the last handoff entry and
+are now in `master` history (owner-driven commit naming):
+
+| Commit | Maps to | One-line summary |
+|---|---|---|
+| `3c34e0e` "new changes" | PR A + PR B | Docs/env cleanup + one-time +3 exact-score bonus + Rules page + EN/HE i18n. |
+| `6e584c5` "new change" | PR B.1 | Vitest unit tests for `computeLeaderboard` (25 tests at the time). |
+| `20257de` feat: add gold accent colors and knockout stage badge | PR C | `--clr-accent-gold` token family + chip refactor + knockout `.stageBadge` on MatchCard. |
+| `ccd76a7` feat: update scoring rules and enhance date formatting | PR B.2 | Top Scorer/Assist 5→15, HIGH_SCORING_MIN 5→4, Asia/Jerusalem match-time display, tests grew 25→32. |
+
+### Roadmap status (post this session)
+
+| PR | Title | Status |
+|---|---|---|
+| PR A | Docs / env cleanup | ✅ committed (`3c34e0e`) |
+| PR B | One-time +3 exact-score bonus + Rules page + EN/HE i18n | ✅ committed (`3c34e0e`) |
+| PR B.1 | Vitest unit tests for `computeLeaderboard` | ✅ committed (`6e584c5`) |
+| PR C | MatchCard gold token family + knockout stage chip (Subtle treatment) | ✅ committed (`20257de`) |
+| **PR B.2** | **Top Scorer/Assist = 15 each, high-scoring threshold = 4+ goals, Asia/Jerusalem display** | **✅ committed (`ccd76a7`)** |
+| PR D | Leaderboard podium + mobile leaderboard card list | ⏳ not started — gated on owner go-ahead |
+| PR E | Exact-score spotlight (`GET /api/spotlight`, Asia/Jerusalem cutoff) | ⏳ not started — gated on owner go-ahead |
+| PR F | Mobile bottom-tab nav | ⏳ not started — keep last; do **not** touch safe-area CSS preemptively |
+| (deferred) | Countdown timer + stronger WC visuals | not in B.2 — separate post-B.2 PR per the owner |
+
+### Concrete behavior changes in this session
+
+**Scoring (PR B.2)** — all in [`api/_lib/scoring.js`](../api/_lib/scoring.js) `POINTS`:
+
+- `TOP_SCORER`: 5 → **15**
+- `TOP_ASSIST`: 5 → **15**
+- `HIGH_SCORING_MIN`: 5 → **4** (now 2-2 and 3-1 exacts pick up the +2 high-scoring bonus → 5 pts total)
+- `TOURNAMENT_WINNER`: still 15
+- `+3` exact-score bonus rule (PR B): unchanged
+- `calcPoints` per-match return shape (`{ points, exact, correct }`): unchanged
+
+**Time display (PR B.2)** — `Asia/Jerusalem` is the single user-facing timezone
+for match kickoff times. New helpers in
+[`src/utils/matchTime.js`](../src/utils/matchTime.js):
+
+- `formatMatchDate(utcDate, locale, options?)`
+- `formatMatchTime(utcDate, locale, options?)`
+- `isMatchToday(utcDate)` — uses an `en-CA` formatter for stable
+  `YYYY-MM-DD` comparison, DST-safe
+
+Migrated consumers: `MatchCard.jsx`, `BetModal.jsx`, `ProfilePage.jsx`
+(predictions list only — the account `joined` date is left in browser-local
+on purpose), `AllGamesPage.jsx` (`isToday` → `isMatchToday`, all three call
+sites: filter, `todayCount`, `todayHighlight` className). Backend storage /
+sort orders / `Date.now()` comparisons are all **unchanged** — UTC throughout.
+
+**i18n updates (PR B.2)** — same 5 keys in both `en.json` and `he.json`:
+
+- `home.rules.exactScoreHigh` ("5+" → "4+")
+- `home.rules.topScorer` ("→ 5 pts" → "→ 15 pts")
+- `home.rules.topAssist` ("→ 5 pts" → "→ 15 pts")
+- `home.bonusTopScorer` ("(5 pts)" → "(15 pts)") — admin recalc form label
+- `home.bonusTopAssist` ("(5 pts)" → "(15 pts)") — admin recalc form label
+
+`RulesPage.jsx` JSX is **unchanged** — it just renders `t('home.rules.*')`,
+so the visible rules text refreshed automatically from the locale updates.
+
+**Gold visual layer (PR C)** — 4 new tokens appended to `:root` in
+[`src/index.css`](../src/index.css):
+
+- `--clr-accent-gold:        #d4af37`
+- `--clr-accent-gold-deep:   #b8860b`
+- `--clr-accent-gold-bg:     rgba(212, 175, 55, 0.12)`
+- `--clr-accent-gold-border: rgba(212, 175, 55, 0.4)`
+
+Consumed by `.bonusChip` (the leaderboard `+3` chip, previously hardcoded)
+and the new `.stageBadge` (gold chip on `MatchCard` for any stage other than
+`GROUP_STAGE`). Indigo `--clr-accent` is untouched. No layout / grid /
+gradient changes on MatchCard — the "Subtle" scoping decision held.
+
+**Tests (PR B.1 + PR B.2)** — **32 passing** in
+[`tests/scoring.test.js`](../tests/scoring.test.js). Test runner: **Vitest
+4.x** via `npm test` (one-shot, CI-safe) and `npm run test:watch` (HMR).
+New test categories vs. PR B.1: high-scoring threshold boundaries (2-2 at
+4 goals, 3-1 at 4 goals asymmetric, 2-1 at 3 goals just-below), explicit
+"15-each" regression guards on `TOURNAMENT_WINNER` / `TOP_SCORER` /
+`TOP_ASSIST`, isolated Top Scorer / Top Assist override paths.
+
+### Lint / build / test (post-PR B.2)
+
+| Check | Result |
+|---|---|
+| `npm run lint` | exit 0, no warnings |
+| `npm run build` | exit 0; 910 modules; CSS 253.12 kB, JS 541.50 kB; same pre-existing chunk-size warning |
+| `npm test` | exit 0; **32/32** passing in ~450 ms |
+
+### Pending items — what's next (ordered by priority)
+
+1. **🔴 Jun 11 (tomorrow) opener — Mexico vs USA.** First real live data
+   flowing through `LiveScoreBanner` + adaptive polling + post-finish `+3`
+   chip + Asia/Jerusalem display. Watch `useTodayMatches` polling cadence
+   and the `/api/scores` dynamic leaderboard right after the match flips
+   to `FINISHED`.
+2. **🟡 `TOP_SCORERS_LIST` and `TOP_ASSISTS_LIST`** in
+   `src/utils/constants.js` are still empty arrays. Now extra-relevant —
+   each correct top-scorer/top-assist pick is worth **15** post-B.2 (was 5).
+   The owner pastes the final list; agents **must not** invent names.
+3. **🟡 [`.cursor/rules/project.mdc`](./rules/project.mdc) scoring table is
+   stale** post-B.2 — still shows `Top Scorer = 5`, `Top Assist = 5`, and
+   "Exact, total ≥ 5 = 5 pts". The source of truth is `POINTS` in
+   `api/_lib/scoring.js`. Sweep at the next doc-only commit window.
+4. **🟢 PR D — Leaderboard podium + mobile leaderboard card list.** Gated
+   on owner go-ahead. The `--clr-accent-gold*` family from PR C is ready
+   to consume on the 1st-place podium tile (don't re-hardcode `#d4af37`).
+5. **🟢 PR E — Exact-score spotlight (`GET /api/spotlight`,
+   Asia/Jerusalem cutoff).** PR B.2 already centralized Asia/Jerusalem
+   formatting in `src/utils/matchTime.js`; PR E can reuse `MATCH_TIME_ZONE`
+   for the spotlight cutoff window.
+6. **🟢 PR F — Mobile bottom-tab nav.** Keep last. Do **not** touch
+   safe-area CSS preemptively.
+7. **🟢 (deferred) Countdown timer + stronger WC visuals** — separate
+   post-B.2 PR per the owner's directive.
+8. **🟡 Production Vercel deploy** — not yet done. Set every env var
+   (especially `CLIENT_ORIGIN`) and confirm root directory =
+   `World-Cup-Betting/`.
+9. **🟢 Tournament-end bonus award** — admin runs `POST
+   /api/scores/recalculate` with `{ tournamentWinner, actualTopScorer,
+   actualTopAssist }`. **Important**: any `users.scores` snapshot taken
+   before PR B.2 will undercount Top Scorer / Top Assist (was 5, now 15).
+   Re-running recalculate at tournament end refreshes the snapshot
+   automatically. The dynamic `GET /api/scores` read path is correct
+   immediately (it computes fresh on every request).
+
+### Manual verification still owed for this session
+
+- **PR B**: 0/1/2 exact hits → no chip; exactly 3 hits → `+3` chip; 4th
+  hit doesn't restack; Hebrew leaderboard renders chip on inline-end.
+  After one `POST /scores/recalculate`, a `users.scores` row contains
+  `exactScoreBonus`.
+- **PR B.2 (NEW)**:
+  - Top Scorer / Top Assist bonus now awards **15 each** on next
+    `POST /api/scores/recalculate`.
+  - 2-2 or 3-1 exact predictions award **5 pts** on the leaderboard
+    (previously 3).
+  - All match times (MatchCard meta, BetModal header, Profile predictions
+    list, AllGames "Today" filter) render Asia/Jerusalem wall-clock
+    regardless of device timezone. Quick check: set the OS clock to UTC
+    or PT, reload; the kickoff times should not shift.
+- **PR C**: Knockout-stage MatchCard meta row shows the gold `.stageBadge`;
+  group-stage cards unchanged; Hebrew RTL flips cleanly (no physical
+  margin artifacts on the gap).
+
+### Hard "do not"s — new carry-forward from this session
+
+In addition to the pre-existing list further down in this file:
+
+- **All user-facing match times go through `src/utils/matchTime.js`**
+  (`formatMatchDate` / `formatMatchTime` / `isMatchToday`). Do **not** call
+  `toLocaleDateString` / `toLocaleTimeString` directly on a `match.utcDate`
+  — that falls back to the browser-local timezone and breaks the
+  Asia/Jerusalem promise for users outside Israel. Account-level dates
+  (`joined`, registration `createdAt`) are NOT match times and stay in
+  browser-local.
+- **`--clr-accent` (indigo) is locked in.** New "championship / milestone"
+  visuals reach for `--clr-accent-gold*`; never replace indigo.
+
+---
+
+## Earlier in same session (Wed Jun 10, 2026 — late evening — PR A + PR B implementation, since committed as `3c34e0e`)
+
+*Kept as a historical record of what those two PRs did. The roadmap table
+inside this section is no longer authoritative — the newest section above
+supersedes it.*
+
+PR A and PR B were implemented and validated locally; later squashed by the
+owner into commit `3c34e0e` "new changes".
 
 ### Roadmap status
 
