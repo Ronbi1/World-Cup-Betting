@@ -6,6 +6,13 @@
   --clr-border:         #334155;
   --clr-accent:         #6366f1;
   --clr-accent-hover:   #818cf8;
+  /* World Cup gold accent — used by the +3 leaderboard bonus chip
+     (HomePage) and the knockout-stage chip (MatchCard). Reserved for
+     "championship / milestone" moments; never replaces --clr-accent. */
+  --clr-accent-gold:        #d4af37;
+  --clr-accent-gold-deep:   #b8860b;
+  --clr-accent-gold-bg:     rgba(212, 175, 55, 0.12);
+  --clr-accent-gold-border: rgba(212, 175, 55, 0.4);
   --clr-text-primary:   #f1f5f9;
   --clr-text-secondary: #94a3b8;
   --clr-muted:          #64748b;

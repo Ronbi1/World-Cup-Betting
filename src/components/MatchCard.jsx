@@ -27,6 +27,7 @@ export default function MatchCard({ match, compact = false, onClick }) {
   const isFinished = match.status === MATCH_STATUS.FINISHED;
   const isLive =
     match.status === MATCH_STATUS.IN_PLAY || match.status === MATCH_STATUS.PAUSED;
+  const isKnockoutStage = match.stage && match.stage !== 'GROUP_STAGE';
 
   return (
     <article
@@ -40,6 +41,9 @@ export default function MatchCard({ match, compact = false, onClick }) {
         <span className={`${styles.statusBadge} ${styles[stCls]}`}>{t(`matchStatus.${stKey}`)}</span>
         <span className={styles.date}>{formatDate(match.utcDate)}</span>
         {!isFinished && <span className={styles.time}>{formatTime(match.utcDate)}</span>}
+        {isKnockoutStage && (
+          <span className={styles.stageBadge}>{t(`stages.${match.stage}`)}</span>
+        )}
         {match.group && <span className={styles.group}>{match.group}</span>}
       </div>
 

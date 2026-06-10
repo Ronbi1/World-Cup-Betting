@@ -276,8 +276,7 @@
 }
 
 /* One-time +3 exact-score bonus chip — subtle gold pill rendered next to
-   `points` when row.exactScoreBonus > 0. PR C will replace the literal
-   hex values with a --clr-accent-gold token. */
+   `points` when row.exactScoreBonus > 0. */
 .pointsCell {
   display: inline-flex;
   align-items: center;
@@ -293,9 +292,9 @@
   line-height: 1;
   padding: 2px 6px;
   border-radius: 999px;
-  color: #b8860b;
-  background: rgba(212, 175, 55, 0.12);
-  border: 1px solid rgba(212, 175, 55, 0.4);
+  color: var(--clr-accent-gold-deep);
+  background: var(--clr-accent-gold-bg);
+  border: 1px solid var(--clr-accent-gold-border);
   white-space: nowrap;
   letter-spacing: 0.02em;
 }

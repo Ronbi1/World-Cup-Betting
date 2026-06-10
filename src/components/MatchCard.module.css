@@ -48,6 +48,21 @@
 .live      { background: #14532d; color: #4ade80; animation: pulse 1.5s infinite; }
 .postponed { background: #4a1942; color: #e879f9; }
 
+/* Gold knockout-stage chip — only renders for ROUND_OF_32 through FINAL.
+   Group-stage matches keep the existing .group label and show no gold. */
+.stageBadge {
+  font-weight: 700;
+  font-size: 0.68rem;
+  padding: 2px 7px;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--clr-accent-gold-deep);
+  background: var(--clr-accent-gold-bg);
+  border: 1px solid var(--clr-accent-gold-border);
+  white-space: nowrap;
+}
+
 @keyframes pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.6; }
