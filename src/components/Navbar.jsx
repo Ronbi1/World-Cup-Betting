@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/useAuth';
 import LanguageSwitcher from './LanguageSwitcher';
 import styles from './Navbar.module.css';
 
@@ -51,6 +51,11 @@ export default function Navbar() {
           <li>
             <NavLink to="/scorers" onClick={closeMenu} className={({ isActive }) => isActive ? styles.active : ''}>
               {t('nav.scorers')}
+            </NavLink>
+          </li>
+          <li>
+            <NavLink to="/rules" onClick={closeMenu} className={({ isActive }) => isActive ? styles.active : ''}>
+              {t('nav.rules')}
             </NavLink>
           </li>
           <li>

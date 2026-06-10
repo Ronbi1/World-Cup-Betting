@@ -9,14 +9,15 @@ Stack — **Vercel + Supabase only**, free of charge.
 ## Features
 
 - Score predictions for every match before kick-off
-- Match schedule + final scores via TheSportsDB v1 (server-side key only)
-- Live leaderboard with full points breakdown
-- Predictions revealed to all players once a match finishes
+- Match schedule + final scores via worldcup26.ir (server-side, narrow proxy)
+- Live leaderboard — auto-recomputed from finished matches on every read (≤ 1 min after a real match finishes)
+- Predictions revealed to all players once a match kicks off (by clock or live status; enforced in both UI and API)
 - Tournament-wide bets (Winner / Top Scorer / Top Assist) — locked at kickoff
-- Admin panel: approve / reject / delete users, recalculate scores
+- Admin panel: approve / reject / delete users, recalculate scores (used only at end of tournament for the bonus prizes)
 - Email notification on approval (Resend, optional)
 - **Installable PWA** — Add to Home Screen on iOS & Android
 - **Hebrew UI** with full RTL support (English / עברית switcher)
+- Login session persists across browser refresh (validated against the backend via `GET /api/auth/me`)
 
 ---
 
@@ -33,6 +34,18 @@ Stack — **Vercel + Supabase only**, free of charge.
 
 All bets are **locked** when the tournament starts on **June 11, 2026**.
 
+### How scoring updates
+
+| Surface | Cadence |
+|---|---|
+| `GET /api/scores` (read-only) | Recomputes from finished matches on every request. Server-side 30 s cache. |
+| `useTodayMatches` poll (HomePage) | 30 s (live) / 60 s (kickoff < 15 min) / 5 min (idle) |
+| Leaderboard refetch | Automatic when any tracked match transitions to FINISHED; also a 60 s opportunistic poll while any match is live |
+| Worst-case delay (match finishes upstream → leaderboard updates in UI) | **≤ ~1 minute** (server cache 30 s + client refetch) |
+| `POST /api/scores/recalculate` (admin) | Writes a snapshot to `users.scores` and persists the tournament-bonus inputs (`{winner, topScorer, topAssist}`) so they survive future recomputes. Only used at end of tournament. |
+
+Missing predictions are treated as a **virtual 0-0** at scoring time — no DB rows are auto-created. If a user never opens the prediction modal for a match and the match finishes 0-0, they get the 3-pt "exact" credit; otherwise they get whatever 0-0 would score against the real result (often 1 pt for correct result if the actual was 0-0… wait, that's the same; usually 0).
+
 ---
 
 ## Architecture
@@ -45,9 +58,9 @@ All bets are **locked** when the tournament starts on **June 11, 2026**.
 | PWA | `vite-plugin-pwa` (Workbox), 192/512/maskable icons, iOS meta tags |
 | Backend | **Vercel Serverless Functions** under `/api/*` (single Express app) |
 | Database | **Supabase** (Postgres) — `users` and `predictions` tables |
-| External API | TheSportsDB v1 — league `4429`, season `2026` (key kept server-side) |
+| External API | worldcup26.ir — `/get/games`, `/get/teams` (proxied server-side, 30 s cache, single-flight) |
 | Email | Resend (optional) |
-| Auth | JWT (7-day) + bcryptjs hashed passwords |
+| Auth | JWT (7-day) + bcryptjs hashed passwords. Boot-time validation via `GET /api/auth/me` keeps login sticky across refresh. |
 
 ```
 World-Cup/
@@ -82,7 +95,7 @@ World-Cup/
 ### 1. Prerequisites
 - Node.js 20+, npm 10+
 - Free [Supabase](https://supabase.com/) project
-- TheSportsDB v1 — defaults to the public free key `123` (30 req/min). Optional: register at [thesportsdb.com](https://www.thesportsdb.com/) for a private free key, or pay $9/mo for premium V2 (livescores)
+- worldcup26.ir — read endpoints work anonymously today. Optional service-account JWT via `WC26_API_EMAIL` + `WC26_API_PASSWORD` only if upstream starts requiring auth.
 - (Optional) Free [Resend](https://resend.com/) account for approval emails
 
 ### 2. Install
@@ -120,7 +133,9 @@ The backend uses the **service-role key** which bypasses RLS — leave RLS off, 
 SUPABASE_URL=https://xxxxxxxx.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 JWT_SECRET=<long random string>
-SPORTSDB_API_KEY=             # optional — defaults to public free key "123"
+WC26_API_BASE_URL=            # optional override (defaults to https://worldcup26.ir)
+WC26_API_EMAIL=               # optional — only if upstream requires JWT
+WC26_API_PASSWORD=
 RESEND_API_KEY=               # optional
 RESEND_FROM_EMAIL=onboarding@resend.dev
 CLIENT_ORIGIN=                # only set in prod to lock CORS
@@ -157,7 +172,7 @@ Health check: `http://localhost:3000/api/health`.
 3. Add the environment variables above.
 4. Deploy.
 
-Vercel auto-routes `/api/*` to the `api/[...slug].js` serverless function (the entire Express app) and serves the Vite-built static SPA + PWA assets for everything else.
+Vercel auto-routes `/api/*` to the `api/index.js` serverless function (the entire Express app) and serves the Vite-built static SPA + PWA assets for everything else.
 
 No separate Node host (Railway, Render, etc.) is required — that's the project's hosting rule.
 
@@ -167,7 +182,7 @@ No separate Node host (Railway, Render, etc.) is required — that's the project
 
 Per the project rules, the **Top Scorer** and **Top Assist** dropdowns on the profile page render from a fixed list, not the live football API. These lists live in `src/utils/constants.js` as `TOP_SCORERS_LIST` and `TOP_ASSISTS_LIST` and are intentionally empty until the user supplies them — the dropdown shows a "list will be supplied by the admin" placeholder in the meantime.
 
-The **Tournament Winner** dropdown still draws from the live TheSportsDB team list (`/api/football/teams`).
+The **Tournament Winner** dropdown still draws from the live worldcup26.ir team list (`/api/football/teams`).
 
 ---
 

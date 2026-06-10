@@ -31,7 +31,11 @@ function getPollInterval(matches) {
   return SLOW_POLL_MS;
 }
 
-export function useTodayMatches() {
+// useTodayMatches({ onMatchFinished }) — optional callback fires when any
+// match in the polled set transitions into FINISHED. HomePage uses this to
+// kick off an immediate leaderboard refresh so users see their points within
+// ~1 minute of the real-world final whistle.
+export function useTodayMatches({ onMatchFinished } = {}) {
   const [matches, setMatches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -40,6 +44,12 @@ export function useTodayMatches() {
   const cancelledRef = useRef(false);
   const matchesRef = useRef(matches);
   const intervalRef = useRef(null);
+  const prevFinishedIdsRef = useRef(new Set());
+  const onMatchFinishedRef = useRef(onMatchFinished);
+
+  useEffect(() => {
+    onMatchFinishedRef.current = onMatchFinished;
+  }, [onMatchFinished]);
 
   const fetchData = useCallback(async (isInitial = false) => {
     if (isInitial) setLoading(true);
@@ -47,9 +57,29 @@ export function useTodayMatches() {
     try {
       const data = await fetchTodayMatches();
       if (!cancelledRef.current) {
+        // Detect FINISHED transitions before we overwrite matchesRef.
+        const nextFinished = new Set(
+          (data ?? [])
+            .filter((m) => m.status === MATCH_STATUS.FINISHED)
+            .map((m) => String(m.id)),
+        );
+        const justFinished = [];
+        for (const id of nextFinished) {
+          if (!prevFinishedIdsRef.current.has(id)) justFinished.push(id);
+        }
+        prevFinishedIdsRef.current = nextFinished;
+
         setMatches(data);
         matchesRef.current = data;
         setLastUpdated(new Date());
+
+        if (justFinished.length > 0 && typeof onMatchFinishedRef.current === 'function') {
+          // Fire after state commit; defer to next tick so subscribers run
+          // against the freshly committed match list.
+          Promise.resolve().then(() => {
+            try { onMatchFinishedRef.current(justFinished); } catch { /* swallow */ }
+          });
+        }
       }
     } catch (err) {
       if (!cancelledRef.current) setError(parseApiError(err));

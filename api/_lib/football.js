@@ -7,6 +7,16 @@
 // Upstream docs: https://worldcup26.ir/api-docs/
 // Live scores are pull-based — their DB updates during matches; we poll via
 // the client hooks and keep a short server cache on /get/games.
+//
+// ── Cache + poll matrix (keep in sync if you change anything) ───────────────
+//   Server  /get/games       cache 30 s, single-flight
+//   Server  /get/teams       cache 5 min, single-flight, in-memory teams map
+//   Server  GET /api/scores  cache 30 s (see scores.routes.js); READ-ONLY
+//   Client  useTodayMatches  poll 30 s (live) / 60 s (pre-kickoff) / 5 min
+//   Client  useMatches       session cache (no poll)
+//   Client  fetchTeams       session cache (no poll)
+//   Client  refreshScores    auto on FINISHED transition + 60 s during live
+// Adding new fetchers? Reuse `wc26Request` so single-flight + cache apply.
 const axios = require('axios');
 
 const WC26_BASE = (process.env.WC26_API_BASE_URL || 'https://worldcup26.ir').replace(/\/$/, '');
@@ -295,6 +305,29 @@ async function fetchFinishedMatches() {
   return all.filter((m) => m.status === 'FINISHED');
 }
 
+// "Has the match started?" — server-side source of truth, used by
+// GET  /api/predictions?matchIds=… (read-side defense-in-depth) and
+// POST /api/predictions          (write-side kickoff lock).
+// A match is started if the kickoff clock has passed OR the upstream
+// status flag has already moved out of SCHEDULED. The clock check guards
+// against worldcup26's `time_elapsed` flag lagging behind real kickoff.
+//
+// IMPORTANT: keep in lock-step with hasMatchStarted in
+// src/utils/matchTime.js (the frontend mirror used by BetModal +
+// LiveBetsReveal). Drift between the two would let the UI and the
+// server disagree about lock state.
+function hasMatchStarted(match) {
+  if (!match) return false;
+  if (match.status === 'IN_PLAY' || match.status === 'PAUSED' || match.status === 'FINISHED') {
+    return true;
+  }
+  if (match.utcDate) {
+    const kickoff = new Date(match.utcDate).getTime();
+    if (!Number.isNaN(kickoff) && Date.now() >= kickoff) return true;
+  }
+  return false;
+}
+
 module.exports = {
   apiBase,
   fetchUpstream,
@@ -305,4 +338,5 @@ module.exports = {
   fetchTodayMatches,
   fetchAllTeams,
   fetchFinishedMatches,
+  hasMatchStarted,
 };

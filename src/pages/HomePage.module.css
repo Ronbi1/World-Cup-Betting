@@ -48,11 +48,6 @@
   border-bottom: 1px solid var(--clr-border);
 }
 
-/* Gamble info */
-.gambleInfo p { font-size: 0.9rem; color: var(--clr-text-secondary); margin: 0 0 0.75rem; line-height: 1.6; }
-.betRules { margin: 0 0 0.75rem; padding-left: 1.2rem; display: flex; flex-direction: column; gap: 0.4rem; }
-.betRules li { font-size: 0.875rem; color: var(--clr-text-secondary); line-height: 1.5; }
-.betRules strong { color: var(--clr-text-primary); }
 .comingSoon { font-size: 0.8rem; color: var(--clr-muted); margin: 0; }
 
 /* Today matches */
@@ -172,10 +167,11 @@
   width: 100%;
   border-collapse: collapse;
   font-size: 0.875rem;
+  table-layout: auto;
 }
 
 .table th {
-  text-align: left;
+  text-align: start;
   padding: 0.5rem 0.75rem;
   color: var(--clr-muted);
   font-weight: 600;
@@ -183,31 +179,83 @@
   text-transform: uppercase;
   letter-spacing: 0.04em;
   border-bottom: 1px solid var(--clr-border);
+  white-space: nowrap;
 }
 
 .table td {
   padding: 0.6rem 0.75rem;
   border-bottom: 1px solid var(--clr-border);
   color: var(--clr-text-secondary);
+  vertical-align: middle;
 }
 
 .table tbody tr:last-child td { border-bottom: none; }
 .table tbody tr:hover td { background: var(--clr-surface-raised); }
 
 .currentUserRow td { background: rgba(99, 102, 241, 0.08); }
-.currentUserRow td:first-child { border-left: 3px solid var(--clr-accent); }
+.currentUserRow td:first-child { border-inline-start: 3px solid var(--clr-accent); }
 
 .rank { font-size: 1rem; text-align: center; width: 40px; }
-.playerName { font-weight: 600; color: var(--clr-text-primary); display: flex; align-items: center; gap: 0.4rem; }
-.youTag { font-size: 0.65rem; background: var(--clr-accent); color: #fff; padding: 1px 5px; border-radius: 999px; font-weight: 700; }
+
+/* Player column: flex lives in the INNER span so the <td> stays a normal
+   table cell. Truncation kicks in when names are long. */
+.playerCell {
+  font-weight: 600;
+  color: var(--clr-text-primary);
+  max-width: 220px;
+}
+.playerInner {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  max-width: 100%;
+}
+.playerName {
+  display: inline-block;
+  max-width: 160px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+}
+.youTag {
+  font-size: 0.65rem;
+  background: var(--clr-accent);
+  color: #fff;
+  padding: 1px 5px;
+  border-radius: 999px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
 .center { text-align: center; }
-.points { font-weight: 700; color: var(--clr-accent); font-size: 1rem; text-align: right; }
+.points { font-weight: 700; color: var(--clr-accent); font-size: 1rem; text-align: end; }
 .missing { color: var(--clr-muted); }
 .empty { color: var(--clr-muted); font-size: 0.875rem; }
+
+/* Bet columns can be ellipsized on tighter widths. */
+.colWinner,
+.colTopScorer,
+.colTopAssist {
+  max-width: 140px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
 @media (max-width: 768px) {
   .grid { grid-template-columns: 1fr; }
   .fullWidth { grid-column: 1; }
+}
+
+@media (max-width: 720px) {
+  /* Drop the three "tournament bet" columns on tablets and below — they're
+     informational, while rank / player / exact / results / points are
+     the must-have leaderboard columns. */
+  .colWinner,
+  .colTopScorer,
+  .colTopAssist { display: none; }
+  .playerCell, .playerName { max-width: none; }
 }
 
 @media (max-width: 600px) {
@@ -217,10 +265,12 @@
   .table { font-size: 0.8rem; }
   .table th, .table td { padding: 0.45rem 0.5rem; }
   .rank { width: 28px; }
+  .playerName { max-width: 160px; }
 }
 
 @media (max-width: 400px) {
   .page { padding: 0.75rem 0.65rem; }
   .welcomeTitle { font-size: 1.15rem; }
   .table th, .table td { padding: 0.4rem 0.4rem; }
+  .playerName { max-width: 110px; }
 }

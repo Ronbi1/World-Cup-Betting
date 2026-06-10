@@ -1,9 +1,19 @@
-import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import serverApi from '../services/serverApi';
 import { STORAGE_KEYS, ROLES } from '../utils/constants';
 import { extractApiError } from '../utils/apiErrors';
+// The Context object + useAuth hook live in ./useAuth.js. AuthProvider stays
+// in this .jsx file as the sole export so Vite React Fast Refresh can
+// hot-reload it cleanly (mixing component + hook exports in the same module
+// breaks Fast Refresh and intermittently crashes consumers with
+// "useAuth must be used inside <AuthProvider>").
+import { AuthContext } from './useAuth';
 
 // ─── Session helpers (logged-in user stays in localStorage) ───────────────────
+// Persistence is unconditional now — the user object lives in localStorage
+// for as long as the JWT does, so a browser refresh never logs the user out
+// while the token is still valid. The "Remember me" checkbox on the login
+// form is preserved in the UI but no longer gates persistence.
 const loadSession = () => {
   try {
     const raw = localStorage.getItem(STORAGE_KEYS.USER);
@@ -16,14 +26,85 @@ const saveSession = (user) => {
   else localStorage.removeItem(STORAGE_KEYS.USER);
 };
 
-// ─── Context ──────────────────────────────────────────────────────────────────
-const AuthContext = createContext(null);
+const sessionFromServer = (userData) => ({
+  id:        userData.id,
+  email:     userData.email,
+  name:      userData.name,
+  role:      userData.role,
+  status:    userData.status,
+  createdAt: userData.createdAt || userData.created_at,
+  bet:       userData.bet,
+  scores:    userData.scores,
+});
 
+// ─── Provider ─────────────────────────────────────────────────────────────────
 export function AuthProvider({ children }) {
   const [user, setUser]           = useState(loadSession);
   const [users, setUsers]         = useState([]);
   const [scores, setScores]       = useState([]); // [{ userId, points, correctResults, exactScores }]
   const [loadingUsers, setLoadingUsers] = useState(true);
+
+  // authReady starts true if there is no token at all (nothing to verify),
+  // otherwise false until /auth/me resolves once. ProtectedRoute waits for
+  // this gate so a valid logged-in user is never bounced to /login mid-boot.
+  const [authReady, setAuthReady] = useState(() => !localStorage.getItem('wc_token'));
+
+  // ── Boot: verify the token via /api/auth/me, refresh cached user ──────────
+  // StrictMode-safe: the `cancelled` flag + cleanup is the sole de-dup
+  // mechanism. A previous version also used a useRef guard to short-circuit
+  // the second mount, but that combined with StrictMode's
+  // mount → cleanup → mount cycle left the first probe in a "cancelled"
+  // state while the second mount early-returned, so `setAuthReady(true)`
+  // never ran and the app froze on the ProtectedRoute loader. Without the
+  // ref, mount #1's probe is cancelled by its cleanup and mount #2's probe
+  // completes normally. In production StrictMode does not double-invoke
+  // effects, so only one /auth/me request is made.
+  //
+  // Failure modes:
+  //   • 401 / 403 → token invalid or user no longer APPROVED. Clear locally
+  //     and let the React render redirect to /login naturally. We do NOT
+  //     trigger window.location.href here — serverApi's 401 interceptor is
+  //     told to skip /auth/me so there's no double-redirect, no loop.
+  //   • Network / 5xx → keep cached user, surface a console warning, mark
+  //     auth ready so the app is usable; next real API call will surface
+  //     any real auth issue through the normal interceptor path.
+  useEffect(() => {
+    const token = localStorage.getItem('wc_token');
+    if (!token) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setUser(null);
+      saveSession(null);
+      setAuthReady(true);
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data } = await serverApi.get('/auth/me');
+        if (cancelled) return;
+        const fresh = sessionFromServer(data.user);
+        setUser(fresh);
+        saveSession(fresh);
+      } catch (err) {
+        if (cancelled) return;
+        const status = err?.response?.status;
+        if (status === 401 || status === 403) {
+          // Token is invalid or user no longer approved — full cleanup.
+          localStorage.removeItem('wc_token');
+          saveSession(null);
+          setUser(null);
+        } else {
+          // Transient — keep cached user (if any).
+          console.warn('[AuthContext] /auth/me probe failed (non-401):', err?.message);
+        }
+      } finally {
+        if (!cancelled) setAuthReady(true);
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, []);
 
   // ── Load all users from Express — admin only ───────────────────────────────
   const fetchUsers = useCallback(async (currentUser) => {
@@ -66,26 +147,22 @@ export function AuthProvider({ children }) {
   }, [user?.id]);
 
   // ── Login ──────────────────────────────────────────────────────────────────
-  const login = useCallback(async (email, password, rememberMe = false) => {
+  // rememberMe is kept as an argument for API compatibility with LoginPage,
+  // but persistence is now unconditional — the user stays logged in until
+  // they explicitly log out or the JWT expires (the axios 401 interceptor
+  // then redirects them to /login?reason=expired).
+  const login = useCallback(async (email, password /* rememberMe */) => {
     try {
       const { data } = await serverApi.post('/auth/login', { email, password });
       const { token, user: userData } = data;
 
       localStorage.setItem('wc_token', token);
 
-      const sessionUser = {
-        id:        userData.id,
-        email:     userData.email,
-        name:      userData.name,
-        role:      userData.role,
-        status:    userData.status,
-        createdAt: userData.createdAt || userData.created_at,
-        bet:       userData.bet,
-        scores:    userData.scores,
-      };
+      const sessionUser = sessionFromServer(userData);
 
       setUser(sessionUser);
-      if (rememberMe) saveSession(sessionUser);
+      saveSession(sessionUser);
+      setAuthReady(true);
 
       if (sessionUser.role === ROLES.ADMIN) {
         fetchUsers(sessionUser);
@@ -173,7 +250,7 @@ export function AuthProvider({ children }) {
       const updatedUser = { ...user, bet: data.bet };
       setUser(updatedUser);
       setUsers(prev => prev.map(u => u.id === user.id ? { ...u, bet: data.bet } : u));
-      if (localStorage.getItem(STORAGE_KEYS.USER)) saveSession(updatedUser);
+      saveSession(updatedUser);
       return { success: true };
     } catch (err) {
       return { success: false, error: extractApiError(err, 'Failed to save bet.') };
@@ -192,6 +269,7 @@ export function AuthProvider({ children }) {
     users,
     scores,
     loadingUsers,
+    authReady,
     login,
     logout,
     register,
@@ -202,14 +280,7 @@ export function AuthProvider({ children }) {
     refreshScores: fetchScores,
     isAdmin: freshUser?.role === ROLES.ADMIN,
     refreshUsers: fetchUsers,
-  }), [freshUser, users, scores, loadingUsers, login, logout, register, updateUserStatus, deleteUser, updateBet, recalculateScores, fetchScores, fetchUsers]);
+  }), [freshUser, users, scores, loadingUsers, authReady, login, logout, register, updateUserStatus, deleteUser, updateBet, recalculateScores, fetchScores, fetchUsers]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
-
-// eslint-disable-next-line react-refresh/only-export-components
-export const useAuth = () => {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth must be used inside <AuthProvider>');
-  return ctx;
-};

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/useAuth';
 import { fetchTeams, parseApiError } from '../services/footballService';
 import { useMatches } from '../hooks/useMatches';
 import {

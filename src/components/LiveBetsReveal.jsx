@@ -2,16 +2,12 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import serverApi from '../services/serverApi';
 import { MATCH_STATUS, REG_STATUS } from '../utils/constants';
+import { hasMatchStarted } from '../utils/matchTime';
 import TeamFlag from './TeamFlag';
 import styles from './LiveBetsReveal.module.css';
 
 const isMatchLive = (status) =>
   status === MATCH_STATUS.IN_PLAY || status === MATCH_STATUS.PAUSED;
-
-const isMatchStarted = (status) =>
-  status === MATCH_STATUS.IN_PLAY ||
-  status === MATCH_STATUS.PAUSED ||
-  status === MATCH_STATUS.FINISHED;
 
 const getPredictionResult = (prediction, liveScore) => {
   if (!prediction || liveScore.home === null) return 'pending';
@@ -31,8 +27,8 @@ export default function LiveBetsReveal({ matches, users, currentUserId }) {
   // { [matchId]: { [userId]: { home, away } } }
   const [allPredictions, setAllPredictions] = useState({});
 
-  // Only show matches that have already kicked off
-  const startedMatches = matches.filter((m) => isMatchStarted(m.status));
+  // Only show matches that have already kicked off (by clock OR status).
+  const startedMatches = matches.filter(hasMatchStarted);
 
   // Stable cache key — prevents re-fetching on every poll cycle.
   const startedMatchKey = startedMatches.map((m) => m.id).sort().join(',');

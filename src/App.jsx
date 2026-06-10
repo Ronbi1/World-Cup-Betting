@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from './context/AuthContext';
+import { AuthProvider } from './context/AuthContext';
+import { useAuth } from './context/useAuth';
 import { LEGACY_STORAGE_KEYS } from './utils/constants';
 
 // ─── One-time purge of stale pre-backend localStorage keys ───────────────────
@@ -14,11 +15,32 @@ import AllGamesPage from './pages/AllGamesPage';
 import ProfilePage from './pages/ProfilePage';
 import AdminPage from './pages/AdminPage';
 import TopScorersPage from './pages/TopScorersPage';
+import RulesPage from './pages/RulesPage';
 import Navbar from './components/Navbar';
 
 // ─── Route guard: redirect to /login when not authenticated ──────────────────
+// Waits for `authReady` (boot-time /auth/me probe) before deciding so a
+// valid logged-in user is never bounced to /login during the initial render.
 function ProtectedRoute({ children }) {
-  const { user } = useAuth();
+  const { user, authReady } = useAuth();
+  if (!authReady) {
+    return (
+      <div
+        aria-busy="true"
+        aria-live="polite"
+        style={{
+          minHeight: '60vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: 'var(--clr-text-secondary, #888)',
+          fontSize: '0.9rem',
+        }}
+      >
+        …
+      </div>
+    );
+  }
   return user ? children : <Navigate to="/login" replace />;
 }
 
@@ -96,6 +118,17 @@ function AppRoutes() {
           <ProtectedRoute>
             <AppLayout>
               <TopScorersPage />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/rules"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <RulesPage />
             </AppLayout>
           </ProtectedRoute>
         }

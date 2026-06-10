@@ -28,12 +28,17 @@ serverApi.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       const hadToken = !!localStorage.getItem('wc_token');
-      // Only treat 401 as a session expiration when there was actually a
-      // token to begin with — unauthenticated calls (login, register) must
-      // not redirect-loop back to /login.
+      const url = error.config?.url || '';
+      // Anti-loop: /auth/me is the boot validation probe used by
+      // AuthContext. If it fails with 401/403, AuthContext does its own
+      // cleanup and the React tree renders <Navigate to="/login" />.
+      // Triggering window.location.href here would clobber that with a
+      // hard reload, restart auth boot, and risk a redirect loop.
+      const isAuthMeProbe = url.endsWith('/auth/me') || url.includes('/auth/me?');
+
       localStorage.removeItem('wc_token');
       localStorage.removeItem(STORAGE_KEYS.USER);
-      if (hadToken) {
+      if (hadToken && !isAuthMeProbe) {
         window.location.href = '/login?reason=expired';
       }
     }

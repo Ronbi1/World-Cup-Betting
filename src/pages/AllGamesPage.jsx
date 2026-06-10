@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMatches } from '../hooks/useMatches';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/useAuth';
 import MatchCard from '../components/MatchCard';
 import SkeletonCard from '../components/SkeletonCard';
 import BetModal from '../components/BetModal';

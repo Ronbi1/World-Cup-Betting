@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useTranslation, Trans } from 'react-i18next';
-import { useAuth } from '../context/AuthContext';
-import { REG_STATUS } from '../utils/constants';
+import { useAuth } from '../context/useAuth';
+import { REG_STATUS, MATCH_STATUS } from '../utils/constants';
 import { useTodayMatches } from '../hooks/useTodayMatches';
 import MatchCard from '../components/MatchCard';
 import SkeletonCard from '../components/SkeletonCard';
@@ -10,9 +10,18 @@ import LiveBetsReveal from '../components/LiveBetsReveal';
 import LiveScoreBanner from '../components/LiveScoreBanner';
 import styles from './HomePage.module.css';
 
+const LIVE_SCORE_POLL_MS = 60_000;
+
 export default function HomePage() {
-  const { user, users, scores, isAdmin, recalculateScores } = useAuth();
+  const { user, users, scores, isAdmin, recalculateScores, refreshScores } = useAuth();
   const { t } = useTranslation();
+
+  // Refresh the leaderboard the moment any match flips to FINISHED. The
+  // GET /api/scores endpoint computes dynamically with a 30 s cache, so
+  // this is cheap and gives users a near-instant update.
+  const handleMatchFinished = useCallback(() => {
+    refreshScores();
+  }, [refreshScores]);
 
   const {
     matches: todayMatches,
@@ -20,7 +29,21 @@ export default function HomePage() {
     error: matchError,
     lastUpdated,
     refresh: refreshMatches,
-  } = useTodayMatches();
+  } = useTodayMatches({ onMatchFinished: handleMatchFinished });
+
+  // Opportunistic 60 s leaderboard poll while any match is live. Pairs
+  // with the 30 s server cache, so concurrent calls are cheap.
+  useEffect(() => {
+    const hasLive = todayMatches.some(
+      (m) => m.status === MATCH_STATUS.IN_PLAY || m.status === MATCH_STATUS.PAUSED,
+    );
+    if (!hasLive) return undefined;
+
+    const id = setInterval(() => {
+      if (document.visibilityState !== 'hidden') refreshScores();
+    }, LIVE_SCORE_POLL_MS);
+    return () => clearInterval(id);
+  }, [todayMatches, refreshScores]);
 
   const [selectedMatch, setSelectedMatch] = useState(null);
   const [modalOpened, setModalOpened] = useState(false);
@@ -106,22 +129,7 @@ export default function HomePage() {
       </section>
 
       <div className={styles.grid}>
-        <section className={styles.card}>
-          <h2 className={styles.sectionTitle}>🎲 {t('home.howItWorks')}</h2>
-          <div className={styles.gambleInfo}>
-            <p>{t('home.rules.intro')}</p>
-            <ul className={styles.betRules}>
-              <li>🎯 {t('home.rules.exactScore')}</li>
-              <li>🔥 {t('home.rules.exactScoreHigh')}</li>
-              <li>✅ {t('home.rules.correctResult')}</li>
-              <li>🏆 {t('home.rules.tournamentWinner')}</li>
-              <li>⚽ {t('home.rules.topScorer')}</li>
-              <li>🎯 {t('home.rules.topAssist')}</li>
-            </ul>
-          </div>
-        </section>
-
-        <section className={styles.card}>
+        <section className={`${styles.card} ${styles.fullWidth}`}>
           <h2 className={styles.sectionTitle}>📅 {t('home.todayMatches')}</h2>
           {loadingMatches && (
             <div className={styles.matchList}>
@@ -216,9 +224,9 @@ export default function HomePage() {
                   <tr>
                     <th>{t('leaderboard.rank')}</th>
                     <th>{t('leaderboard.player')}</th>
-                    <th>{t('leaderboard.winnerBet')}</th>
-                    <th>{t('leaderboard.topScorer')}</th>
-                    <th>{t('leaderboard.topAssist')}</th>
+                    <th className={styles.colWinner}>{t('leaderboard.winnerBet')}</th>
+                    <th className={styles.colTopScorer}>{t('leaderboard.topScorer')}</th>
+                    <th className={styles.colTopAssist}>{t('leaderboard.topAssist')}</th>
                     <th className={styles.center}>🎯 {t('leaderboard.exact')}</th>
                     <th className={styles.center}>✅ {t('leaderboard.results')}</th>
                     <th className={styles.center}>{t('leaderboard.points')}</th>
@@ -233,13 +241,15 @@ export default function HomePage() {
                       <td className={styles.rank}>
                         {idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : idx + 1}
                       </td>
-                      <td className={styles.playerName}>
-                        {row.name}
-                        {row.isCurrentUser && <span className={styles.youTag}>{t('leaderboard.you')}</span>}
+                      <td className={styles.playerCell}>
+                        <span className={styles.playerInner}>
+                          <span className={styles.playerName} title={row.name}>{row.name}</span>
+                          {row.isCurrentUser && <span className={styles.youTag}>{t('leaderboard.you')}</span>}
+                        </span>
                       </td>
-                      <td>{row.bet?.winningTeam ?? <span className={styles.missing}>—</span>}</td>
-                      <td>{row.bet?.topScorer ?? <span className={styles.missing}>—</span>}</td>
-                      <td>{row.bet?.topAssist ?? <span className={styles.missing}>—</span>}</td>
+                      <td className={styles.colWinner}>{row.bet?.winningTeam ?? <span className={styles.missing}>—</span>}</td>
+                      <td className={styles.colTopScorer}>{row.bet?.topScorer ?? <span className={styles.missing}>—</span>}</td>
+                      <td className={styles.colTopAssist}>{row.bet?.topAssist ?? <span className={styles.missing}>—</span>}</td>
                       <td className={styles.center}>{row.exactScores}</td>
                       <td className={styles.center}>{row.correctResults}</td>
                       <td className={styles.points}>{row.points}</td>

@@ -1,0 +1,85 @@
+.page {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 1.5rem 1.25rem;
+}
+
+.header { margin-bottom: 1.75rem; }
+
+.title {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--clr-text-primary);
+  margin: 0 0 0.25rem;
+}
+
+.sub {
+  font-size: 0.9rem;
+  color: var(--clr-text-secondary);
+  margin: 0;
+}
+
+.card {
+  background: var(--clr-surface);
+  border: 1px solid var(--clr-border);
+  border-radius: 14px;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.sectionTitle {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--clr-text-primary);
+  margin: 0 0 0.85rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid var(--clr-border);
+}
+
+.intro {
+  font-size: 0.95rem;
+  color: var(--clr-text-secondary);
+  line-height: 1.6;
+  margin: 0 0 1rem;
+}
+
+.body {
+  font-size: 0.9rem;
+  color: var(--clr-text-secondary);
+  line-height: 1.65;
+  margin: 0;
+}
+
+.rulesList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.rulesList li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  font-size: 0.95rem;
+  color: var(--clr-text-primary);
+  line-height: 1.55;
+  padding: 0.6rem 0.75rem;
+  background: var(--clr-surface-raised);
+  border-radius: 10px;
+}
+
+.icon {
+  font-size: 1.15rem;
+  line-height: 1.4;
+  flex-shrink: 0;
+}
+
+@media (max-width: 600px) {
+  .page { padding: 1rem 0.85rem; }
+  .title { font-size: 1.3rem; }
+  .card { padding: 1rem 1.1rem; border-radius: 10px; }
+  .rulesList li { font-size: 0.88rem; padding: 0.5rem 0.65rem; }
+}

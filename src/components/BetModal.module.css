@@ -32,9 +32,9 @@
 }
 
 .inputs {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  display: flex;
   align-items: flex-end;
+  justify-content: center;
   gap: 0.75rem;
 }
 
@@ -42,9 +42,121 @@
   font-size: 2rem;
   font-weight: 800;
   color: var(--clr-text-secondary);
-  padding-bottom: 0.35rem;
+  padding-bottom: 0.45rem;
   text-align: center;
   align-self: flex-end;
+}
+
+/* ── Custom score stepper ──────────────────────────────────────────────── */
+.stepperWrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.stepperLabel {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--clr-text-secondary);
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.stepper {
+  display: inline-flex;
+  align-items: stretch;
+  background: var(--clr-surface-raised);
+  border: 1px solid var(--clr-border);
+  border-radius: 10px;
+  overflow: hidden;
+  height: 56px;
+  /* Stepper internal direction stays LTR so − is always on the left of the
+     number and + on the right, even when the page is RTL. */
+}
+
+.stepperBtn {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  color: var(--clr-text-primary);
+  font-size: 1.4rem;
+  font-weight: 700;
+  width: 40px;
+  min-height: 0; /* override global button { min-height: 44px } so the
+                    stepper button stays inside the stepper frame */
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+  user-select: none;
+  padding: 0;
+}
+
+.stepperBtn:hover:not(:disabled) {
+  background: var(--clr-accent);
+  color: #fff;
+}
+
+.stepperBtn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.stepperInput {
+  width: 56px;
+  border: 0;
+  border-inline-start: 1px solid var(--clr-border);
+  border-inline-end: 1px solid var(--clr-border);
+  background: var(--clr-surface);
+  color: var(--clr-text-primary);
+  font-size: 1.5rem;
+  font-weight: 800;
+  text-align: center;
+  outline: none;
+  min-height: 0;
+  padding: 0;
+  font-family: var(--font-mono, inherit);
+}
+
+.stepperInput:focus {
+  background: var(--clr-surface-raised);
+  box-shadow: inset 0 0 0 2px var(--clr-accent);
+}
+
+.stepperInputDisabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  color: var(--clr-text-secondary);
+}
+
+.stepperInputDisabled:focus {
+  box-shadow: none;
+  background: var(--clr-surface);
+}
+
+/* ── Kickoff-lock banner ───────────────────────────────────────────────── */
+/* Shown above the teams row once the match has started. Uses logical
+   properties so RTL (Hebrew) layout works unchanged. */
+.lockedBanner {
+  padding-block: 0.55rem;
+  padding-inline: 0.75rem;
+  border-radius: 8px;
+  background: rgba(239, 68, 68, 0.10);
+  color: var(--clr-text-primary);
+  text-align: center;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border: 1px solid rgba(239, 68, 68, 0.30);
+}
+
+/* Hide the spinner Firefox sometimes draws despite type=text on inputmode=numeric */
+.stepperInput::-webkit-outer-spin-button,
+.stepperInput::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 
 @media (max-width: 480px) {
@@ -59,9 +171,14 @@
   .vs { font-size: 1rem; }
   .inputs { gap: 0.5rem; }
   .dash { font-size: 1.5rem; }
+  .stepper { height: 52px; }
+  .stepperBtn { width: 36px; font-size: 1.25rem; }
+  .stepperInput { width: 48px; font-size: 1.35rem; }
 }
 
 @media (max-width: 360px) {
   .teams { gap: 0.3rem; }
   .teamName { font-size: 0.7rem; max-width: 70px; }
+  .stepperBtn { width: 32px; }
+  .stepperInput { width: 42px; font-size: 1.2rem; }
 }

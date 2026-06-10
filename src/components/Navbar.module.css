@@ -2,8 +2,16 @@
   display: flex;
   align-items: center;
   gap: 1.5rem;
-  padding: 0 1.5rem;
-  height: 60px;
+  /* Physical L/R padding so iPhone landscape notch / Dynamic Island corner
+     never clips menu links. `max(base, inset)` keeps the desktop layout
+     identical (env() resolves to 0 there). Top padding pushes content
+     below the iOS status-bar overlay in installed-PWA mode; height grows
+     by the same amount so layout below the navbar isn't pushed up. */
+  padding-top:    var(--safe-area-inset-top);
+  padding-bottom: 0;
+  padding-left:   max(1.5rem, var(--safe-area-inset-left));
+  padding-right:  max(1.5rem, var(--safe-area-inset-right));
+  height: calc(60px + var(--safe-area-inset-top));
   background: var(--clr-surface);
   border-bottom: 1px solid var(--clr-border);
   position: sticky;
@@ -129,14 +137,25 @@
 
 /* ── Tablet ───────────────────────────────────────────────────────────────── */
 @media (max-width: 900px) {
-  .nav { padding: 0 1rem; gap: 0.75rem; }
+  .nav {
+    /* Keep the safe-area-aware top/L/R padding; only shrink the base sides. */
+    padding-left:  max(1rem, var(--safe-area-inset-left));
+    padding-right: max(1rem, var(--safe-area-inset-right));
+    gap: 0.75rem;
+  }
   .links a { padding: 0.35rem 0.6rem; font-size: 0.85rem; }
   .username { display: none; }
 }
 
 /* ── Mobile: collapse links into a slide-down panel ───────────────────────── */
 @media (max-width: 700px) {
-  .nav { padding: 0 0.85rem; height: 56px; gap: 0.5rem; position: relative; }
+  .nav {
+    padding-left:  max(0.85rem, var(--safe-area-inset-left));
+    padding-right: max(0.85rem, var(--safe-area-inset-right));
+    height: calc(56px + var(--safe-area-inset-top));
+    gap: 0.5rem;
+    position: relative;
+  }
 
   .menuToggle { display: flex; }
 

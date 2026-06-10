@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { randomUUID } = require('crypto');
 const { supabase } = require('../_lib/supabase');
+const { requireAuth } = require('../_lib/auth');
 
 const router = express.Router();
 
@@ -138,6 +139,34 @@ router.post('/register', async (req, res, next) => {
     }
 
     return res.status(201).json({ user: sanitizeUser(created) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/auth/me — verify the JWT and return the fresh sanitized user.
+// Used by the frontend on app boot to:
+//   1. Keep the user logged in across page refresh.
+//   2. Catch tokens that are still valid but belong to users whose row has
+//      been deleted or whose status was flipped to REJECTED post-issuance.
+//   3. Surface up-to-date `bet` / `scores` / `status` immediately on reload
+//      instead of trusting potentially stale localStorage.
+router.get('/me', requireAuth, async (req, res, next) => {
+  try {
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('id, email, name, role, status, created_at, bet, scores')
+      .eq('id', req.user.id)
+      .single();
+
+    if (error || !user) {
+      return res.status(403).json({ error: 'User not found or no longer active.' });
+    }
+    if (user.status !== 'APPROVED') {
+      return res.status(403).json({ error: 'Your account is not approved.' });
+    }
+
+    return res.status(200).json({ user: sanitizeUser(user) });
   } catch (err) {
     next(err);
   }

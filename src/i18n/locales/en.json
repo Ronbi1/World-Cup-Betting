@@ -12,9 +12,18 @@
     "home": "Home",
     "games": "All Games",
     "scorers": "Golden Boot",
+    "rules": "Rules",
     "profile": "My Profile",
     "admin": "Admin",
     "logout": "Logout"
+  },
+  "rules": {
+    "pageTitle": "Game Rules",
+    "pageSubtitle": "Everything you need to know about how the pool works.",
+    "howScoringWorksTitle": "How Scoring Updates",
+    "howScoringWorksBody": "Once a match finishes upstream, the leaderboard updates automatically within about a minute. There is no need for an admin to recalculate after every match — the recalculate button is only used at the end of the tournament to award the winner / top scorer / top assist bonuses.",
+    "privacyTitle": "Predictions Privacy",
+    "privacyBody": "Other participants' predictions are kept private until kickoff. The moment the match starts (by kickoff time or live status), everyone's predictions become visible on the homepage Live Predictions panel."
   },
   "auth": {
     "login": {
@@ -228,7 +237,10 @@
   "betModal": {
     "title": "Place Your Prediction",
     "cancel": "Cancel",
+    "close": "Close",
     "save": "Save Prediction",
+    "locked": "Locked",
+    "lockedNotice": "This match has kicked off. Your prediction is locked.",
     "incompleteTitle": "Incomplete prediction",
     "incompleteBody": "Please enter a score for both teams.",
     "savedTitle": "Prediction saved!",

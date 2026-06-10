@@ -11,6 +11,19 @@
   --clr-muted:          #64748b;
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+
+  /* ─── Safe-area insets (PWA notch / status-bar / home-indicator) ──────────
+     `env(safe-area-inset-*)` resolves to 0 on desktop and on non-notched
+     mobile, so these variables are no-ops outside installed PWA on iPhone
+     X+ / Dynamic Island / Galaxy edge displays.
+     The insets are PHYSICAL (left/right of the device), not logical — that's
+     why the navbar below uses physical padding-left/padding-right with
+     `max(base, env(...))`. RTL layouts work unchanged because the physical
+     edges of the screen don't flip with text direction. */
+  --safe-area-inset-top:    env(safe-area-inset-top, 0px);
+  --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-inset-left:   env(safe-area-inset-left, 0px);
+  --safe-area-inset-right:  env(safe-area-inset-right, 0px);
 }
 
 /* ─── Reset ──────────────────────────────────────────────────────────────── */
@@ -29,6 +42,11 @@ body {
   line-height: 1.6;
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
+  /* Keep bottom content above the iOS home indicator in installed PWA mode.
+     Horizontal insets are NOT applied here on purpose — the sticky navbar
+     spans edge-to-edge and pads itself; padding body sides would leave a
+     visible bg-color strip beside the navbar on landscape notched phones. */
+  padding-bottom: var(--safe-area-inset-bottom);
 }
 
 /* ─── Typography ─────────────────────────────────────────────────────────── */
