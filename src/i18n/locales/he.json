@@ -90,7 +90,16 @@
     "bonusWinningTeam": "הנבחרת המנצחת (15 נק׳)",
     "bonusTopScorer": "שם מלך השערים (15 נק׳)",
     "bonusTopAssist": "שם מלך הבישולים (15 נק׳)",
-    "leaderboardEmpty": "אין משתתפים עדיין."
+    "leaderboardEmpty": "אין משתתפים עדיין.",
+    "hero": {
+      "kickoff": "פתיחה",
+      "in": "בעוד",
+      "noUpcoming": "אין משחקים קרובים",
+      "you": "אתה",
+      "rank": "דירוג",
+      "pts": "נק׳",
+      "unranked": "ללא דירוג"
+    }
   },
   "leaderboard": {
     "rank": "#",
@@ -193,7 +202,10 @@
       "saved": "ההימורים נשמרו בהצלחה!",
       "loading": "טוען…",
       "loadError": "לא ניתן לטעון את הנבחרות והשחקנים: {{error}}",
-      "playerListUnavailable": "רשימת השחקנים תסופק על-ידי המנהל."
+      "playerListUnavailable": "רשימת השחקנים תסופק על-ידי המנהל.",
+      "tier1": "רמה 1 — מועדפים",
+      "tier2": "רמה 2 — מועמדים חזקים",
+      "tier3": "רמה 3 — סוסים שחורים"
     },
     "missingBets": "הימורים חסרים",
     "missing": {

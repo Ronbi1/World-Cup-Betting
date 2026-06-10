@@ -103,8 +103,8 @@ export default function ProfilePage() {
 
   // The fixed lists may be empty until the user supplies them — render a
   // friendly placeholder option in that case (spec rule).
-  const hasScorerList = TOP_SCORERS_LIST.length > 0;
-  const hasAssistList = TOP_ASSISTS_LIST.length > 0;
+  const hasScorerList = TOP_SCORERS_LIST.some((tier) => tier.players.length > 0);
+  const hasAssistList = TOP_ASSISTS_LIST.some((tier) => tier.players.length > 0);
 
   return (
     <main className={styles.page}>
@@ -266,7 +266,11 @@ export default function ProfilePage() {
                   >
                     <option value="">— {t('profile.bets.playerPlaceholder')} —</option>
                     {hasScorerList
-                      ? TOP_SCORERS_LIST.map((p) => <option key={p} value={p}>{p}</option>)
+                      ? TOP_SCORERS_LIST.map((tier) => (
+                          <optgroup key={tier.labelKey} label={t(tier.labelKey)}>
+                            {tier.players.map((p) => <option key={p} value={p}>{p}</option>)}
+                          </optgroup>
+                        ))
                       : <option disabled>{t('profile.bets.playerListUnavailable')}</option>}
                   </select>
                 </div>
@@ -281,7 +285,11 @@ export default function ProfilePage() {
                   >
                     <option value="">— {t('profile.bets.playerPlaceholder')} —</option>
                     {hasAssistList
-                      ? TOP_ASSISTS_LIST.map((p) => <option key={p} value={p}>{p}</option>)
+                      ? TOP_ASSISTS_LIST.map((tier) => (
+                          <optgroup key={tier.labelKey} label={t(tier.labelKey)}>
+                            {tier.players.map((p) => <option key={p} value={p}>{p}</option>)}
+                          </optgroup>
+                        ))
                       : <option disabled>{t('profile.bets.playerListUnavailable')}</option>}
                   </select>
                 </div>

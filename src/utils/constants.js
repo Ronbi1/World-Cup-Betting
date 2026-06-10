@@ -1,9 +1,12 @@
 // ─── Tournament dates ────────────────────────────────────────────────────────
 // World Cup 2026: June 11 – July 19, 2026
+import { isSimulationMode } from './simulation';
+
 export const TOURNAMENT_START = new Date('2026-06-11T00:00:00Z');
 export const TOURNAMENT_ENDED = new Date('2026-07-19T23:59:59Z');
 
-export const isTournamentStarted = () => new Date() >= TOURNAMENT_START;
+export const isTournamentStarted = () =>
+  isSimulationMode || new Date() >= TOURNAMENT_START;
 export const isTournamentOver = () => new Date() > TOURNAMENT_ENDED;
 
 // ─── Match statuses ──────────────────────────────────────────────────────────
@@ -67,33 +70,101 @@ export const REG_STATUS = {
 //
 // The Tournament Winner dropdown still draws from the live API (all teams
 // playing in the World Cup) — see ProfilePage.
+// Each list is grouped into tiers. The Profile dropdown renders each tier as
+// an <optgroup>; the stored value is still the plain player string, so old
+// bets remain valid after restructuring.
 export const TOP_SCORERS_LIST = [
-  'Lionel Messi – Argentina',
-  'Julian Alvarez – Argentina',
-  'Lautaro Martinez – Argentina',
-  'Cristiano Ronaldo – Portugal',
-  'Vinicius Jr – Brazil',
-  'Goncalo Ramos – Portugal',
-  'Endrick – Brazil',
-  'Cody Gakpo – Netherlands',
-  'Ousmane Dembele – France',
-  'Bukayo Saka – England',
-  'Romelu Lukaku – Belgium',
-  'Mikel Oyarzabal – Spain',
-  'Lamine Yamal – Spain',
-  'Erling Haaland – Norway',
-  'Harry Kane – England',
-  'Kylian Mbappe – France',
-  'Raphinha – Brazil',
-  'Viktor Gyokeres – Sweden',
-  'Kai Havertz – Germany',
-  'Ismaila Sarr – Senegal',
-  'Luis Diaz – Colombia',
-  'Victor Osimhen – Nigeria',
-  'Jamal Musiala – Germany',
-  'Rafael Leao – Portugal',
-  'Khvicha Kvaratskhelia – Georgia',
-  'Ollie Watkins – England',
-  'Dusan Vlahovic – Serbia',
+  {
+    labelKey: 'profile.bets.tier1',
+    players: [
+      'Kylian Mbappe – France',
+      'Erling Haaland – Norway',
+      'Harry Kane – England',
+      'Lionel Messi – Argentina',
+      'Lamine Yamal – Spain',
+      'Vinicius Jr – Brazil',
+      'Julian Alvarez – Argentina',
+      'Lautaro Martinez – Argentina',
+    ],
+  },
+  {
+    labelKey: 'profile.bets.tier2',
+    players: [
+      'Ousmane Dembele – France',
+      'Bukayo Saka – England',
+      'Cristiano Ronaldo – Portugal',
+      'Rafael Leao – Portugal',
+      'Goncalo Ramos – Portugal',
+      'Raphinha – Brazil',
+      'Kai Havertz – Germany',
+      'Jamal Musiala – Germany',
+      'Viktor Gyokeres – Sweden',
+      'Romelu Lukaku – Belgium',
+      'Cody Gakpo – Netherlands',
+      'Mikel Oyarzabal – Spain',
+      'Victor Osimhen – Nigeria',
+    ],
+  },
+  {
+    labelKey: 'profile.bets.tier3',
+    players: [
+      'Endrick – Brazil',
+      'Luis Diaz – Colombia',
+      'Ismaila Sarr – Senegal',
+      'Khvicha Kvaratskhelia – Georgia',
+      'Ollie Watkins – England',
+      'Dusan Vlahovic – Serbia',
+    ],
+  },
 ];
-export const TOP_ASSISTS_LIST = [];
+
+export const TOP_ASSISTS_LIST = [
+  {
+    labelKey: 'profile.bets.tier1',
+    players: [
+      'Lionel Messi – Argentina',
+      'Bruno Fernandes – Portugal',
+      'Kevin De Bruyne – Belgium',
+      'Lamine Yamal – Spain',
+      'Jude Bellingham – England',
+      'Pedri – Spain',
+      'Florian Wirtz – Germany',
+      'Martin Odegaard – Norway',
+    ],
+  },
+  {
+    labelKey: 'profile.bets.tier2',
+    players: [
+      'Bernardo Silva – Portugal',
+      'Ousmane Dembele – France',
+      'Michael Olise – France',
+      'Bukayo Saka – England',
+      'Raphinha – Brazil',
+      'Neymar Jr – Brazil',
+      'Lucas Paqueta – Brazil',
+      'Jamal Musiala – Germany',
+      'Leroy Sane – Germany',
+      'Joshua Kimmich – Germany',
+      'Achraf Hakimi – Morocco',
+      'Frenkie de Jong – Netherlands',
+      'Jeremy Doku – Belgium',
+      'Mohamed Salah – Egypt',
+      'Lee Kang-in – Korea Republic',
+      'Takefusa Kubo – Japan',
+      'James Rodriguez – Colombia',
+      'Luka Modric – Croatia',
+      'Alphonso Davies – Canada',
+    ],
+  },
+  {
+    labelKey: 'profile.bets.tier3',
+    players: [
+      'Eberechi Eze – England',
+      'Tijjani Reijnders – Netherlands',
+      'Leandro Trossard – Belgium',
+      'Rayan Cherki – France',
+      'Desire Doue – France',
+      'Vitinha – Portugal',
+    ],
+  },
+];

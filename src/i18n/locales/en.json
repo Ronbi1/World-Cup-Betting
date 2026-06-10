@@ -90,7 +90,16 @@
     "bonusWinningTeam": "Winning team (15 pts)",
     "bonusTopScorer": "Top scorer name (15 pts)",
     "bonusTopAssist": "Top assist name (15 pts)",
-    "leaderboardEmpty": "No participants yet."
+    "leaderboardEmpty": "No participants yet.",
+    "hero": {
+      "kickoff": "Kickoff",
+      "in": "in",
+      "noUpcoming": "No upcoming matches",
+      "you": "You",
+      "rank": "Rank",
+      "pts": "PTS",
+      "unranked": "Unranked"
+    }
   },
   "leaderboard": {
     "rank": "#",
@@ -193,7 +202,10 @@
       "saved": "Bets saved successfully!",
       "loading": "loading…",
       "loadError": "Could not load team/player data: {{error}}",
-      "playerListUnavailable": "Player list will be supplied by the admin."
+      "playerListUnavailable": "Player list will be supplied by the admin.",
+      "tier1": "Tier 1 — Favorites",
+      "tier2": "Tier 2 — Strong contenders",
+      "tier3": "Tier 3 — Dark horses"
     },
     "missingBets": "Missing bets",
     "missing": {
