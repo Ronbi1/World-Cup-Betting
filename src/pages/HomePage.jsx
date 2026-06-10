@@ -1,22 +1,26 @@
-import { useState, useEffect, useCallback } from 'react';
-import { useTranslation, Trans } from 'react-i18next';
+import { Fragment, useState, useEffect, useCallback, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/useAuth';
 import { REG_STATUS, MATCH_STATUS } from '../utils/constants';
+import { isSimulationMode } from '../utils/simulation';
 import { useTodayMatches } from '../hooks/useTodayMatches';
 import { useMinuteTick } from '../hooks/useMinuteTick';
 import { useUserPredictions } from '../hooks/useUserPredictions';
+import { formatKickoffCountdown, formatMatchTime, hasMatchStarted } from '../utils/matchTime';
 import MatchCard from '../components/MatchCard';
 import SkeletonCard from '../components/SkeletonCard';
 import BetModal from '../components/BetModal';
-import LiveBetsReveal from '../components/LiveBetsReveal';
+import LiveBetsModal from '../components/LiveBetsModal';
 import LiveScoreBanner from '../components/LiveScoreBanner';
+import Podium from '../components/Podium';
 import styles from './HomePage.module.css';
 
 const LIVE_SCORE_POLL_MS = 60_000;
 
 export default function HomePage() {
   const { user, users, scores, isAdmin, recalculateScores, refreshScores } = useAuth();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const locale = i18n.resolvedLanguage === 'he' ? 'he-IL' : 'en-GB';
 
   // Refresh the leaderboard the moment any match flips to FINISHED. The
   // GET /api/scores endpoint computes dynamically with a 30 s cache, so
@@ -55,6 +59,8 @@ export default function HomePage() {
 
   const [selectedMatch, setSelectedMatch] = useState(null);
   const [modalOpened, setModalOpened] = useState(false);
+  const [liveBetsMatch, setLiveBetsMatch] = useState(null);
+  const [liveBetsOpened, setLiveBetsOpened] = useState(false);
   const [recalcLoading, setRecalcLoading] = useState(false);
   const [recalcMsg, setRecalcMsg] = useState('');
   const [showBonusForm, setShowBonusForm] = useState(false);
@@ -62,9 +68,19 @@ export default function HomePage() {
   const [bonusTopScorer, setBonusTopScorer] = useState('');
   const [bonusTopAssist, setBonusTopAssist] = useState('');
 
+  // Click branching:
+  //   • pre-match (not started)  → BetModal: place / edit your prediction
+  //   • started (live or final) → LiveBetsModal: see what everyone bet
+  // The server gate is authoritative; this is purely UX so the two modals
+  // don't both fire for the same fixture.
   const handleMatchClick = (match) => {
-    setSelectedMatch(match);
-    setModalOpened(true);
+    if (hasMatchStarted(match)) {
+      setLiveBetsMatch(match);
+      setLiveBetsOpened(true);
+    } else {
+      setSelectedMatch(match);
+      setModalOpened(true);
+    }
   };
 
   const handleRecalculate = async () => {
@@ -86,8 +102,18 @@ export default function HomePage() {
   //     before any match has finished and scores have been calculated)
   //   - regular users see the /scores response, which contains every approved
   //     user already
-  const leaderboard = (isAdmin
-    ? users
+  const leaderboard = (isSimulationMode || !isAdmin
+    ? scores.map((s) => ({
+        id: s.userId,
+        name: s.name,
+        bet: null,
+        points: s.points ?? 0,
+        correctResults: s.correctResults ?? 0,
+        exactScores: s.exactScores ?? 0,
+        exactScoreBonus: s.exactScoreBonus ?? 0,
+        isCurrentUser: s.userId === user?.id,
+      }))
+    : users
         .filter((u) => u.status === REG_STATUS.APPROVED && u.role !== 'ADMIN')
         .map((u) => {
           const s = scores.find((sc) => sc.userId === u.id);
@@ -102,17 +128,48 @@ export default function HomePage() {
             isCurrentUser: false,
           };
         })
+  ).sort((a, b) => b.points - a.points || b.exactScores - a.exactScores);
+
+  // LiveBetsModal needs approved-user rows. AuthContext.users is fetched
+  // admin-only, so non-admin viewers (and simulation mode) get an empty
+  // array — fall back to scores, which is loaded for everyone and already
+  // contains every approved player.
+  const revealUsers = users.length > 0
+    ? users
     : scores.map((s) => ({
         id: s.userId,
         name: s.name,
-        bet: null,
-        points: s.points ?? 0,
-        correctResults: s.correctResults ?? 0,
-        exactScores: s.exactScores ?? 0,
-        exactScoreBonus: s.exactScoreBonus ?? 0,
-        isCurrentUser: s.userId === user?.id,
-      }))
-  ).sort((a, b) => b.points - a.points || b.exactScores - a.exactScores);
+        status: REG_STATUS.APPROVED,
+      }));
+
+  // Hero ticker: first upcoming match today (scheduled/timed, not finished
+  // or in-play). Used to render "KICKOFF · {home} vs {away} · IN {ctd}" —
+  // pure derivation from already-fetched data, no extra network call.
+  const nextMatch = useMemo(() => {
+    const upcoming = todayMatches
+      .filter(
+        (m) =>
+          m.status === MATCH_STATUS.SCHEDULED ||
+          m.status === MATCH_STATUS.TIMED,
+      )
+      .sort((a, b) => new Date(a.utcDate) - new Date(b.utcDate));
+    return upcoming[0] ?? null;
+  }, [todayMatches]);
+
+  const nextMatchCountdown = nextMatch
+    ? formatKickoffCountdown(nextMatch.utcDate, t, now)
+    : null;
+  const nextMatchTime = nextMatch ? formatMatchTime(nextMatch.utcDate, locale) : null;
+
+  // Current-user rank derived from the same leaderboard we render below —
+  // 1-indexed, null if the user isn't in the table (e.g. admin without a row).
+  const currentUserEntry = leaderboard.findIndex((r) => r.id === user?.id);
+  const currentUserRank = currentUserEntry >= 0 ? currentUserEntry + 1 : null;
+  const currentUserPoints =
+    currentUserRank != null ? leaderboard[currentUserEntry].points : null;
+
+  const top3 = leaderboard.slice(0, 3);
+  const rest = leaderboard.slice(3);
 
   return (
     <main className={styles.page}>
@@ -124,18 +181,52 @@ export default function HomePage() {
         />
       )}
 
-      <section className={styles.welcome}>
-        <h1 className={styles.welcomeTitle}>
-          <Trans
-            i18nKey="home.welcomeBack"
-            values={{ name: user?.name ?? '' }}
-            components={{ accent: <span className={styles.accent} /> }}
-          >
-            Welcome back, <span className={styles.accent}>{user?.name}</span>
-          </Trans>
-          {' '}👋
-        </h1>
-        <p className={styles.welcomeSub}>{t('app.tagline')}</p>
+      <section className={styles.hero}>
+        <div className={styles.heroScanlines} aria-hidden="true" />
+        <div className={styles.heroInner}>
+          <div className={styles.heroNameBlock}>
+            <span className={styles.heroEyebrow}>{t('home.welcomeBack', { name: '' }).replace(/[,\s]+$/, '')}</span>
+            <h1 className={styles.heroName}>{user?.name ?? ''}</h1>
+            <p className={`${styles.heroTicker} numerals`}>
+              <span className={styles.heroTickerLabel}>
+                {nextMatch
+                  ? t('home.hero.kickoff').toUpperCase()
+                  : t('home.hero.noUpcoming').toUpperCase()}
+              </span>
+              {nextMatch && (
+                <>
+                  <span className={styles.heroTickerDot} aria-hidden="true">·</span>
+                  <span className={styles.heroTickerMatch}>
+                    {nextMatch.homeTeam.tla ?? nextMatch.homeTeam.shortName}
+                    {' '}vs{' '}
+                    {nextMatch.awayTeam.tla ?? nextMatch.awayTeam.shortName}
+                  </span>
+                  <span className={styles.heroTickerDot} aria-hidden="true">·</span>
+                  <span className={styles.heroTickerCountdown}>
+                    {nextMatchCountdown ?? nextMatchTime}
+                  </span>
+                </>
+              )}
+            </p>
+          </div>
+
+          {currentUserRank != null && (
+            <div className={styles.heroChip}>
+              <span className={styles.heroChipLabel}>{t('home.hero.you').toUpperCase()}</span>
+              <div className={styles.heroChipFigures}>
+                <div className={styles.heroChipFigure}>
+                  <span className={`${styles.heroChipValue} numerals`}>#{currentUserRank}</span>
+                  <span className={styles.heroChipUnit}>{t('home.hero.rank').toUpperCase()}</span>
+                </div>
+                <div className={styles.heroChipDivider} aria-hidden="true" />
+                <div className={styles.heroChipFigure}>
+                  <span className={`${styles.heroChipValue} numerals`}>{currentUserPoints}</span>
+                  <span className={styles.heroChipUnit}>{t('home.hero.pts')}</span>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       </section>
 
       <div className={styles.grid}>
@@ -173,16 +264,6 @@ export default function HomePage() {
             </div>
           )}
         </section>
-
-        {!loadingMatches && todayMatches.length > 0 && (
-          <section className={`${styles.card} ${styles.fullWidth}`}>
-            <LiveBetsReveal
-              matches={todayMatches}
-              users={users}
-              currentUserId={user?.id}
-            />
-          </section>
-        )}
 
         <section className={`${styles.card} ${styles.fullWidth}`}>
           <div className={styles.leaderboardHeader}>
@@ -237,59 +318,17 @@ export default function HomePage() {
           {leaderboard.length === 0 ? (
             <p className={styles.empty}>{t('home.leaderboardEmpty')}</p>
           ) : (
-            <div className={styles.tableWrapper}>
-              <table className={styles.table}>
-                <thead>
-                  <tr>
-                    <th>{t('leaderboard.rank')}</th>
-                    <th>{t('leaderboard.player')}</th>
-                    <th className={styles.colWinner}>{t('leaderboard.winnerBet')}</th>
-                    <th className={styles.colTopScorer}>{t('leaderboard.topScorer')}</th>
-                    <th className={styles.colTopAssist}>{t('leaderboard.topAssist')}</th>
-                    <th className={styles.center}>🎯 {t('leaderboard.exact')}</th>
-                    <th className={styles.center}>✅ {t('leaderboard.results')}</th>
-                    <th className={styles.center}>{t('leaderboard.points')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {leaderboard.map((row, idx) => (
-                    <tr
-                      key={row.id}
-                      className={row.isCurrentUser ? styles.currentUserRow : ''}
-                    >
-                      <td className={styles.rank}>
-                        {idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : idx + 1}
-                      </td>
-                      <td className={styles.playerCell}>
-                        <span className={styles.playerInner}>
-                          <span className={styles.playerName} title={row.name}>{row.name}</span>
-                          {row.isCurrentUser && <span className={styles.youTag}>{t('leaderboard.you')}</span>}
-                        </span>
-                      </td>
-                      <td className={styles.colWinner}>{row.bet?.winningTeam ?? <span className={styles.missing}>—</span>}</td>
-                      <td className={styles.colTopScorer}>{row.bet?.topScorer ?? <span className={styles.missing}>—</span>}</td>
-                      <td className={styles.colTopAssist}>{row.bet?.topAssist ?? <span className={styles.missing}>—</span>}</td>
-                      <td className={styles.center}>{row.exactScores}</td>
-                      <td className={styles.center}>{row.correctResults}</td>
-                      <td className={styles.points}>
-                        <span className={styles.pointsCell}>
-                          <span>{row.points}</span>
-                          {row.exactScoreBonus > 0 && (
-                            <span
-                              className={styles.bonusChip}
-                              title={t('leaderboard.exactBonusTooltip')}
-                              aria-label={t('leaderboard.exactBonusTooltip')}
-                            >
-                              {t('leaderboard.exactBonusBadge')}
-                            </span>
-                          )}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <>
+              <Podium top3={top3} currentUserId={user?.id} />
+              {rest.length > 0 && (
+                <LeaderboardTable
+                  rows={rest}
+                  startRank={top3.length + 1}
+                  styles={styles}
+                  t={t}
+                />
+              )}
+            </>
           )}
         </section>
       </div>
@@ -300,6 +339,171 @@ export default function HomePage() {
         onClose={() => setModalOpened(false)}
         onSaved={upsertPrediction}
       />
+
+      <LiveBetsModal
+        match={liveBetsMatch}
+        users={revealUsers}
+        currentUserId={user?.id}
+        opened={liveBetsOpened}
+        onClose={() => setLiveBetsOpened(false)}
+      />
     </main>
+  );
+}
+
+// Snapshot of the previous leaderboard order, keyed per visit. Used so the
+// table can show a small ▲/▼ chevron beside each rank without any backend
+// change. The snapshot updates on each render that produces a non-empty
+// list, so the "previous" state is "what I last saw" rather than a server
+// truth — pure UX.
+const RANK_SNAPSHOT_KEY = 'wc26:lastLeaderboardRanks';
+
+function loadRankSnapshot() {
+  try {
+    const raw = localStorage.getItem(RANK_SNAPSHOT_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveRankSnapshot(snapshot) {
+  try {
+    localStorage.setItem(RANK_SNAPSHOT_KEY, JSON.stringify(snapshot));
+  } catch {
+    /* localStorage unavailable — ignore */
+  }
+}
+
+function LeaderboardTable({ rows, startRank, styles, t }) {
+  const [expandedId, setExpandedId] = useState(null);
+  // Read once on mount; we compare against this for the lifetime of the
+  // component, then refresh on unmount so the next visit sees today's order
+  // as "previous."
+  const [previousRanks] = useState(loadRankSnapshot);
+
+  useEffect(() => {
+    if (rows.length === 0) return;
+    const next = {};
+    rows.forEach((r, idx) => {
+      next[r.id] = startRank + idx;
+    });
+    saveRankSnapshot(next);
+  }, [rows, startRank]);
+
+  const toggleExpanded = (id) => {
+    setExpandedId((prev) => (prev === id ? null : id));
+  };
+
+  return (
+    <div className={styles.tableWrapper}>
+      <table className={styles.table}>
+        <thead>
+          <tr>
+            <th className={styles.center}>{t('leaderboard.rank')}</th>
+            <th>{t('leaderboard.player')}</th>
+            <th className={styles.colWinner}>{t('leaderboard.winnerBet')}</th>
+            <th className={styles.colTopScorer}>{t('leaderboard.topScorer')}</th>
+            <th className={styles.colTopAssist}>{t('leaderboard.topAssist')}</th>
+            <th className={styles.center}>🎯 {t('leaderboard.exact')}</th>
+            <th className={styles.center}>✅ {t('leaderboard.results')}</th>
+            <th className={styles.center}>{t('leaderboard.points')}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row, idx) => {
+            const rank = startRank + idx;
+            const prev = previousRanks[row.id];
+            const delta = prev != null ? prev - rank : 0;
+            const isExpanded = expandedId === row.id;
+            const hasAnyBet = row.bet?.winningTeam || row.bet?.topScorer || row.bet?.topAssist;
+            return (
+              <Fragment key={row.id}>
+                <tr className={row.isCurrentUser ? styles.currentUserRow : ''}>
+                  <td className={`${styles.rank} numerals`}>
+                    <span className={styles.rankInner}>
+                      <span>{rank}</span>
+                      {delta > 0 && (
+                        <span
+                          className={`${styles.delta} ${styles.deltaUp}`}
+                          aria-label={`up ${delta}`}
+                        >
+                          ▲{delta}
+                        </span>
+                      )}
+                      {delta < 0 && (
+                        <span
+                          className={`${styles.delta} ${styles.deltaDown}`}
+                          aria-label={`down ${-delta}`}
+                        >
+                          ▼{-delta}
+                        </span>
+                      )}
+                    </span>
+                  </td>
+                  <td className={styles.playerCell}>
+                    <span className={styles.playerInner}>
+                      <span className={styles.playerName} title={row.name}>{row.name}</span>
+                      {row.isCurrentUser && <span className={styles.youTag}>{t('leaderboard.you')}</span>}
+                      {hasAnyBet && (
+                        <button
+                          type="button"
+                          className={`${styles.expandToggle} ${isExpanded ? styles.expandToggleOpen : ''}`}
+                          onClick={() => toggleExpanded(row.id)}
+                          aria-label={isExpanded ? 'Hide bets' : 'Show bets'}
+                          aria-expanded={isExpanded}
+                        >
+                          ▾
+                        </button>
+                      )}
+                    </span>
+                  </td>
+                  <td className={styles.colWinner}>{row.bet?.winningTeam ?? <span className={styles.missing}>—</span>}</td>
+                  <td className={styles.colTopScorer}>{row.bet?.topScorer ?? <span className={styles.missing}>—</span>}</td>
+                  <td className={styles.colTopAssist}>{row.bet?.topAssist ?? <span className={styles.missing}>—</span>}</td>
+                  <td className={`${styles.center} numerals`}>{row.exactScores}</td>
+                  <td className={`${styles.center} numerals`}>{row.correctResults}</td>
+                  <td className={styles.points}>
+                    <span className={styles.pointsCell}>
+                      <span className="numerals">{row.points}</span>
+                      {row.exactScoreBonus > 0 && (
+                        <span
+                          className={styles.bonusChip}
+                          title={t('leaderboard.exactBonusTooltip')}
+                          aria-label={t('leaderboard.exactBonusTooltip')}
+                        >
+                          {t('leaderboard.exactBonusBadge')}
+                        </span>
+                      )}
+                    </span>
+                  </td>
+                </tr>
+                {isExpanded && hasAnyBet && (
+                  <tr className={styles.expandedRow}>
+                    <td />
+                    <td colSpan={7}>
+                      <dl className={styles.betDetail}>
+                        <div>
+                          <dt>{t('leaderboard.winnerBet')}</dt>
+                          <dd>{row.bet?.winningTeam ?? <span className={styles.missing}>—</span>}</dd>
+                        </div>
+                        <div>
+                          <dt>{t('leaderboard.topScorer')}</dt>
+                          <dd>{row.bet?.topScorer ?? <span className={styles.missing}>—</span>}</dd>
+                        </div>
+                        <div>
+                          <dt>{t('leaderboard.topAssist')}</dt>
+                          <dd>{row.bet?.topAssist ?? <span className={styles.missing}>—</span>}</dd>
+                        </div>
+                      </dl>
+                    </td>
+                  </tr>
+                )}
+              </Fragment>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
   );
 }

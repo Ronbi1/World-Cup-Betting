@@ -155,7 +155,28 @@ The deployed app URL — for example `https://wc-bets.example.com` (no trailing 
 Leave blank locally. Set per-environment (Production, optionally Preview) in the Vercel dashboard.
 
 #### Secrets boundary
-Only variables prefixed with `VITE_` are bundled into the browser by Vite. Every secret in this project — `SUPABASE_SERVICE_ROLE_KEY`, `JWT_SECRET`, `WC26_API_PASSWORD`, `RESEND_API_KEY` — is **unprefixed** and read exclusively by the serverless functions under `/api`. The only `VITE_*` variable in the codebase today is `VITE_API_BASE_URL`, which holds a URL, not a secret. **Never prefix a real secret with `VITE_`** — it would ship to every visitor's browser bundle.
+Only variables prefixed with `VITE_` are bundled into the browser by Vite. Every secret in this project — `SUPABASE_SERVICE_ROLE_KEY`, `JWT_SECRET`, `WC26_API_PASSWORD`, `RESEND_API_KEY` — is **unprefixed** and read exclusively by the serverless functions under `/api`. The `VITE_*` variables in this project (`VITE_API_BASE_URL`, `VITE_SIMULATION_MODE`) hold non-secret configuration. **Never prefix a real secret with `VITE_`** — it would ship to every visitor's browser bundle.
+
+#### Simulation mode (local testing only)
+
+Simulation mode lets you preview the app as if the World Cup is already in progress — finished, live, and upcoming matches, demo predictions, and a working leaderboard — without touching real data.
+
+**Enable locally:**
+1. Create or edit `.env.local` (or add to `.env`)
+2. Set `VITE_SIMULATION_MODE=true`
+3. Restart the dev server (`npm run dev:all`)
+
+**Disable:**
+1. Remove `VITE_SIMULATION_MODE` from `.env.local` or set `VITE_SIMULATION_MODE=false`
+2. Restart the dev server
+
+**Safety:**
+- Off by default — if the variable is missing or not exactly `"true"`, behavior is unchanged
+- No Supabase writes — prediction saves and score recalculation are blocked in simulation mode
+- Mock data lives in `api/mock/worldCupSimulation.js` — delete that folder and the simulation helpers to remove the feature entirely
+- **Do not set `VITE_SIMULATION_MODE=true` in production Vercel env** — Vite bakes it into the build bundle
+
+When enabled, a prominent orange **SIMULATION / DEMO MODE** banner appears at the top of every page.
 
 ### 5. Seed the admin user
 Run from `World-Cup/`:

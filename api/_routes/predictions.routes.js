@@ -2,6 +2,11 @@ const express = require('express');
 const { supabase } = require('../_lib/supabase');
 const { requireAuth } = require('../_lib/auth');
 const { fetchSeasonMatches, hasMatchStarted } = require('../_lib/football');
+const {
+  isSimulationMode,
+  getSimulationPredictionsForUser,
+  getSimulationPredictionsForMatchIds,
+} = require('../_lib/simulation');
 
 const router = express.Router();
 
@@ -26,6 +31,15 @@ router.get('/', requireAuth, async (req, res, next) => {
     if (userId) {
       if (req.user.id !== userId && req.user.role !== 'ADMIN') {
         return res.status(403).json({ error: 'You can only view your own predictions.' });
+      }
+
+      // SIMULATION ONLY — in-memory demo predictions; no Supabase read.
+      if (isSimulationMode()) {
+        let rows = getSimulationPredictionsForUser(String(userId));
+        if (matchId) {
+          rows = rows.filter((p) => String(p.match_id) === String(matchId));
+        }
+        return res.json(rows);
       }
 
       let query = supabase
@@ -67,6 +81,11 @@ router.get('/', requireAuth, async (req, res, next) => {
 
       if (startedIds.length === 0) return res.json([]);
 
+      // SIMULATION ONLY — in-memory demo predictions; no Supabase read.
+      if (isSimulationMode()) {
+        return res.json(getSimulationPredictionsForMatchIds(startedIds));
+      }
+
       const { data, error } = await supabase
         .from('predictions')
         .select('user_id, match_id, home, away')
@@ -92,6 +111,13 @@ router.get('/', requireAuth, async (req, res, next) => {
 router.post('/', requireAuth, async (req, res, next) => {
   try {
     const { user_id, match_id, home, away } = req.body || {};
+
+    // SIMULATION ONLY — block writes so no demo data reaches Supabase.
+    if (isSimulationMode()) {
+      return res.status(403).json({
+        error: 'Simulation mode is read-only. Disable VITE_SIMULATION_MODE to save real predictions.',
+      });
+    }
 
     if (req.user.id !== user_id) {
       return res.status(403).json({ error: 'You can only submit your own predictions.' });

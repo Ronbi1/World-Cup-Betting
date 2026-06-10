@@ -6,15 +6,6 @@
 
 .header { margin-bottom: 1.5rem; }
 
-.liveBetsWrapper {
-  margin-top: 2rem;
-  background: var(--clr-surface);
-  border: 1px solid var(--clr-border);
-  border-radius: 16px;
-  padding: 1.25rem;
-  box-shadow: var(--shadow-card);
-}
-
 .title {
   font-size: 1.6rem;
   font-weight: 800;
@@ -172,7 +163,6 @@
   .title { font-size: 1.3rem; }
   .stageTab { padding: 0.35rem 0.6rem; font-size: 0.75rem; }
   .filterBtn { padding: 0.25rem 0.65rem; font-size: 0.75rem; }
-  .liveBetsWrapper { padding: 1rem; margin-top: 1.25rem; }
 }
 
 @media (max-width: 400px) {

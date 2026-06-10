@@ -26,7 +26,11 @@
       "Bash(python:*)",
       "Bash(npm uninstall:*)",
       "Bash(del \"C:\\\\dev\\\\WorldCupApp\\\\World-Cup\\\\src\\\\services\\\\supabaseClient.js\")",
-      "Bash(Remove-Item \"C:\\\\dev\\\\WorldCupApp\\\\World-Cup\\\\src\\\\services\\\\supabaseClient.js\")"
+      "Bash(Remove-Item \"C:\\\\dev\\\\WorldCupApp\\\\World-Cup\\\\src\\\\services\\\\supabaseClient.js\")",
+      "Bash(node -e \"const {TOP_SCORERS_LIST, TOP_ASSISTS_LIST} = require\\('./src/utils/constants.js'\\); console.log\\('scorers tiers:', TOP_SCORERS_LIST.length\\); console.log\\('assists tiers:', TOP_ASSISTS_LIST.length\\);\")",
+      "Bash(npx vite *)",
+      "Bash(npx eslint *)",
+      "Bash(npm run *)"
     ]
   }
 }

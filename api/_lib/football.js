@@ -18,6 +18,13 @@
 //   Client  refreshScores    auto on FINISHED transition + 60 s during live
 // Adding new fetchers? Reuse `wc26Request` so single-flight + cache apply.
 const axios = require('axios');
+const {
+  isSimulationMode,
+  getSimulationMatches,
+  getSimulationTodayMatches,
+  getSimulationFinishedMatches,
+  getSimulationTeams,
+} = require('./simulation');
 
 const WC26_BASE = (process.env.WC26_API_BASE_URL || 'https://worldcup26.ir').replace(/\/$/, '');
 
@@ -282,6 +289,7 @@ async function fetchAllGamesRaw() {
 }
 
 async function fetchSeasonMatches() {
+  if (isSimulationMode()) return getSimulationMatches();
   const games = await fetchAllGamesRaw();
   return games
     .map(transformGame)
@@ -289,18 +297,21 @@ async function fetchSeasonMatches() {
 }
 
 async function fetchTodayMatches() {
+  if (isSimulationMode()) return getSimulationTodayMatches();
   const all = await fetchSeasonMatches();
   const today = new Date().toISOString().slice(0, 10);
   return all.filter((m) => m.utcDate && m.utcDate.slice(0, 10) === today);
 }
 
 async function fetchAllTeams() {
+  if (isSimulationMode()) return getSimulationTeams();
   await ensureTeams();
   const all = Object.values(_teamsById ?? {});
   return all.map(transformTeam).sort((a, b) => a.name.localeCompare(b.name));
 }
 
 async function fetchFinishedMatches() {
+  if (isSimulationMode()) return getSimulationFinishedMatches();
   const all = await fetchSeasonMatches();
   return all.filter((m) => m.status === 'FINISHED');
 }

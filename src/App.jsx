@@ -17,6 +17,7 @@ import AdminPage from './pages/AdminPage';
 import TopScorersPage from './pages/TopScorersPage';
 import RulesPage from './pages/RulesPage';
 import Navbar from './components/Navbar';
+import SimulationBanner from './components/SimulationBanner';
 
 // ─── Route guard: redirect to /login when not authenticated ──────────────────
 // Waits for `authReady` (boot-time /auth/me probe) before deciding so a
@@ -48,6 +49,7 @@ function ProtectedRoute({ children }) {
 function AppLayout({ children }) {
   return (
     <>
+      <SimulationBanner />
       <Navbar />
       {children}
     </>

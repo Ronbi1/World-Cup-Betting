@@ -11,6 +11,7 @@ const predictionsRoutes = require('./_routes/predictions.routes');
 const footballRoutes = require('./_routes/football.routes');
 const scoresRoutes = require('./_routes/scores.routes');
 const { errorHandler } = require('./_lib/errorHandler');
+const { isSimulationMode } = require('./_lib/simulation');
 
 const app = express();
 
@@ -28,7 +29,11 @@ app.use(express.json({ limit: '256kb' }));
 // Vercel forwards req.url with the full /api/* prefix intact. Mount routers
 // under /api so Express path matching lines up with what the client sent.
 app.get('/api/health', (_req, res) =>
-  res.json({ status: 'ok', timestamp: new Date().toISOString() })
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    simulationMode: isSimulationMode(),
+  })
 );
 app.use('/api/auth', authRoutes);
 app.use('/api/users', usersRoutes);

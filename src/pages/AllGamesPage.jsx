@@ -7,10 +7,10 @@ import { useAuth } from '../context/useAuth';
 import MatchCard from '../components/MatchCard';
 import SkeletonCard from '../components/SkeletonCard';
 import BetModal from '../components/BetModal';
-import LiveBetsReveal from '../components/LiveBetsReveal';
+import LiveBetsModal from '../components/LiveBetsModal';
 import LiveScoreBanner from '../components/LiveScoreBanner';
-import { MATCH_STATUS, STAGE_ORDER } from '../utils/constants';
-import { isMatchToday } from '../utils/matchTime';
+import { MATCH_STATUS, STAGE_ORDER, REG_STATUS } from '../utils/constants';
+import { isMatchToday, hasMatchStarted } from '../utils/matchTime';
 import styles from './AllGamesPage.module.css';
 
 const groupMatchesByStageAndGroup = (matches) => {
@@ -27,12 +27,14 @@ const groupMatchesByStageAndGroup = (matches) => {
 
 export default function AllGamesPage() {
   const { matches, loading, error, lastUpdated, refresh } = useMatches();
-  const { user, users } = useAuth();
+  const { user, users, scores } = useAuth();
   const { t } = useTranslation();
   const [activeStage, setActiveStage] = useState('GROUP_STAGE');
   const [filterStatus, setFilterStatus] = useState('ALL');
   const [selectedMatch, setSelectedMatch] = useState(null);
   const [modalOpened, setModalOpened] = useState(false);
+  const [liveBetsMatch, setLiveBetsMatch] = useState(null);
+  const [liveBetsOpened, setLiveBetsOpened] = useState(false);
 
   // Single shared minute-tick for every MatchCard on the page — see
   // src/hooks/useMinuteTick.js. Passed as a prop into every card below so
@@ -40,9 +42,16 @@ export default function AllGamesPage() {
   const now = useMinuteTick();
   const { predictions, upsertPrediction } = useUserPredictions();
 
+  // Click branching mirrors HomePage: started → reveal everyone's bets;
+  // not started → BetModal for the user to place / edit their own.
   const handleMatchClick = (match) => {
-    setSelectedMatch(match);
-    setModalOpened(true);
+    if (hasMatchStarted(match)) {
+      setLiveBetsMatch(match);
+      setLiveBetsOpened(true);
+    } else {
+      setSelectedMatch(match);
+      setModalOpened(true);
+    }
   };
 
   const handleModalClose = () => setModalOpened(false);
@@ -72,6 +81,16 @@ export default function AllGamesPage() {
     if (f === 'FINISHED') return t('allGames.filter.finished');
     return f;
   };
+
+  // See HomePage.jsx — users is admin-only, fall back to scores so
+  // non-admin viewers (and simulation mode) still see everyone's picks.
+  const revealUsers = users.length > 0
+    ? users
+    : scores.map((s) => ({
+        id: s.userId,
+        name: s.name,
+        status: REG_STATUS.APPROVED,
+      }));
 
   return (
     <main className={styles.page}>
@@ -178,17 +197,19 @@ export default function AllGamesPage() {
         )
       )}
 
-      {!loading && !error && matches.length > 0 && (
-        <div className={styles.liveBetsWrapper}>
-          <LiveBetsReveal matches={matches} users={users} currentUserId={user?.id} />
-        </div>
-      )}
-
       <BetModal
         match={selectedMatch}
         opened={modalOpened}
         onClose={handleModalClose}
         onSaved={upsertPrediction}
+      />
+
+      <LiveBetsModal
+        match={liveBetsMatch}
+        users={revealUsers}
+        currentUserId={user?.id}
+        opened={liveBetsOpened}
+        onClose={() => setLiveBetsOpened(false)}
       />
     </main>
   );

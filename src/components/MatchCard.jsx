@@ -49,18 +49,37 @@ export default function MatchCard({ match, compact = false, onClick, now, userPr
   const hasUserPrediction = userPrediction != null;
   const showPredictedScoreInCenter = isUpcoming && hasUserPrediction;
 
+  // The centered scoreboard pill swaps content based on match state:
+  //   • finished / live → real score
+  //   • upcoming + user has prediction → gold prediction
+  //   • upcoming + no prediction → kickoff time (was "vs")
+  let scoreContent;
+  let scoreToneClass = '';
+  if (isFinished || isLive) {
+    scoreContent = `${match.score.home ?? 0} – ${match.score.away ?? 0}`;
+    scoreToneClass = isLive ? styles.scoreLive : styles.scoreFinal;
+  } else if (showPredictedScoreInCenter) {
+    scoreContent = `${userPrediction.home} – ${userPrediction.away}`;
+    scoreToneClass = styles.scorePrediction;
+  } else {
+    scoreContent = formatTime(match.utcDate);
+    scoreToneClass = styles.scoreTime;
+  }
+
   return (
     <article
-      className={`${styles.card} ${compact ? styles.compact : ''} ${onClick ? styles.clickable : ''} ${hasUserPrediction ? styles.hasPrediction : ''}`}
+      className={`${styles.card} ${compact ? styles.compact : ''} ${onClick ? styles.clickable : ''} ${hasUserPrediction ? styles.hasPrediction : ''} ${isLive ? styles.cardLive : ''} ${isFinished ? styles.cardFinished : ''}`}
       onClick={onClick ? () => onClick(match) : undefined}
       role={onClick ? 'button' : undefined}
       tabIndex={onClick ? 0 : undefined}
       onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') onClick(match); } : undefined}
     >
       <div className={styles.meta}>
-        <span className={`${styles.statusBadge} ${styles[stCls]}`}>{t(`matchStatus.${stKey}`)}</span>
+        <span className={`${styles.statusBadge} ${styles[stCls]}`}>
+          {isLive && <span className={styles.liveDot} aria-hidden="true" />}
+          {t(`matchStatus.${stKey}`)}
+        </span>
         <span className={styles.date}>{formatDate(match.utcDate)}</span>
-        {!isFinished && <span className={styles.time}>{formatTime(match.utcDate)}</span>}
         {countdownText && (
           <span className={styles.countdown}>{countdownText}</span>
         )}
@@ -68,43 +87,40 @@ export default function MatchCard({ match, compact = false, onClick, now, userPr
           <span className={styles.stageBadge}>{t(`stages.${match.stage}`)}</span>
         )}
         {match.group && <span className={styles.group}>{match.group}</span>}
-        {hasUserPrediction && (
-          <span className={styles.yourPickMeta}>
-            {t('matchCard.yourPick', { home: userPrediction.home, away: userPrediction.away })}
-          </span>
-        )}
       </div>
 
       <div className={styles.teams}>
-        <div className={styles.team}>
-          <TeamFlag crest={match.homeTeam.crest} tla={match.homeTeam.tla} name={match.homeTeam.name} />
+        <div className={`${styles.team} ${styles.teamHome}`}>
           <span className={styles.teamName}>{match.homeTeam.shortName}</span>
+          <TeamFlag crest={match.homeTeam.crest} tla={match.homeTeam.tla} name={match.homeTeam.name} />
         </div>
 
-        <div className={`${styles.score} ${isLive ? styles.scoreLive : ''} ${showPredictedScoreInCenter ? styles.scorePrediction : ''}`}>
-          {isFinished || isLive
-            ? `${match.score.home ?? 0} – ${match.score.away ?? 0}`
-            : showPredictedScoreInCenter
-              ? `${userPrediction.home} – ${userPrediction.away}`
-              : t('matchCard.vs')}
+        <div className={`${styles.scoreboard} ${scoreToneClass}`}>
+          <span className={`${styles.score} numerals`}>{scoreContent}</span>
         </div>
 
-        <div className={`${styles.team} ${styles.teamRight}`}>
-          <span className={styles.teamName}>{match.awayTeam.shortName}</span>
+        <div className={`${styles.team} ${styles.teamAway}`}>
           <TeamFlag crest={match.awayTeam.crest} tla={match.awayTeam.tla} name={match.awayTeam.name} />
+          <span className={styles.teamName}>{match.awayTeam.shortName}</span>
         </div>
       </div>
 
       {isFinished && match.score.halfHome !== null && !compact && (
         <p className={styles.ht}>
-          {t('matchCard.halfTime')}: {match.score.halfHome} – {match.score.halfAway}
+          {t('matchCard.halfTime')}: <span className="numerals">{match.score.halfHome} – {match.score.halfAway}</span>
         </p>
       )}
 
+      {/* Gold ticket-stub in the corner — visible whenever the user has a
+          prediction AND we're not already showing it inside the scoreboard
+          pill (i.e. live/finished where the real score takes the pill). */}
       {hasUserPrediction && (isFinished || isLive) && (
-        <p className={styles.yourPick}>
-          {t('matchCard.yourPick', { home: userPrediction.home, away: userPrediction.away })}
-        </p>
+        <span className={styles.ticketStub} aria-label={t('matchCard.yourPick', { home: userPrediction.home, away: userPrediction.away })}>
+          <span className={styles.ticketStubLabel}>PICK</span>
+          <span className={`${styles.ticketStubScore} numerals`}>
+            {userPrediction.home}–{userPrediction.away}
+          </span>
+        </span>
       )}
     </article>
   );

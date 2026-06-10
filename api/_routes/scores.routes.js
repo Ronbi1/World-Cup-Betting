@@ -3,6 +3,12 @@ const { supabase } = require('../_lib/supabase');
 const { requireAuth, requireAdmin } = require('../_lib/auth');
 const { computeLeaderboard, readTournamentBonus } = require('../_lib/scoring');
 const { fetchFinishedMatches } = require('../_lib/football');
+const {
+  isSimulationMode,
+  getSimulationUsers,
+  getSimulationFinishedMatches,
+  getSimulationPredictions,
+} = require('../_lib/simulation');
 
 const router = express.Router();
 
@@ -19,6 +25,20 @@ function bustLeaderboardCache() {
 }
 
 async function loadLeaderboardInputs() {
+  // SIMULATION ONLY — in-memory demo data; never touches Supabase.
+  if (isSimulationMode()) {
+    const finishedMatches = getSimulationFinishedMatches();
+    const finishedMatchIds = new Set(finishedMatches.map((m) => String(m.id)));
+    const predictions = getSimulationPredictions().filter(
+      (p) => finishedMatchIds.has(String(p.match_id)),
+    );
+    return {
+      users: getSimulationUsers(),
+      finishedMatches,
+      predictions,
+    };
+  }
+
   // 1. Approved non-ADMIN users — these are the only rows that score.
   const { data: usersRaw, error: usersError } = await supabase
     .from('users')
@@ -73,6 +93,12 @@ router.get('/', requireAuth, async (_req, res, next) => {
 // tournament-bonus inputs. This is the ONLY write path on the scores route.
 router.post('/recalculate', requireAuth, requireAdmin, async (req, res, next) => {
   try {
+    if (isSimulationMode()) {
+      return res.status(403).json({
+        error: 'Simulation mode is read-only. Disable VITE_SIMULATION_MODE to recalculate real scores.',
+      });
+    }
+
     const { tournamentWinner, actualTopScorer, actualTopAssist } = req.body || {};
 
     const overrides = {

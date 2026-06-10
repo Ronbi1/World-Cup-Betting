@@ -4,27 +4,155 @@
   padding: 1.5rem 1.25rem;
 }
 
-.welcome {
-  margin-bottom: 1.75rem;
+/* ─── Editorial broadcast hero ────────────────────────────────────────────
+   Replaces the old blue welcome card. Massive condensed display name,
+   monospaced kickoff ticker, gold rank/points chip. The scanline overlay
+   is the cheap broadcast trick that makes a gradient feel like an OB-truck
+   chyron rather than a SaaS dashboard. */
+.hero {
+  position: relative;
+  margin-bottom: 1.5rem;
   background: var(--grad-hero);
   border-radius: 18px;
-  padding: 1.75rem 1.5rem;
+  padding: 2rem 1.75rem;
   box-shadow: var(--shadow-hero);
+  overflow: hidden;
+  isolation: isolate;
 }
 
-.welcomeTitle {
-  font-size: 1.6rem;
-  font-weight: 800;
+.heroScanlines {
+  position: absolute;
+  inset: 0;
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent 0 2px,
+    rgba(255, 255, 255, 0.025) 2px 3px
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
+.heroInner {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+}
+
+.heroNameBlock {
+  flex: 1;
+  min-width: 0;
+}
+
+.heroEyebrow {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.6);
+  margin-bottom: 0.25rem;
+}
+
+.heroName {
+  font-family: var(--font-display);
+  font-size: clamp(2.5rem, 6vw + 1rem, 4.5rem);
+  font-weight: 400; /* Bebas Neue ships as a single weight */
+  line-height: 0.95;
+  letter-spacing: 0.02em;
   color: #fff;
-  margin: 0 0 0.3rem;
+  text-transform: uppercase;
+  margin: 0 0 0.6rem;
+  word-break: break-word;
+  /* Soft inner-glow against the gradient — makes the display type "pop"
+     off the blue, broadcast-graphic style. */
+  text-shadow: 0 2px 24px rgba(0, 0, 0, 0.35);
 }
 
-.accent { color: var(--clr-accent-gold); }
-
-.welcomeSub {
-  font-size: 0.9rem;
+.heroTicker {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   color: rgba(255, 255, 255, 0.85);
   margin: 0;
+}
+
+.heroTickerLabel {
+  color: var(--clr-accent-gold);
+  font-weight: 700;
+}
+
+.heroTickerDot {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.heroTickerMatch { color: #fff; font-weight: 600; }
+.heroTickerCountdown { color: rgba(255, 255, 255, 0.78); }
+
+/* Gold rank/points slab — broadcast-chyron style. Hugs the right side of
+   the hero, drops below the name on narrow screens via the @media block. */
+.heroChip {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.4rem;
+  padding: 0.85rem 1.1rem;
+  background: rgba(0, 0, 0, 0.32);
+  border: 1px solid var(--clr-accent-gold-border);
+  border-radius: 12px;
+  backdrop-filter: blur(4px);
+  flex-shrink: 0;
+}
+
+.heroChipLabel {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  color: var(--clr-accent-gold);
+}
+
+.heroChipFigures {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.heroChipFigure {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1;
+}
+
+.heroChipValue {
+  font-family: var(--font-display);
+  font-size: 1.85rem;
+  font-weight: 400;
+  color: #fff;
+  letter-spacing: 0.04em;
+  line-height: 1;
+}
+
+.heroChipUnit {
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  color: rgba(255, 255, 255, 0.55);
+  margin-top: 0.2rem;
+}
+
+.heroChipDivider {
+  width: 1px;
+  align-self: stretch;
+  background: var(--clr-accent-gold-border);
+  margin: 0.15rem 0;
 }
 
 /* 2-column grid on desktop, stacks on mobile */
@@ -50,14 +178,18 @@
 }
 
 .sectionTitle {
-  font-size: 1rem;
-  font-weight: 700;
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  font-weight: 400;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
   color: var(--clr-text-primary);
   margin: 0 0 1rem;
   padding-bottom: 0.6rem;
   padding-inline-start: 0.75rem;
   border-bottom: 1px solid var(--clr-border);
   border-inline-start: 3px solid var(--clr-accent-cyan);
+  line-height: 1.1;
 }
 
 .comingSoon { font-size: 0.8rem; color: var(--clr-muted); margin: 0; }
@@ -87,29 +219,23 @@
   flex-wrap: wrap;
   gap: 0.5rem;
   margin-bottom: 0;
-}
-.leaderboardHeader .sectionTitle { margin-bottom: 0; border-bottom: none; padding-bottom: 0; }
-
-.recalcWrap {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  padding-bottom: 0.6rem;
-  border-bottom: 1px solid var(--clr-border);
-  flex: 1;
-  justify-content: flex-end;
-}
-
-/* Extend the border across the full width */
-.leaderboardHeader {
   padding-bottom: 0.6rem;
   border-bottom: 1px solid var(--clr-border);
   margin-bottom: 0.75rem;
 }
 .leaderboardHeader .sectionTitle {
+  margin-bottom: 0;
   border-bottom: none;
   padding-bottom: 0;
   border-inline-start-color: var(--clr-accent-gold);
+}
+
+.recalcWrap {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex: 1;
+  justify-content: flex-end;
 }
 
 .recalcBtn {
@@ -152,6 +278,7 @@
   padding: 0.75rem 0 0.25rem;
   border-top: 1px dashed var(--clr-border);
   margin-top: 0.25rem;
+  flex-basis: 100%;
 }
 
 .bonusNote {
@@ -181,7 +308,7 @@
 .bonusInput::placeholder { color: var(--clr-muted); }
 
 /* Leaderboard table */
-.tableWrapper { overflow-x: auto; }
+.tableWrapper { overflow-x: auto; margin-top: 1.25rem; }
 
 .table {
   width: 100%;
@@ -195,9 +322,9 @@
   padding: 0.5rem 0.75rem;
   color: var(--clr-accent-cyan);
   font-weight: 700;
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.08em;
   border-bottom: 2px solid var(--clr-border);
   background: rgba(56, 189, 248, 0.06);
   white-space: nowrap;
@@ -214,10 +341,48 @@
 .table tbody tr:last-child td { border-bottom: none; }
 .table tbody tr:hover td { background: rgba(56, 189, 248, 0.08); }
 
-.currentUserRow td { background: rgba(56, 189, 248, 0.12) !important; }
-.currentUserRow td:first-child { border-inline-start: 3px solid var(--clr-accent); }
+/* Current-user row — gold inline-start border + faint gradient. Frees
+   cyan for brand use elsewhere and gives the user pride of place without
+   shouting. */
+.currentUserRow td {
+  background: linear-gradient(
+    90deg,
+    rgba(212, 175, 55, 0.16) 0%,
+    rgba(212, 175, 55, 0.04) 30%,
+    transparent 100%
+  ) !important;
+}
+.currentUserRow td:first-child {
+  border-inline-start: 3px solid var(--clr-accent-gold);
+}
 
-.rank { font-size: 1rem; text-align: center; width: 40px; }
+.rank {
+  font-size: 0.95rem;
+  text-align: center;
+  width: 56px;
+  color: var(--clr-text-primary);
+  font-weight: 600;
+}
+.rankInner {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  justify-content: center;
+}
+
+/* Rank-delta chevrons (▲2 / ▼1) — pulls previous order from localStorage,
+   so the delta is "since last visit," not since last server update. The
+   first visit shows no chevrons (snapshot is empty). */
+.delta {
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 1px 4px;
+  border-radius: 4px;
+  line-height: 1;
+}
+.deltaUp { color: var(--clr-accent-green); background: rgba(34, 197, 94, 0.12); }
+.deltaDown { color: var(--clr-accent-orange); background: rgba(249, 115, 22, 0.12); }
 
 /* Player column: flex lives in the INNER span so the <td> stays a normal
    table cell. Truncation kicks in when names are long. */
@@ -250,8 +415,55 @@
   flex-shrink: 0;
 }
 
+/* Mobile expand-bets chevron — hidden by default on desktop (the three
+   bet columns are already visible), shown on small screens where those
+   columns collapse into a sub-row dl. */
+.expandToggle {
+  display: none;
+  background: transparent;
+  border: 1px solid var(--clr-border);
+  color: var(--clr-text-secondary);
+  border-radius: 6px;
+  padding: 1px 5px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  cursor: pointer;
+  min-height: unset;
+  line-height: 1;
+  transition: transform 0.15s, color 0.15s, border-color 0.15s;
+}
+.expandToggle:hover { color: var(--clr-accent); border-color: var(--clr-accent); }
+.expandToggleOpen { transform: rotate(180deg); color: var(--clr-accent-gold); border-color: var(--clr-accent-gold); }
+
+.expandedRow { display: none; }
+.betDetail {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 0.6rem 1.2rem;
+  padding: 0.4rem 0 0.4rem 0.25rem;
+  margin: 0;
+}
+.betDetail dt {
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--clr-accent-cyan);
+  margin-bottom: 0.15rem;
+}
+.betDetail dd {
+  font-size: 0.85rem;
+  color: var(--clr-text-primary);
+  margin: 0;
+}
+
 .center { text-align: center; }
-.points { font-weight: 700; color: var(--clr-accent); font-size: 1rem; text-align: end; }
+.points {
+  font-weight: 700;
+  color: var(--clr-accent);
+  font-size: 1rem;
+  text-align: end;
+}
 .missing { color: var(--clr-muted); }
 .empty { color: var(--clr-muted); font-size: 0.875rem; }
 
@@ -270,32 +482,48 @@
   .fullWidth { grid-column: 1; }
 }
 
+/* Mobile: instead of hiding the three bet columns (the old behavior), we
+   now collapse them behind an expand chevron in the player cell. The bets
+   are the whole point of a betting league — hiding them on the device most
+   people actually use was a footgun. */
 @media (max-width: 720px) {
-  /* Drop the three "tournament bet" columns on tablets and below — they're
-     informational, while rank / player / exact / results / points are
-     the must-have leaderboard columns. */
   .colWinner,
   .colTopScorer,
   .colTopAssist { display: none; }
   .playerCell, .playerName { max-width: none; }
+  .expandToggle { display: inline-flex; align-items: center; justify-content: center; }
+  .expandedRow { display: table-row; }
+  .expandedRow td { background: rgba(33, 50, 89, 0.55) !important; padding-top: 0.2rem; padding-bottom: 0.6rem; }
+  .betDetail { grid-template-columns: 1fr 1fr; }
+}
+
+@media (max-width: 720px) {
+  /* Hero stacks: name above, gold chip below. */
+  .heroInner { flex-direction: column; align-items: flex-start; gap: 1rem; }
+  .heroChip { align-self: stretch; flex-direction: row; align-items: center; justify-content: space-between; }
+  .heroChipFigures { gap: 1.2rem; }
 }
 
 @media (max-width: 600px) {
   .page { padding: 1rem 0.85rem; }
-  .welcome { padding: 1.25rem 1.1rem; border-radius: 14px; }
-  .welcomeTitle { font-size: 1.3rem; }
+  .hero { padding: 1.5rem 1.25rem; border-radius: 14px; }
+  .heroEyebrow { font-size: 0.68rem; letter-spacing: 0.16em; }
+  .heroTicker { font-size: 0.72rem; }
   .card { padding: 1rem; border-radius: 12px; }
+  .sectionTitle { font-size: 1.2rem; }
   .table { font-size: 0.8rem; }
   .table th, .table td { padding: 0.45rem 0.5rem; }
-  .rank { width: 28px; }
+  .rank { width: 44px; font-size: 0.85rem; }
   .playerName { max-width: 160px; }
+  .betDetail { grid-template-columns: 1fr; gap: 0.4rem; }
 }
 
 @media (max-width: 400px) {
   .page { padding: 0.75rem 0.65rem; }
-  .welcomeTitle { font-size: 1.15rem; }
+  .heroName { letter-spacing: 0.01em; }
   .table th, .table td { padding: 0.4rem 0.4rem; }
   .playerName { max-width: 110px; }
+  .heroChipValue { font-size: 1.55rem; }
 }
 
 /* One-time +3 exact-score bonus chip — subtle gold pill rendered next to
