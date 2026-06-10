@@ -19,7 +19,7 @@ const statusKey = (status) => {
 // card on the page re-renders against the same instant once per minute,
 // avoiding N independent intervals. Standalone callers (e.g. tests, future
 // solo use) can omit `now` and the helper falls back to `Date.now()`.
-export default function MatchCard({ match, compact = false, onClick, now }) {
+export default function MatchCard({ match, compact = false, onClick, now, userPrediction }) {
   const { t, i18n } = useTranslation();
   const locale = i18n.resolvedLanguage === 'he' ? 'he-IL' : 'en-GB';
 
@@ -46,9 +46,11 @@ export default function MatchCard({ match, compact = false, onClick, now }) {
     ? formatKickoffCountdown(match.utcDate, t, now)
     : null;
 
+  const hasUserPrediction = userPrediction != null;
+
   return (
     <article
-      className={`${styles.card} ${compact ? styles.compact : ''} ${onClick ? styles.clickable : ''}`}
+      className={`${styles.card} ${compact ? styles.compact : ''} ${onClick ? styles.clickable : ''} ${hasUserPrediction ? styles.hasPrediction : ''}`}
       onClick={onClick ? () => onClick(match) : undefined}
       role={onClick ? 'button' : undefined}
       tabIndex={onClick ? 0 : undefined}
@@ -88,6 +90,12 @@ export default function MatchCard({ match, compact = false, onClick, now }) {
       {isFinished && match.score.halfHome !== null && !compact && (
         <p className={styles.ht}>
           {t('matchCard.halfTime')}: {match.score.halfHome} – {match.score.halfAway}
+        </p>
+      )}
+
+      {hasUserPrediction && (
+        <p className={styles.yourPick}>
+          {t('matchCard.yourPick', { home: userPrediction.home, away: userPrediction.away })}
         </p>
       )}
     </article>

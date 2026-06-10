@@ -4,6 +4,7 @@ import { useAuth } from '../context/useAuth';
 import { REG_STATUS, MATCH_STATUS } from '../utils/constants';
 import { useTodayMatches } from '../hooks/useTodayMatches';
 import { useMinuteTick } from '../hooks/useMinuteTick';
+import { useUserPredictions } from '../hooks/useUserPredictions';
 import MatchCard from '../components/MatchCard';
 import SkeletonCard from '../components/SkeletonCard';
 import BetModal from '../components/BetModal';
@@ -36,6 +37,7 @@ export default function HomePage() {
   // Each card uses it to compute its own countdown text without spawning
   // its own interval.
   const now = useMinuteTick();
+  const { predictions, upsertPrediction } = useUserPredictions(user?.id);
 
   // Opportunistic 60 s leaderboard poll while any match is live. Pairs
   // with the 30 s server cache, so concurrent calls are cheap.
@@ -159,7 +161,14 @@ export default function HomePage() {
           {!loadingMatches && todayMatches.length > 0 && (
             <div className={styles.matchList}>
               {todayMatches.map((m) => (
-                <MatchCard key={m.id} match={m} compact onClick={handleMatchClick} now={now} />
+                <MatchCard
+                  key={m.id}
+                  match={m}
+                  compact
+                  onClick={handleMatchClick}
+                  now={now}
+                  userPrediction={predictions[String(m.id)]}
+                />
               ))}
             </div>
           )}
@@ -289,6 +298,7 @@ export default function HomePage() {
         match={selectedMatch}
         opened={modalOpened}
         onClose={() => setModalOpened(false)}
+        onSaved={upsertPrediction}
       />
     </main>
   );

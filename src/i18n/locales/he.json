@@ -107,6 +107,7 @@
   },
   "matchCard": {
     "vs": "נגד",
+    "yourPick": "הניחוש שלך: {{home}} – {{away}}",
     "halfTime": "מחצית",
     "countdown": {
       "soon": "מתחיל בקרוב",

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMatches } from '../hooks/useMatches';
 import { useMinuteTick } from '../hooks/useMinuteTick';
+import { useUserPredictions } from '../hooks/useUserPredictions';
 import { useAuth } from '../context/useAuth';
 import MatchCard from '../components/MatchCard';
 import SkeletonCard from '../components/SkeletonCard';
@@ -37,6 +38,7 @@ export default function AllGamesPage() {
   // src/hooks/useMinuteTick.js. Passed as a prop into every card below so
   // countdowns re-evaluate in lock-step without per-card intervals.
   const now = useMinuteTick();
+  const { predictions, upsertPrediction } = useUserPredictions(user?.id);
 
   const handleMatchClick = (match) => {
     setSelectedMatch(match);
@@ -161,7 +163,12 @@ export default function AllGamesPage() {
                       .sort((a, b) => new Date(a.utcDate) - new Date(b.utcDate))
                       .map((m) => (
                         <div key={m.id} className={isMatchToday(m.utcDate) ? styles.todayHighlight : ''}>
-                          <MatchCard match={m} onClick={handleMatchClick} now={now} />
+                          <MatchCard
+                            match={m}
+                            onClick={handleMatchClick}
+                            now={now}
+                            userPrediction={predictions[String(m.id)]}
+                          />
                         </div>
                       ))}
                   </div>
@@ -177,7 +184,12 @@ export default function AllGamesPage() {
         </div>
       )}
 
-      <BetModal match={selectedMatch} opened={modalOpened} onClose={handleModalClose} />
+      <BetModal
+        match={selectedMatch}
+        opened={modalOpened}
+        onClose={handleModalClose}
+        onSaved={upsertPrediction}
+      />
     </main>
   );
 }

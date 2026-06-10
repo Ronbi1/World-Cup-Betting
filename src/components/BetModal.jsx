@@ -126,7 +126,7 @@ function ScoreStepper({ label, value, onChange, ariaLabel, disabled = false }) {
   );
 }
 
-export default function BetModal({ match, opened, onClose }) {
+export default function BetModal({ match, opened, onClose, onSaved }) {
   const { user } = useAuth();
   const { t, i18n } = useTranslation();
   const locale = i18n.resolvedLanguage === 'he' ? 'he-IL' : 'en-GB';
@@ -213,6 +213,7 @@ export default function BetModal({ match, opened, onClose }) {
         color: 'green',
         autoClose: 4000,
       });
+      onSaved?.(String(match.id), { home, away });
       onClose();
     } catch (err) {
       notifications.show({

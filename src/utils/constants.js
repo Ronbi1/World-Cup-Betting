@@ -67,5 +67,33 @@ export const REG_STATUS = {
 //
 // The Tournament Winner dropdown still draws from the live API (all teams
 // playing in the World Cup) — see ProfilePage.
-export const TOP_SCORERS_LIST = [];
+export const TOP_SCORERS_LIST = [
+  'Lionel Messi – Argentina',
+  'Julian Alvarez – Argentina',
+  'Lautaro Martinez – Argentina',
+  'Cristiano Ronaldo – Portugal',
+  'Vinicius Jr – Brazil',
+  'Goncalo Ramos – Portugal',
+  'Endrick – Brazil',
+  'Cody Gakpo – Netherlands',
+  'Ousmane Dembele – France',
+  'Bukayo Saka – England',
+  'Romelu Lukaku – Belgium',
+  'Mikel Oyarzabal – Spain',
+  'Lamine Yamal – Spain',
+  'Erling Haaland – Norway',
+  'Harry Kane – England',
+  'Kylian Mbappe – France',
+  'Raphinha – Brazil',
+  'Viktor Gyokeres – Sweden',
+  'Kai Havertz – Germany',
+  'Ismaila Sarr – Senegal',
+  'Luis Diaz – Colombia',
+  'Victor Osimhen – Nigeria',
+  'Jamal Musiala – Germany',
+  'Rafael Leao – Portugal',
+  'Khvicha Kvaratskhelia – Georgia',
+  'Ollie Watkins – England',
+  'Dusan Vlahovic – Serbia',
+];
 export const TOP_ASSISTS_LIST = [];

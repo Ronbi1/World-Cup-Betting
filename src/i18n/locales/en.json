@@ -107,6 +107,7 @@
   },
   "matchCard": {
     "vs": "vs",
+    "yourPick": "Your pick: {{home}} – {{away}}",
     "halfTime": "Half-time",
     "countdown": {
       "soon": "Starts soon",

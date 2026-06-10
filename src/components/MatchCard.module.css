@@ -132,6 +132,24 @@
   text-align: center;
 }
 
+.hasPrediction {
+  border-inline-start: 3px solid var(--clr-accent-gold-border);
+}
+
+.yourPick {
+  margin-top: 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--clr-accent-gold-deep);
+  text-align: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--clr-accent-gold-bg);
+  border: 1px solid var(--clr-accent-gold-border);
+  font-family: var(--font-mono);
+  direction: ltr;
+}
+
 @media (max-width: 600px) {
   .card { padding: 0.85rem 1rem; }
   .teamName { font-size: 0.88rem; }
