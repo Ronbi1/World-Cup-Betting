@@ -1,12 +1,13 @@
 // ─── Tournament dates ────────────────────────────────────────────────────────
 // World Cup 2026: June 11 – July 19, 2026
-import { isSimulationMode } from './simulation';
-
+// NB: this gate stays tied to real wall-clock time even when simulation mode
+// is on. Sim mode fakes match data + leaderboard so the UI is testable, but
+// it must NOT lock real users' tournament bets or expose everyone's Golden
+// Boot picks before the actual kickoff.
 export const TOURNAMENT_START = new Date('2026-06-11T00:00:00Z');
 export const TOURNAMENT_ENDED = new Date('2026-07-19T23:59:59Z');
 
-export const isTournamentStarted = () =>
-  isSimulationMode || new Date() >= TOURNAMENT_START;
+export const isTournamentStarted = () => new Date() >= TOURNAMENT_START;
 export const isTournamentOver = () => new Date() > TOURNAMENT_ENDED;
 
 // ─── Match statuses ──────────────────────────────────────────────────────────
