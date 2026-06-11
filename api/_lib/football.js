@@ -159,13 +159,60 @@ function mapStage(type, group) {
   return 'GROUP_STAGE';
 }
 
-function parseLocalDate(raw) {
+// worldcup26.ir returns `local_date` in the venue's wall-clock time, NOT
+// UTC — e.g. "06/11/2026 13:00" for the Mexico City opener means 13:00
+// Mexico time (19:00 UTC). Treating it as UTC offsets every kickoff by the
+// host city's UTC offset (the bug we hit when "Starts in 2h 55m" showed
+// for a match that was actually 9h away in Israel time).
+//
+// The tournament runs entirely in mid-June through mid-July 2026, so DST
+// rules are stable across the whole window: every US/Canadian venue is on
+// summer time, and Mexico has been year-round UTC-6 since 2022. Hardcoded
+// integer offsets are correct for this tournament and cheaper than a
+// timezone library; revisit if the schedule ever stretches outside DST.
+const STADIUM_UTC_OFFSET_HOURS = {
+  // Mexico (year-round UTC-6, no DST)
+  '1': -6, // Estadio Azteca, Mexico City
+  '2': -6, // Estadio Akron, Guadalajara
+  '3': -6, // Estadio BBVA, Monterrey
+  // US Central (CDT, UTC-5)
+  '4': -5, // AT&T Stadium, Dallas
+  '5': -5, // NRG Stadium, Houston
+  '6': -5, // Arrowhead Stadium, Kansas City
+  // US Eastern (EDT, UTC-4)
+  '7': -4, // Mercedes-Benz Stadium, Atlanta
+  '8': -4, // Hard Rock Stadium, Miami
+  '9': -4, // Gillette Stadium, Boston
+  '10': -4, // Lincoln Financial Field, Philadelphia
+  '11': -4, // MetLife Stadium, New York/New Jersey
+  // Canada Eastern (EDT, UTC-4)
+  '12': -4, // BMO Field, Toronto
+  // Canada / US Pacific (PDT, UTC-7)
+  '13': -7, // BC Place, Vancouver
+  '14': -7, // Lumen Field, Seattle
+  '15': -7, // Levi's Stadium, San Francisco Bay Area
+  '16': -7, // SoFi Stadium, Los Angeles
+};
+
+// Fallback when stadium_id is missing or unmapped. UTC-6 (Mexico City) is
+// the most common offset across the group stage and keeps pre-knockout
+// "TBD venue" placeholders in the right rough window.
+const DEFAULT_VENUE_OFFSET_HOURS = -6;
+
+function parseLocalDate(raw, stadiumId) {
   if (!raw) return null;
   const [datePart, timePart = '00:00'] = String(raw).trim().split(' ');
   const [month, day, year] = datePart.split('/').map((v) => parseInt(v, 10));
   if (!month || !day || !year) return null;
   const [hour, minute] = timePart.split(':').map((v) => parseInt(v, 10) || 0);
-  const d = new Date(Date.UTC(year, month - 1, day, hour, minute));
+
+  const offsetHours = stadiumId != null && STADIUM_UTC_OFFSET_HOURS[String(stadiumId)] !== undefined
+    ? STADIUM_UTC_OFFSET_HOURS[String(stadiumId)]
+    : DEFAULT_VENUE_OFFSET_HOURS;
+
+  // Venue-local clock − UTC offset = UTC instant. For UTC-6 (Mexico City),
+  // "13:00 local" → 13:00 − (−6) = 19:00 UTC. Subtract via the hour arg.
+  const d = new Date(Date.UTC(year, month - 1, day, hour - offsetHours, minute));
   return Number.isNaN(d.getTime()) ? null : d.toISOString();
 }
 
@@ -239,7 +286,7 @@ function transformGame(raw) {
 
   return {
     id: String(raw.id),
-    utcDate: parseLocalDate(raw.local_date),
+    utcDate: parseLocalDate(raw.local_date, raw.stadium_id),
     status: mapStatus(raw.finished, raw.time_elapsed),
     stage: mapStage(raw.type, raw.group),
     group: raw.group || null,
