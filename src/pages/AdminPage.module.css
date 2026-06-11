@@ -147,6 +147,25 @@
 }
 .rejectBtn:hover { transform: translateY(-1px); opacity: 0.95; }
 
+/* Promote / demote toggle. Same shape as approve/reject; different palette
+   so the action is visually distinct from approval state changes. */
+.roleBtn {
+  padding: 0.25rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  background: rgba(245, 158, 11, 0.12);
+  color: #fbbf24;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.15s, background 0.15s;
+}
+.roleBtn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  background: rgba(245, 158, 11, 0.22);
+}
+.roleBtn:disabled { opacity: 0.45; cursor: not-allowed; }
+
 /* ── Delete button (trash icon) ─────────────────────────────────────────── */
 .deleteBtn {
   background: transparent;

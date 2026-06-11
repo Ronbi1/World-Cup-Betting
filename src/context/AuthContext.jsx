@@ -279,6 +279,63 @@ export function AuthProvider({ children }) {
     }
   }, [fetchScores]);
 
+  // ── Admin: promote / demote a user between USER and ADMIN ────────────────
+  // The server enforces the last-admin guard; this helper just surfaces the
+  // result and applies the optimistic update on success.
+  const updateUserRole = useCallback(async (userId, role) => {
+    try {
+      await serverApi.patch(`/users/${userId}/role`, { role });
+      setUsers(prev => prev.map(u => u.id === userId ? { ...u, role } : u));
+      // A promoted USER will drop off the leaderboard; a demoted ADMIN reappears.
+      fetchScores();
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: extractApiError(err, 'Failed to update role.') };
+    }
+  }, [fetchScores]);
+
+  // ── Admin: override a prediction for any user, any time ─────────────────
+  // POST /api/predictions/admin-edit writes an audit row before mutating
+  // the prediction and busts the leaderboard cache on success. We refresh
+  // scores locally + (if editing the current admin's own bet, which is a
+  // weird edge case but supported) their personal predictions map.
+  const adminEditPrediction = useCallback(async ({ userId, matchId, home, away, reason }) => {
+    if (!user) return { success: false, error: 'Not logged in.' };
+    try {
+      await serverApi.post('/predictions/admin-edit', {
+        user_id: userId,
+        match_id: String(matchId),
+        home,
+        away,
+        reason: reason || undefined,
+      });
+      await fetchScores();
+      if (userId === user.id) {
+        await fetchUserPredictions(user.id);
+      }
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: extractApiError(err, 'Failed to apply override.') };
+    }
+  }, [user, fetchScores, fetchUserPredictions]);
+
+  // ── Admin: fetch audit log of prediction edits ───────────────────────────
+  // Returns enriched rows: { id, admin_id, admin_name, target_user_id,
+  // target_user_name, match_id, old_home, old_away, new_home, new_away,
+  // reason, created_at }. Pass { matchIds: [...] } to filter for the
+  // LiveBetsModal badge use case.
+  const fetchAuditLog = useCallback(async ({ matchIds } = {}) => {
+    try {
+      const params = matchIds && matchIds.length
+        ? { matchIds: matchIds.join(',') }
+        : undefined;
+      const { data } = await serverApi.get('/predictions/edits', { params });
+      return { success: true, data };
+    } catch (err) {
+      return { success: false, error: extractApiError(err, 'Failed to load audit log.') };
+    }
+  }, []);
+
   // ── Update own tournament bet ──────────────────────────────────────────────
   const updateBet = useCallback(async (winningTeam, topScorer, topAssist) => {
     if (!user) return { success: false, error: 'Not logged in.' };
@@ -315,13 +372,16 @@ export function AuthProvider({ children }) {
     logout,
     register,
     updateUserStatus,
+    updateUserRole,
     deleteUser,
     updateBet,
     recalculateScores,
+    adminEditPrediction,
+    fetchAuditLog,
     refreshScores: fetchScores,
     isAdmin: freshUser?.role === ROLES.ADMIN,
     refreshUsers: fetchUsers,
-  }), [freshUser, users, scores, predictions, loadingPredictions, upsertPrediction, fetchUserPredictions, loadingUsers, authReady, login, logout, register, updateUserStatus, deleteUser, updateBet, recalculateScores, fetchScores, fetchUsers]);
+  }), [freshUser, users, scores, predictions, loadingPredictions, upsertPrediction, fetchUserPredictions, loadingUsers, authReady, login, logout, register, updateUserStatus, updateUserRole, deleteUser, updateBet, recalculateScores, adminEditPrediction, fetchAuditLog, fetchScores, fetchUsers]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/useAuth';
-import { REG_STATUS } from '../utils/constants';
+import { REG_STATUS, ROLES } from '../utils/constants';
+import AdminOverrideModal from '../components/AdminOverrideModal';
 import styles from './AdminPage.module.css';
 
 function DeleteModal({ user, onConfirm, onCancel, loading }) {
@@ -29,13 +30,48 @@ function DeleteModal({ user, onConfirm, onCancel, loading }) {
 }
 
 export default function AdminPage() {
-  const { users, updateUserStatus, deleteUser, isAdmin } = useAuth();
+  const { users, updateUserStatus, updateUserRole, deleteUser, isAdmin, fetchAuditLog } = useAuth();
   const { t, i18n } = useTranslation();
   const locale = i18n.resolvedLanguage === 'he' ? 'he-IL' : 'en-GB';
 
   const [confirmUser, setConfirmUser] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState('');
+  const [overrideOpen, setOverrideOpen] = useState(false);
+  const [auditRows, setAuditRows] = useState([]);
+  const [auditError, setAuditError] = useState('');
+  const [roleError, setRoleError] = useState('');
+
+  // Count APPROVED admins so we can disable the demote button on the only
+  // remaining admin. Server still enforces — this is defense-in-depth UX.
+  const approvedAdminCount = useMemo(
+    () => (users ?? []).filter((u) => u.role === ROLES.ADMIN && u.status === REG_STATUS.APPROVED).length,
+    [users],
+  );
+
+  const loadAudit = useCallback(async () => {
+    const result = await fetchAuditLog();
+    if (result.success) {
+      setAuditRows(result.data || []);
+      setAuditError('');
+    } else {
+      setAuditError(result.error || t('admin.audit.loadError'));
+    }
+  }, [fetchAuditLog, t]);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadAudit();
+  }, [isAdmin, loadAudit]);
+
+  // Refetch the audit log whenever the override modal closes (a save inside
+  // the modal would have just appended a new row).
+  useEffect(() => {
+    if (!isAdmin || overrideOpen) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadAudit();
+  }, [overrideOpen, isAdmin, loadAudit]);
 
   if (!isAdmin) {
     return (
@@ -63,6 +99,19 @@ export default function AdminPage() {
     setDeleting(false);
     if (result.success) setConfirmUser(null);
     else setDeleteError(result.error);
+  };
+
+  // Promote/demote handler with confirm + last-admin frontend guard. The
+  // server is still the source of truth; this disable + confirm flow just
+  // prevents accidental clicks.
+  const handleRoleToggle = async (u) => {
+    setRoleError('');
+    const targetRole = u.role === ROLES.ADMIN ? ROLES.USER : ROLES.ADMIN;
+    const isDemote = targetRole === ROLES.USER;
+    const promptKey = isDemote ? 'admin.role.demoteConfirm' : 'admin.role.promoteConfirm';
+    if (!window.confirm(t(promptKey, { name: u.name }))) return;
+    const result = await updateUserRole(u.id, targetRole);
+    if (!result.success) setRoleError(result.error || '');
   };
 
   // Shared row component (closure captures `t` and helpers)
@@ -94,9 +143,28 @@ export default function AdminPage() {
           </>
         )}
         {!showActions && !isRejected && (
-          <span className={`${styles.statusBadge} ${u.status === REG_STATUS.APPROVED ? styles.approved : styles.rejected}`}>
-            {u.status}
-          </span>
+          <>
+            <span className={`${styles.statusBadge} ${u.status === REG_STATUS.APPROVED ? styles.approved : styles.rejected}`}>
+              {u.role === ROLES.ADMIN ? 'ADMIN' : u.status}
+            </span>
+            {/* Role toggle is offered only on APPROVED rows. Promotion always
+                allowed; demotion is locally guarded against the last-admin
+                case (server enforces, but disabling avoids a wasted POST). */}
+            {u.status === REG_STATUS.APPROVED && (
+              <button
+                className={styles.roleBtn}
+                onClick={() => handleRoleToggle(u)}
+                disabled={u.role === ROLES.ADMIN && approvedAdminCount <= 1}
+                title={
+                  u.role === ROLES.ADMIN && approvedAdminCount <= 1
+                    ? t('admin.role.lastAdmin')
+                    : undefined
+                }
+              >
+                {u.role === ROLES.ADMIN ? t('admin.role.demote') : t('admin.role.promote')}
+              </button>
+            )}
+          </>
         )}
         <button
           className={styles.deleteBtn}
@@ -133,6 +201,7 @@ export default function AdminPage() {
         />
       )}
       {deleteError && <p className={styles.deleteError}>{deleteError}</p>}
+      {roleError && <p className={styles.deleteError}>{roleError}</p>}
 
       <div className={styles.header}>
         <h1 className={styles.title}>{t('admin.title')}</h1>
@@ -202,6 +271,67 @@ export default function AdminPage() {
           </div>
         </section>
       )}
+
+      {/* Admin override entry point. Single source of truth for the override
+          flow — kept off the regular MatchCard / BetModal path so the normal
+          user-bet UX stays unchanged. */}
+      <section className={styles.section}>
+        <h2 className={styles.sectionTitle}>🛠 {t('admin.override.sectionTitle')}</h2>
+        <p className={styles.empty}>{t('admin.override.sectionHint')}</p>
+        <button
+          className={styles.approveBtn}
+          onClick={() => setOverrideOpen(true)}
+          style={{ marginTop: '0.75rem' }}
+        >
+          {t('admin.override.openButton')}
+        </button>
+      </section>
+
+      <section className={styles.section}>
+        <h2 className={styles.sectionTitle}>📜 {t('admin.audit.sectionTitle')}</h2>
+        {auditError && <p className={styles.deleteError}>{auditError}</p>}
+        {!auditError && auditRows.length === 0 ? (
+          <p className={styles.empty}>{t('admin.audit.empty')}</p>
+        ) : (
+          <div className={styles.tableWrapper}>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th>{t('admin.audit.table.admin')}</th>
+                  <th>{t('admin.audit.table.target')}</th>
+                  <th>{t('admin.audit.table.match')}</th>
+                  <th>{t('admin.audit.table.change')}</th>
+                  <th>{t('admin.audit.table.reason')}</th>
+                  <th>{t('admin.audit.table.when')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {auditRows.map((row) => {
+                  const before = row.old_home === null || row.old_away === null
+                    ? t('admin.audit.noPrior')
+                    : `${row.old_home}-${row.old_away}`;
+                  const after = `${row.new_home}-${row.new_away}`;
+                  return (
+                    <tr key={row.id}>
+                      <td>{row.admin_name}</td>
+                      <td>{row.target_user_name}</td>
+                      <td>{t('admin.audit.matchUnknown', { id: row.match_id })}</td>
+                      <td>{before} → {after}</td>
+                      <td>{row.reason || t('admin.audit.noReason')}</td>
+                      <td>{new Date(row.created_at).toLocaleString(locale)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      <AdminOverrideModal
+        opened={overrideOpen}
+        onClose={() => setOverrideOpen(false)}
+      />
     </main>
   );
 }

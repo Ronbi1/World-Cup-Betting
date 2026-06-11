@@ -1,12 +1,13 @@
 const express = require('express');
 const { supabase } = require('../_lib/supabase');
-const { requireAuth, requireAdmin } = require('../_lib/auth');
+const { requireAuth, requireAdmin, requireFreshAdmin } = require('../_lib/auth');
 const { sendApprovalEmail } = require('../_lib/email');
 const { isTournamentStarted } = require('../_lib/tournament');
 
 const router = express.Router();
 
 const VALID_STATUSES = ['PENDING', 'APPROVED', 'REJECTED'];
+const VALID_ROLES = ['USER', 'ADMIN'];
 
 // GET /api/users/tournament-bets — approved users' top scorer/assist picks.
 // Defense-in-depth: only available after tournament kickoff so pre-start
@@ -39,7 +40,7 @@ router.get('/tournament-bets', requireAuth, async (req, res, next) => {
 });
 
 // GET /api/users — admin only, never returns password
-router.get('/', requireAuth, requireAdmin, async (req, res, next) => {
+router.get('/', requireAuth, requireAdmin, requireFreshAdmin, async (req, res, next) => {
   try {
     const { data, error } = await supabase
       .from('users')
@@ -54,7 +55,7 @@ router.get('/', requireAuth, requireAdmin, async (req, res, next) => {
 });
 
 // PATCH /api/users/:id/status — approve/reject (admin)
-router.patch('/:id/status', requireAuth, requireAdmin, async (req, res, next) => {
+router.patch('/:id/status', requireAuth, requireAdmin, requireFreshAdmin, async (req, res, next) => {
   try {
     const { id } = req.params;
     const { status } = req.body || {};
@@ -87,7 +88,7 @@ router.patch('/:id/status', requireAuth, requireAdmin, async (req, res, next) =>
 });
 
 // DELETE /api/users/:id — admin only, cascades predictions
-router.delete('/:id', requireAuth, requireAdmin, async (req, res, next) => {
+router.delete('/:id', requireAuth, requireAdmin, requireFreshAdmin, async (req, res, next) => {
   try {
     const { id } = req.params;
 
@@ -124,6 +125,61 @@ router.delete('/:id', requireAuth, requireAdmin, async (req, res, next) => {
     }
 
     res.json({ id, deleted: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// PATCH /api/users/:id/role — promote / demote (admin)
+// Body: { role: 'USER' | 'ADMIN' }
+//
+// Last-admin guard: server refuses to demote the only remaining APPROVED
+// admin so an accidental click can never lock the pool out of admin actions.
+// PENDING/REJECTED admin rows don't count — only effective admins do.
+router.patch('/:id/role', requireAuth, requireAdmin, requireFreshAdmin, async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { role } = req.body || {};
+
+    if (!role || !VALID_ROLES.includes(role)) {
+      return res.status(400).json({ error: `Role must be one of: ${VALID_ROLES.join(', ')}.` });
+    }
+
+    const { data: existing, error: fetchError } = await supabase
+      .from('users')
+      .select('id, role, status')
+      .eq('id', id)
+      .single();
+
+    if (fetchError || !existing) {
+      return res.status(404).json({ error: 'User not found.' });
+    }
+
+    // No-op write — return current role.
+    if (existing.role === role) {
+      return res.json({ id, role });
+    }
+
+    // Last-admin guard fires only on a real demotion of an APPROVED admin.
+    if (existing.role === 'ADMIN' && role === 'USER') {
+      const { count, error: countError } = await supabase
+        .from('users')
+        .select('id', { count: 'exact', head: true })
+        .eq('role', 'ADMIN')
+        .eq('status', 'APPROVED');
+      if (countError) throw countError;
+      if ((count ?? 0) <= 1) {
+        return res.status(403).json({ error: 'Cannot demote the last admin.' });
+      }
+    }
+
+    const { error: updateError } = await supabase
+      .from('users')
+      .update({ role })
+      .eq('id', id);
+    if (updateError) throw updateError;
+
+    res.json({ id, role });
   } catch (err) {
     next(err);
   }

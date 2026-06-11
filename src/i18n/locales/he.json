@@ -255,6 +255,52 @@
       "cancel": "ביטול",
       "confirm": "כן, מחק",
       "deleting": "מוחק…"
+    },
+    "role": {
+      "promote": "הפוך למנהל",
+      "demote": "הורד למשתמש רגיל",
+      "lastAdmin": "לא ניתן להוריד את המנהל האחרון",
+      "promoteConfirm": "להפוך את {{name}} למנהל? יקבל/תקבל הרשאות ניהול מלאות.",
+      "demoteConfirm": "להוריד את {{name}} למשתמש רגיל? כל הרשאות הניהול יאבדו."
+    },
+    "override": {
+      "sectionTitle": "עקיפת ניחוש",
+      "sectionHint": "כלי מנהל — עוקף בעלות ונעילת פתיחה. כל עקיפה נרשמת ביומן.",
+      "openButton": "פתח כלי עקיפה",
+      "modalTitle": "עקיפת מנהל",
+      "modalSubtitle": "עוקף את נעילת הפתיחה — כל עריכה נרשמת ביומן הביקורת.",
+      "userLabel": "משתמש יעד",
+      "userPlaceholder": "בחר/י משתמש",
+      "matchLabel": "משחק",
+      "matchPlaceholder": "בחר/י משחק",
+      "matchKickoff": "פתיחה",
+      "scoreLabel": "תוצאה לעקיפה",
+      "reasonLabel": "סיבה (אופציונלי)",
+      "reasonPlaceholder": "למה צריך לעקוף? (עד 200 תווים)",
+      "currentLabel": "ניחוש נוכחי",
+      "noCurrent": "— (ברירת מחדל 0-0)",
+      "save": "שמור עקיפה (מנהל)",
+      "saving": "שומר…",
+      "saved": "העקיפה נשמרה.",
+      "savedDetail": "{{user}} → {{home}}-{{away}} עבור {{match}}.",
+      "errorTitle": "העקיפה נכשלה",
+      "missingFields": "יש לבחור משתמש ומשחק לפני השמירה."
+    },
+    "audit": {
+      "sectionTitle": "עקיפות אחרונות",
+      "empty": "לא נרשמו עקיפות ניחוש.",
+      "table": {
+        "admin": "מנהל",
+        "target": "יעד",
+        "match": "משחק",
+        "change": "לפני → אחרי",
+        "reason": "סיבה",
+        "when": "מתי"
+      },
+      "noReason": "—",
+      "matchUnknown": "משחק {{id}}",
+      "noPrior": "— (ללא קודם)",
+      "loadError": "טעינת יומן הביקורת נכשלה."
     }
   },
   "betModal": {
@@ -285,7 +331,8 @@
       "wrong": "טעות",
       "pending": "ממתין",
       "noBet": "אין הימור"
-    }
+    },
+    "editedBadge": "נערך על-ידי מנהל"
   },
   "common": {
     "yes": "כן",

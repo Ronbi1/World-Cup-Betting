@@ -1,8 +1,9 @@
 const express = require('express');
 const { supabase } = require('../_lib/supabase');
-const { requireAuth, requireAdmin } = require('../_lib/auth');
+const { requireAuth, requireAdmin, requireFreshAdmin } = require('../_lib/auth');
 const { computeLeaderboard, readTournamentBonus } = require('../_lib/scoring');
 const { fetchFinishedMatches } = require('../_lib/football');
+const leaderboardCache = require('../_lib/leaderboardCache');
 const {
   isSimulationMode,
   getSimulationUsers,
@@ -12,17 +13,9 @@ const {
 
 const router = express.Router();
 
-// ── Module-level cache for GET /api/scores ──────────────────────────────────
-// GET is strictly read-only — it never writes to the DB. The cache absorbs
-// concurrent requests (many users hitting the leaderboard at once) and keeps
-// the upstream pressure on Supabase + worldcup26 low. The cache is busted
-// whenever an admin runs POST /recalculate.
-const LEADERBOARD_TTL_MS = 30_000;
-let _leaderboardCache = { data: null, expiresAt: 0 };
-
-function bustLeaderboardCache() {
-  _leaderboardCache = { data: null, expiresAt: 0 };
-}
+// Leaderboard cache lives in api/_lib/leaderboardCache.js so cross-route
+// callers (predictions admin-edit) can bust it without depending on this
+// router. See the module's header for invalidation rules.
 
 async function loadLeaderboardInputs() {
   // SIMULATION ONLY — in-memory demo data; never touches Supabase.
@@ -70,19 +63,13 @@ async function loadLeaderboardInputs() {
 // READ-ONLY: never writes to the database.
 router.get('/', requireAuth, async (_req, res, next) => {
   try {
-    const now = Date.now();
-    if (_leaderboardCache.data && now < _leaderboardCache.expiresAt) {
-      return res.json(_leaderboardCache.data);
-    }
+    const cached = leaderboardCache.read();
+    if (cached) return res.json(cached);
 
     const { users, finishedMatches, predictions } = await loadLeaderboardInputs();
     const leaderboard = computeLeaderboard({ users, finishedMatches, predictions });
 
-    _leaderboardCache = {
-      data: leaderboard,
-      expiresAt: Date.now() + LEADERBOARD_TTL_MS,
-    };
-
+    leaderboardCache.write(leaderboard);
     res.json(leaderboard);
   } catch (err) {
     next(err);
@@ -91,7 +78,7 @@ router.get('/', requireAuth, async (_req, res, next) => {
 
 // POST /api/scores/recalculate — admin: re-tally, persist snapshot, update
 // tournament-bonus inputs. This is the ONLY write path on the scores route.
-router.post('/recalculate', requireAuth, requireAdmin, async (req, res, next) => {
+router.post('/recalculate', requireAuth, requireAdmin, requireFreshAdmin, async (req, res, next) => {
   try {
     if (isSimulationMode()) {
       return res.status(403).json({
@@ -155,7 +142,7 @@ router.post('/recalculate', requireAuth, requireAdmin, async (req, res, next) =>
     const failedUpdates = results.filter((r) => r.error).map((r) => r.error.message);
     if (failedUpdates.length > 0) console.error('[scores] partial failures:', failedUpdates);
 
-    bustLeaderboardCache();
+    leaderboardCache.bust();
 
     const statusCode = failedUpdates.length > 0 ? 207 : 200;
     res.status(statusCode).json({
@@ -173,8 +160,4 @@ router.post('/recalculate', requireAuth, requireAdmin, async (req, res, next) =>
   }
 });
 
-// Express expects the router itself as the default export (see
-// `app.use('/api/scores', scoresRoutes)`). Expose the cache-bust helper as
-// a property on the router so other modules can import it if needed.
-router.bustLeaderboardCache = bustLeaderboardCache;
 module.exports = router;

@@ -1,6 +1,7 @@
 // JWT auth middleware shared by every protected route.
 const jwt = require('jsonwebtoken');
 const { COOKIE_NAME } = require('./sessionCookie');
+const { supabase } = require('./supabase');
 
 function extractToken(req) {
   const cookieToken = req.cookies?.[COOKIE_NAME];
@@ -65,4 +66,36 @@ function requireAdmin(req, res, next) {
   next();
 }
 
-module.exports = { requireAuth, requireAdmin, extractToken, decodeToken };
+// Stronger admin gate that re-fetches role + status from Supabase on every
+// call. Closes the JWT-staleness gap: a demoted admin still holds a cookie
+// claiming role=ADMIN for up to 7 days, so requireAdmin alone would let
+// them through. Mount this AFTER requireAuth + requireAdmin on any
+// admin-only mutation:
+//
+//   router.patch('/foo', requireAuth, requireAdmin, requireFreshAdmin, handler);
+//
+// One DB read per admin write — admin writes are low volume, so the cost
+// is negligible compared to the safety win.
+async function requireFreshAdmin(req, res, next) {
+  if (!req.user?.id) {
+    return res.status(401).json({ error: 'Authentication required.' });
+  }
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .select('role, status')
+      .eq('id', req.user.id)
+      .single();
+    if (error || !data) {
+      return res.status(401).json({ error: 'Session invalid.' });
+    }
+    if (data.role !== 'ADMIN' || data.status !== 'APPROVED') {
+      return res.status(403).json({ error: 'Admin access required.' });
+    }
+    next();
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { requireAuth, requireAdmin, requireFreshAdmin, extractToken, decodeToken };

@@ -41,6 +41,10 @@ export default function LiveBetsModal({ match, users, currentUserId, opened, onC
   const { t } = useTranslation();
   const [predictions, setPredictions] = useState({});
   const [loading, setLoading] = useState(false);
+  // Set of user ids whose prediction for this match has an admin-edit
+  // audit row. Powers the "Edited by admin" badge — visible to every
+  // authenticated user as part of the pool's accountability layer.
+  const [editedUserIds, setEditedUserIds] = useState(() => new Set());
 
   // Fetch predictions for this match whenever the modal opens for a new
   // match id. Reusing the existing /predictions endpoint with a single id
@@ -56,15 +60,28 @@ export default function LiveBetsModal({ match, users, currentUserId, opened, onC
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     setPredictions({});
-    serverApi
-      .get('/predictions', { params: { matchIds: String(match.id) } })
-      .then(({ data }) => {
+    setEditedUserIds(new Set());
+
+    // Parallel fetch: live predictions for this match + the audit-log
+    // flag set for this match. The edits call is best-effort — if it
+    // fails (network, server), we still render the predictions table.
+    Promise.all([
+      serverApi.get('/predictions', { params: { matchIds: String(match.id) } }),
+      serverApi
+        .get('/predictions/edits', { params: { matchIds: String(match.id) } })
+        .catch((err) => {
+          console.warn('[LiveBetsModal] edits fetch failed:', err.message);
+          return { data: [] };
+        }),
+    ])
+      .then(([predsRes, editsRes]) => {
         if (cancelled) return;
         const map = {};
-        data.forEach((row) => {
+        (predsRes.data ?? []).forEach((row) => {
           map[row.user_id] = { home: row.home, away: row.away };
         });
         setPredictions(map);
+        setEditedUserIds(new Set((editsRes.data ?? []).map((e) => e.target_user_id)));
       })
       .catch((err) => {
         if (!cancelled) console.error('[LiveBetsModal] fetch error:', err.message);
@@ -156,6 +173,11 @@ export default function LiveBetsModal({ match, users, currentUserId, opened, onC
                     <span className={styles.playerName}>{u.name}</span>
                     {u.id === currentUserId && (
                       <span className={styles.youTag}>{t('leaderboard.you')}</span>
+                    )}
+                    {editedUserIds.has(u.id) && (
+                      <span className={styles.editedTag} title={t('liveBets.editedBadge')}>
+                        {t('liveBets.editedBadge')}
+                      </span>
                     )}
                   </td>
 

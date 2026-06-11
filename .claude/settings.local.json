@@ -30,7 +30,13 @@
       "Bash(node -e \"const {TOP_SCORERS_LIST, TOP_ASSISTS_LIST} = require\\('./src/utils/constants.js'\\); console.log\\('scorers tiers:', TOP_SCORERS_LIST.length\\); console.log\\('assists tiers:', TOP_ASSISTS_LIST.length\\);\")",
       "Bash(npx vite *)",
       "Bash(npx eslint *)",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "WebFetch(domain:worldcup26.ir)",
+      "Bash(grep -i \"^\\\\.env$\")",
+      "Bash(git rev-list *)",
+      "Bash(git check-ignore *)",
+      "Bash(npm test *)",
+      "Bash(rm api/_lib/rateLimit.js && echo \"deleted rateLimit.js\")"
     ]
   }
 }

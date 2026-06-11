@@ -255,6 +255,52 @@
       "cancel": "Cancel",
       "confirm": "Yes, Delete",
       "deleting": "Deleting…"
+    },
+    "role": {
+      "promote": "Make admin",
+      "demote": "Demote to user",
+      "lastAdmin": "Cannot demote the last admin",
+      "promoteConfirm": "Promote {{name}} to admin? They will gain full admin permissions.",
+      "demoteConfirm": "Demote {{name}} to regular user? They will lose all admin permissions."
+    },
+    "override": {
+      "sectionTitle": "Override Prediction",
+      "sectionHint": "Admin tool — bypasses ownership and kickoff lock. Every override is logged.",
+      "openButton": "Open override tool",
+      "modalTitle": "Admin override",
+      "modalSubtitle": "Bypasses kickoff lock — every edit is audit-logged.",
+      "userLabel": "Target user",
+      "userPlaceholder": "Pick a user",
+      "matchLabel": "Match",
+      "matchPlaceholder": "Pick a match",
+      "matchKickoff": "Kickoff",
+      "scoreLabel": "Override score",
+      "reasonLabel": "Reason (optional)",
+      "reasonPlaceholder": "Why is this being overridden? (max 200 chars)",
+      "currentLabel": "Current prediction",
+      "noCurrent": "— (defaulted to 0-0)",
+      "save": "Save override (admin)",
+      "saving": "Saving…",
+      "saved": "Override saved.",
+      "savedDetail": "{{user}} → {{home}}-{{away}} on {{match}}.",
+      "errorTitle": "Override failed",
+      "missingFields": "Pick a user and a match before saving."
+    },
+    "audit": {
+      "sectionTitle": "Recent overrides",
+      "empty": "No prediction overrides have been recorded.",
+      "table": {
+        "admin": "Admin",
+        "target": "Target",
+        "match": "Match",
+        "change": "Before → After",
+        "reason": "Reason",
+        "when": "When"
+      },
+      "noReason": "—",
+      "matchUnknown": "Match {{id}}",
+      "noPrior": "— (no prior)",
+      "loadError": "Could not load audit log."
     }
   },
   "betModal": {
@@ -285,7 +331,8 @@
       "wrong": "Wrong",
       "pending": "Pending",
       "noBet": "No bet"
-    }
+    },
+    "editedBadge": "Edited by admin"
   },
   "common": {
     "yes": "Yes",
