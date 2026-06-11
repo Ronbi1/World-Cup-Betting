@@ -70,11 +70,23 @@ const ISRAEL_DAY_FMT = new Intl.DateTimeFormat('en-CA', {
   day: '2-digit',
 });
 
+export function toIsraelDateString(utcDate) {
+  if (!utcDate) return null;
+  const d = new Date(utcDate);
+  if (Number.isNaN(d.getTime())) return null;
+  return ISRAEL_DAY_FMT.format(d);
+}
+
 export function isMatchToday(utcDate) {
   if (!utcDate) return false;
-  const matchDay = ISRAEL_DAY_FMT.format(new Date(utcDate));
+  const matchDay = toIsraelDateString(utcDate);
   const todayDay = ISRAEL_DAY_FMT.format(new Date());
   return matchDay === todayDay;
+}
+
+export function isMatchOnDate(utcDate, isoDate) {
+  if (!utcDate || !isoDate) return false;
+  return toIsraelDateString(utcDate) === isoDate;
 }
 
 // Pure helper: how long until kickoff, broken into days/hours/minutes.

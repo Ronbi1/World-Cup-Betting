@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMatches } from '../hooks/useMatches';
 import { useMinuteTick } from '../hooks/useMinuteTick';
@@ -10,7 +10,7 @@ import BetModal from '../components/BetModal';
 import LiveBetsModal from '../components/LiveBetsModal';
 import LiveScoreBanner from '../components/LiveScoreBanner';
 import { MATCH_STATUS, STAGE_ORDER, REG_STATUS } from '../utils/constants';
-import { isMatchToday, hasMatchStarted } from '../utils/matchTime';
+import { isMatchToday, isMatchOnDate, toIsraelDateString, hasMatchStarted } from '../utils/matchTime';
 import styles from './AllGamesPage.module.css';
 
 const groupMatchesByStageAndGroup = (matches) => {
@@ -25,25 +25,44 @@ const groupMatchesByStageAndGroup = (matches) => {
   return stageMap;
 };
 
+const applyStatusFilter = (list, filterStatus) =>
+  list.filter((m) => {
+    if (filterStatus === 'TODAY') return isMatchToday(m.utcDate);
+    if (filterStatus === 'FINISHED') return m.status === MATCH_STATUS.FINISHED;
+    if (filterStatus === 'UPCOMING')
+      return m.status === MATCH_STATUS.SCHEDULED || m.status === MATCH_STATUS.TIMED;
+    return true;
+  });
+
+const matchHasTeam = (match, teamKey) => {
+  if (!teamKey || teamKey === 'ALL') return true;
+  if (teamKey.startsWith('name:')) {
+    const name = teamKey.slice(5);
+    return match.homeTeam?.name === name || match.awayTeam?.name === name;
+  }
+  return match.homeTeam?.id === teamKey || match.awayTeam?.id === teamKey;
+};
+
+const sortByKickoff = (a, b) => new Date(a.utcDate) - new Date(b.utcDate);
+
 export default function AllGamesPage() {
   const { matches, loading, error, lastUpdated, refresh } = useMatches();
   const { user, users, scores } = useAuth();
   const { t } = useTranslation();
   const [activeStage, setActiveStage] = useState('GROUP_STAGE');
   const [filterStatus, setFilterStatus] = useState('ALL');
+  const [viewMode, setViewMode] = useState('byGroup');
+  const [filterDate, setFilterDate] = useState('');
+  const [filterGroup, setFilterGroup] = useState('ALL');
+  const [filterTeam, setFilterTeam] = useState('ALL');
   const [selectedMatch, setSelectedMatch] = useState(null);
   const [modalOpened, setModalOpened] = useState(false);
   const [liveBetsMatch, setLiveBetsMatch] = useState(null);
   const [liveBetsOpened, setLiveBetsOpened] = useState(false);
 
-  // Single shared minute-tick for every MatchCard on the page — see
-  // src/hooks/useMinuteTick.js. Passed as a prop into every card below so
-  // countdowns re-evaluate in lock-step without per-card intervals.
   const now = useMinuteTick();
   const { predictions, upsertPrediction } = useUserPredictions();
 
-  // Click branching mirrors HomePage: started → reveal everyone's bets;
-  // not started → BetModal for the user to place / edit their own.
   const handleMatchClick = (match) => {
     if (hasMatchStarted(match)) {
       setLiveBetsMatch(match);
@@ -56,21 +75,81 @@ export default function AllGamesPage() {
 
   const handleModalClose = () => setModalOpened(false);
 
+  const handleStageChange = (stage) => {
+    setActiveStage(stage);
+    setFilterGroup('ALL');
+  };
+
   const stageMap = groupMatchesByStageAndGroup(matches);
   const availableStages = STAGE_ORDER.filter((s) => stageMap[s]);
-  const currentStageGroups = stageMap[activeStage] ?? {};
 
-  const filteredGroups = {};
-  for (const [group, groupMatches] of Object.entries(currentStageGroups)) {
-    const filtered = groupMatches.filter((m) => {
-      if (filterStatus === 'TODAY') return isMatchToday(m.utcDate);
-      if (filterStatus === 'FINISHED') return m.status === MATCH_STATUS.FINISHED;
-      if (filterStatus === 'UPCOMING')
-        return m.status === MATCH_STATUS.SCHEDULED || m.status === MATCH_STATUS.TIMED;
-      return true;
-    });
-    if (filtered.length > 0) filteredGroups[group] = filtered;
-  }
+  const stageMatches = useMemo(
+    () => matches.filter((m) => (m.stage || 'GROUP_STAGE') === activeStage),
+    [matches, activeStage],
+  );
+
+  const availableGroups = useMemo(() => {
+    if (activeStage !== 'GROUP_STAGE') return [];
+    const groups = new Set();
+    for (const m of stageMatches) {
+      if (m.group) groups.add(m.group);
+    }
+    return [...groups].sort((a, b) => a.localeCompare(b));
+  }, [stageMatches, activeStage]);
+
+  const stageTeams = useMemo(() => {
+    const teamMap = new Map();
+    for (const m of stageMatches) {
+      for (const side of [m.homeTeam, m.awayTeam]) {
+        if (!side?.name) continue;
+        const key = side.id ?? `name:${side.name}`;
+        if (!teamMap.has(key)) teamMap.set(key, { key, name: side.name });
+      }
+    }
+    return [...teamMap.values()].sort((a, b) => a.name.localeCompare(b.name));
+  }, [stageMatches]);
+
+  const dateRange = useMemo(() => {
+    const dates = stageMatches
+      .map((m) => toIsraelDateString(m.utcDate))
+      .filter(Boolean)
+      .sort();
+    if (dates.length === 0) return { min: '', max: '' };
+    return { min: dates[0], max: dates[dates.length - 1] };
+  }, [stageMatches]);
+
+  const filteredMatches = useMemo(() => {
+    let result = applyStatusFilter(stageMatches, filterStatus);
+    if (filterDate) {
+      result = result.filter((m) => isMatchOnDate(m.utcDate, filterDate));
+    }
+    if (filterGroup !== 'ALL' && activeStage === 'GROUP_STAGE') {
+      result = result.filter((m) => m.group === filterGroup);
+    }
+    if (filterTeam !== 'ALL') {
+      result = result.filter((m) => matchHasTeam(m, filterTeam));
+    }
+    return result;
+  }, [stageMatches, filterStatus, filterDate, filterGroup, filterTeam, activeStage]);
+
+  const filteredGroups = useMemo(() => {
+    const groups = {};
+    for (const m of filteredMatches) {
+      const group = m.group || 'Matches';
+      if (!groups[group]) groups[group] = [];
+      groups[group].push(m);
+    }
+    return groups;
+  }, [filteredMatches]);
+
+  const chronologicalMatches = useMemo(
+    () => [...filteredMatches].sort(sortByKickoff),
+    [filteredMatches],
+  );
+
+  const hasFilteredResults = viewMode === 'chronological'
+    ? chronologicalMatches.length > 0
+    : Object.keys(filteredGroups).length > 0;
 
   const todayCount = matches.filter((m) => isMatchToday(m.utcDate)).length;
 
@@ -82,8 +161,6 @@ export default function AllGamesPage() {
     return f;
   };
 
-  // See HomePage.jsx — users is admin-only, fall back to scores so
-  // non-admin viewers (and simulation mode) still see everyone's picks.
   const revealUsers = users.length > 0
     ? users
     : scores.map((s) => ({
@@ -92,13 +169,19 @@ export default function AllGamesPage() {
         status: REG_STATUS.APPROVED,
       }));
 
+  const renderMatchCard = (m) => (
+    <div key={m.id} className={isMatchToday(m.utcDate) ? styles.todayHighlight : ''}>
+      <MatchCard
+        match={m}
+        onClick={handleMatchClick}
+        now={now}
+        userPrediction={predictions[String(m.id)]}
+      />
+    </div>
+  );
+
   return (
     <main className={styles.page}>
-      <div className={styles.header}>
-        <h1 className={styles.title}>{t('allGames.title')}</h1>
-        <p className={styles.sub}>{t('allGames.subtitle')}</p>
-      </div>
-
       {!loading && matches.length > 0 && (
         <LiveScoreBanner
           matches={matches}
@@ -107,42 +190,139 @@ export default function AllGamesPage() {
         />
       )}
 
-      <div className={styles.stageTabs}>
-        {loading
-          ? STAGE_ORDER.map((s) => (
-              <div key={s} className={`${styles.stageTab} ${styles.shimmer}`} style={{ width: 100, height: 36 }} />
-            ))
-          : availableStages.length > 0
-            ? availableStages.map((stage) => (
-                <button
-                  key={stage}
-                  onClick={() => setActiveStage(stage)}
-                  className={`${styles.stageTab} ${activeStage === stage ? styles.stageActive : ''}`}
-                >
-                  {t(`stages.${stage}`)}
-                </button>
-              ))
-            : STAGE_ORDER.map((stage) => (
-                <button
-                  key={stage}
-                  onClick={() => setActiveStage(stage)}
-                  className={`${styles.stageTab} ${activeStage === stage ? styles.stageActive : ''} ${styles.placeholder}`}
-                >
-                  {t(`stages.${stage}`)}
-                </button>
-              ))}
-      </div>
+      <div className={styles.controlsGrid}>
+        <div className={styles.controlsPrimary}>
+          <div className={styles.header}>
+            <h1 className={styles.title}>{t('allGames.title')}</h1>
+            <p className={styles.sub}>{t('allGames.subtitle')}</p>
+          </div>
 
-      <div className={styles.filterBar}>
-        {['ALL', 'TODAY', 'UPCOMING', 'FINISHED'].map((f) => (
-          <button
-            key={f}
-            onClick={() => setFilterStatus(f)}
-            className={`${styles.filterBtn} ${filterStatus === f ? styles.filterActive : ''}`}
+          <div className={styles.stageTabs}>
+            {loading
+              ? STAGE_ORDER.map((s) => (
+                  <div key={s} className={`${styles.stageTab} ${styles.shimmer}`} style={{ width: 100, height: 36 }} />
+                ))
+              : availableStages.length > 0
+                ? availableStages.map((stage) => (
+                    <button
+                      key={stage}
+                      onClick={() => handleStageChange(stage)}
+                      className={`${styles.stageTab} ${activeStage === stage ? styles.stageActive : ''}`}
+                    >
+                      {t(`stages.${stage}`)}
+                    </button>
+                  ))
+                : STAGE_ORDER.map((stage) => (
+                    <button
+                      key={stage}
+                      onClick={() => handleStageChange(stage)}
+                      className={`${styles.stageTab} ${activeStage === stage ? styles.stageActive : ''} ${styles.placeholder}`}
+                    >
+                      {t(`stages.${stage}`)}
+                    </button>
+                  ))}
+          </div>
+
+          <div className={styles.filterBar}>
+            {['ALL', 'TODAY', 'UPCOMING', 'FINISHED'].map((f) => (
+              <button
+                key={f}
+                onClick={() => setFilterStatus(f)}
+                className={`${styles.filterBtn} ${filterStatus === f ? styles.filterActive : ''}`}
+              >
+                {filterLabel(f)}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className={styles.advancedFilters}>
+        <div className={styles.filterRow}>
+          <span className={styles.filterRowLabel}>{t('allGames.filter.viewLabel')}</span>
+          <div className={styles.filterBar}>
+            <button
+              type="button"
+              onClick={() => setViewMode('byGroup')}
+              className={`${styles.filterBtn} ${viewMode === 'byGroup' ? styles.filterActive : ''}`}
+            >
+              <span className={styles.labelFull}>{t('allGames.filter.viewByGroup')}</span>
+              <span className={styles.labelShort}>{t('allGames.filter.viewByGroupShort')}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('chronological')}
+              className={`${styles.filterBtn} ${viewMode === 'chronological' ? styles.filterActive : ''}`}
+            >
+              <span className={styles.labelFull}>{t('allGames.filter.viewChronological')}</span>
+              <span className={styles.labelShort}>{t('allGames.filter.viewChronologicalShort')}</span>
+            </button>
+          </div>
+        </div>
+
+        <div className={styles.filterRow}>
+          <label className={styles.filterRowLabel} htmlFor="filter-date">
+            {t('allGames.filter.dateLabel')}
+          </label>
+          <div className={styles.dateControls}>
+            <input
+              id="filter-date"
+              type="date"
+              className={styles.dateInput}
+              value={filterDate}
+              min={dateRange.min || undefined}
+              max={dateRange.max || undefined}
+              onChange={(e) => setFilterDate(e.target.value)}
+            />
+            {filterDate && (
+              <button
+                type="button"
+                className={styles.clearBtn}
+                onClick={() => setFilterDate('')}
+              >
+                {t('allGames.filter.dateClear')}
+              </button>
+            )}
+          </div>
+        </div>
+
+        {activeStage === 'GROUP_STAGE' && availableGroups.length > 0 && (
+          <div className={styles.filterRow}>
+            <label className={styles.filterRowLabel} htmlFor="filter-group">
+              {t('allGames.filter.groupSectionLabel')}
+            </label>
+            <select
+              id="filter-group"
+              className={styles.filterSelect}
+              value={filterGroup}
+              onChange={(e) => setFilterGroup(e.target.value)}
+            >
+              <option value="ALL">{t('allGames.filter.groupAll')}</option>
+              {availableGroups.map((g) => (
+                <option key={g} value={g}>
+                  {t('allGames.filter.groupLabel', { letter: g })}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        <div className={styles.filterRow}>
+          <label className={styles.filterRowLabel} htmlFor="filter-team">
+            {t('allGames.filter.teamLabel')}
+          </label>
+          <select
+            id="filter-team"
+            className={styles.filterSelect}
+            value={filterTeam}
+            onChange={(e) => setFilterTeam(e.target.value)}
           >
-            {filterLabel(f)}
-          </button>
-        ))}
+            <option value="ALL">{t('allGames.filter.teamAll')}</option>
+            {stageTeams.map((team) => (
+              <option key={team.key} value={team.key}>{team.name}</option>
+            ))}
+          </select>
+        </div>
+        </div>
       </div>
 
       {error && (
@@ -166,9 +346,13 @@ export default function AllGamesPage() {
       )}
 
       {!loading && !error && matches.length > 0 && (
-        Object.keys(filteredGroups).length === 0 ? (
+        !hasFilteredResults ? (
           <div className={styles.empty}>
             <p>{t('allGames.noMatchesFilter')}</p>
+          </div>
+        ) : viewMode === 'chronological' ? (
+          <div className={styles.matchGrid}>
+            {chronologicalMatches.map(renderMatchCard)}
           </div>
         ) : (
           <div className={styles.stageContent}>
@@ -178,18 +362,7 @@ export default function AllGamesPage() {
                 <section key={group} className={styles.groupSection}>
                   <h3 className={styles.groupTitle}>{group}</h3>
                   <div className={styles.matchGrid}>
-                    {groupMatches
-                      .sort((a, b) => new Date(a.utcDate) - new Date(b.utcDate))
-                      .map((m) => (
-                        <div key={m.id} className={isMatchToday(m.utcDate) ? styles.todayHighlight : ''}>
-                          <MatchCard
-                            match={m}
-                            onClick={handleMatchClick}
-                            now={now}
-                            userPrediction={predictions[String(m.id)]}
-                          />
-                        </div>
-                      ))}
+                    {[...groupMatches].sort(sortByKickoff).map(renderMatchCard)}
                   </div>
                 </section>
               ))}
