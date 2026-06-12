@@ -101,6 +101,31 @@
       "unranked": "Unranked"
     }
   },
+  "spotlight": {
+    "eyebrow": "Daily hero",
+    "title": "Exact-Score Spotlight",
+    "winner": "Spotlight",
+    "thatsYou": "That's you!",
+    "exactHit": "Boom",
+    "predicted": "Predicted {{home}}–{{away}}",
+    "periodToday": "Today",
+    "periodYesterday": "Yesterday",
+    "contextSolo": "The only exact score of the day — nailed it.",
+    "contextSoloAmong": "Top pick out of {{count}} exact scores today.",
+    "contextShared": "{{count}} exact scores that day — shared this match with {{matchCount}} others.",
+    "pastWinners": "Past spotlights ({{count}})"
+  },
+  "chaos": {
+    "eyebrow": "Bold miss",
+    "title": "Chaos Pick",
+    "villain": "Today's chaos agent",
+    "yikesYou": "Yikes — that's you!",
+    "guessed": "Guessed",
+    "final": "Final",
+    "missBadge": "0 pts",
+    "context": "Predicted {{predHome}}–{{predAway}}, ended {{actualHome}}–{{actualAway}} — {{gap}} goals off.",
+    "pastPicks": "Past chaos picks ({{count}})"
+  },
   "leaderboard": {
     "rank": "#",
     "player": "Player",

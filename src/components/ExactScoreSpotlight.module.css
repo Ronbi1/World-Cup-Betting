@@ -1,0 +1,496 @@
+/* ─── Exact-score spotlight — centered stadium scoreboard ─────────────────
+   Single-column stage: winner name on top, horizontal scoreboard below.
+   RTL-safe — teams flank the score symmetrically via a 3-col grid. */
+
+.card {
+  position: relative;
+  border-radius: 18px;
+  background: linear-gradient(
+    165deg,
+    rgba(33, 50, 89, 0.95) 0%,
+    rgba(10, 20, 40, 0.98) 55%,
+    rgba(6, 13, 29, 1) 100%
+  );
+  border: 1px solid var(--clr-accent-gold-border);
+  box-shadow:
+    0 12px 40px rgba(0, 0, 0, 0.45),
+    0 0 0 1px rgba(212, 175, 55, 0.08) inset;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.glow {
+  position: absolute;
+  inset: -30% -10% auto;
+  height: 80%;
+  background: radial-gradient(
+    ellipse 55% 70% at 50% 0%,
+    rgba(212, 175, 55, 0.28) 0%,
+    rgba(212, 175, 55, 0.08) 40%,
+    transparent 72%
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
+.beam {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(52%, 320px);
+  height: 100%;
+  background: linear-gradient(
+    180deg,
+    rgba(212, 175, 55, 0.14) 0%,
+    rgba(212, 175, 55, 0.04) 45%,
+    transparent 70%
+  );
+  clip-path: polygon(30% 0%, 70% 0%, 100% 100%, 0% 100%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.cardYou {
+  border-color: rgba(56, 189, 248, 0.55);
+  box-shadow:
+    0 12px 40px rgba(37, 99, 235, 0.25),
+    0 0 48px rgba(56, 189, 248, 0.08);
+}
+
+.cardYou .glow {
+  background: radial-gradient(
+    ellipse 55% 70% at 50% 0%,
+    rgba(56, 189, 248, 0.2) 0%,
+    rgba(212, 175, 55, 0.1) 38%,
+    transparent 72%
+  );
+}
+
+/* ─── Header ────────────────────────────────────────────────────────────── */
+.header {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.headerMain { min-width: 0; }
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--clr-accent-gold);
+  margin-bottom: 0.2rem;
+}
+
+.star {
+  font-size: 0.85rem;
+  animation: twinkle 2.4s ease-in-out infinite;
+}
+
+@keyframes twinkle {
+  0%, 100% { opacity: 0.55; transform: scale(0.92); }
+  50% { opacity: 1; transform: scale(1.05); }
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 3.5vw, 2rem);
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #fff;
+  margin: 0;
+  line-height: 1.05;
+}
+
+.periodChip {
+  flex-shrink: 0;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--clr-accent-gold);
+  background: var(--clr-accent-gold-bg);
+  border: 1px solid var(--clr-accent-gold-border);
+}
+
+/* ─── Stage (winner + scoreboard) ───────────────────────────────────────── */
+.stage {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+}
+
+.winnerHero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  width: 100%;
+  text-align: center;
+}
+
+.winnerLabel {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--clr-muted);
+}
+
+.nameRow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.85rem;
+  width: 100%;
+  max-width: 28rem;
+}
+
+.nameFlank {
+  flex: 1;
+  height: 1px;
+  max-width: 4rem;
+  background: linear-gradient(
+    to right,
+    transparent,
+    var(--clr-accent-gold-border) 50%,
+    transparent
+  );
+}
+
+[dir='rtl'] .nameFlank {
+  background: linear-gradient(
+    to left,
+    transparent,
+    var(--clr-accent-gold-border) 50%,
+    transparent
+  );
+}
+
+.winnerName {
+  font-family: var(--font-display);
+  font-size: clamp(2.2rem, 6vw, 3.2rem);
+  font-weight: 400;
+  line-height: 0.95;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #fff8dc;
+  margin: 0;
+  text-shadow: 0 2px 28px rgba(212, 175, 55, 0.45);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: min(100%, 16rem);
+}
+
+.youTag {
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--grad-cyan);
+  color: #fff;
+  box-shadow: 0 2px 12px rgba(56, 189, 248, 0.35);
+}
+
+/* ─── Scoreboard ────────────────────────────────────────────────────────── */
+.scoreboard {
+  position: relative;
+  width: 100%;
+  max-width: 36rem;
+  margin-inline: auto;
+}
+
+.scoreboardRing {
+  position: absolute;
+  inset: -1px;
+  border-radius: 16px;
+  background: linear-gradient(
+    135deg,
+    rgba(212, 175, 55, 0.55) 0%,
+    rgba(212, 175, 55, 0.12) 40%,
+    rgba(56, 189, 248, 0.15) 60%,
+    rgba(212, 175, 55, 0.45) 100%
+  );
+  opacity: 0.85;
+  z-index: 0;
+}
+
+.stageYou .scoreboardRing {
+  background: linear-gradient(
+    135deg,
+    rgba(56, 189, 248, 0.5) 0%,
+    rgba(212, 175, 55, 0.2) 50%,
+    rgba(56, 189, 248, 0.4) 100%
+  );
+}
+
+.scoreboardInner {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 0.75rem 1rem;
+  padding: 1.1rem 1.25rem;
+  border-radius: 15px;
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.45) 0%,
+    rgba(10, 20, 40, 0.75) 100%
+  );
+  backdrop-filter: blur(6px);
+}
+
+.teamSide {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  text-align: center;
+  min-width: 0;
+}
+
+.teamName {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--clr-text-secondary);
+  line-height: 1.2;
+  max-width: 7.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.scoreCenter {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding-inline: 0.5rem;
+}
+
+.scoreline {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  line-height: 1;
+}
+
+.scoreDigit {
+  font-family: var(--font-display);
+  font-size: clamp(2.8rem, 8vw, 4rem);
+  color: #fff;
+  letter-spacing: 0.02em;
+  text-shadow:
+    0 0 32px rgba(212, 175, 55, 0.5),
+    0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.scoreDash {
+  font-family: var(--font-display);
+  font-size: clamp(1.4rem, 4vw, 2rem);
+  color: var(--clr-accent-gold);
+  opacity: 0.9;
+  padding-inline: 0.1rem;
+}
+
+.pointsBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  background: var(--clr-accent-gold-bg);
+  border: 1px solid var(--clr-accent-gold-border);
+}
+
+.pointsValue {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  line-height: 1;
+  color: var(--clr-accent-gold);
+}
+
+.pointsUnit {
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--clr-text-secondary);
+}
+
+.exactDot {
+  color: var(--clr-muted);
+  opacity: 0.6;
+}
+
+.exactTag {
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--clr-accent-green);
+}
+
+.pickLine {
+  margin: 0;
+  font-size: 0.68rem;
+  color: var(--clr-muted);
+  letter-spacing: 0.03em;
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* ─── Context + history ─────────────────────────────────────────────────── */
+.context {
+  position: relative;
+  z-index: 1;
+  font-size: 0.78rem;
+  color: var(--clr-text-secondary);
+  letter-spacing: 0.02em;
+}
+
+.historyToggle {
+  border: 1px solid rgba(212, 175, 55, 0.25);
+  color: var(--clr-text-secondary);
+}
+
+.historyToggle:hover {
+  color: var(--clr-accent-gold);
+  border-color: var(--clr-accent-gold-border);
+  background: rgba(212, 175, 55, 0.06);
+}
+
+.historyToggle:focus-visible {
+  outline: 2px solid var(--clr-accent-gold);
+  outline-offset: 2px;
+}
+
+.chevron {
+  display: inline-block;
+  transition: transform 0.2s ease;
+  font-size: 0.85rem;
+}
+
+.chevronOpen { transform: rotate(180deg); }
+
+.historyRow {
+  display: grid;
+  grid-template-columns: 4.5rem 1fr auto auto;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+}
+
+.historyDate {
+  color: var(--clr-muted);
+  font-size: 0.72rem;
+}
+
+.historyName {
+  font-weight: 600;
+  color: var(--clr-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.historyTeams {
+  color: var(--clr-text-secondary);
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+
+.historyPts {
+  font-weight: 700;
+  color: var(--clr-accent-gold);
+}
+
+/* ─── Skeleton ──────────────────────────────────────────────────────────── */
+.cardSkeleton {
+  min-height: 200px;
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+.skelEyebrow,
+.skelName,
+.skelScore {
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.skelEyebrow { width: 40%; height: 12px; margin-bottom: 0.75rem; }
+.skelName { width: 45%; height: 40px; margin: 0 auto 1rem; }
+.skelScore { width: 80%; max-width: 24rem; height: 72px; margin-inline: auto; }
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+
+/* ─── Mobile: stack scoreboard vertically ───────────────────────────────── */
+@media (max-width: 520px) {
+  .scoreboardInner {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto;
+    gap: 0.65rem;
+    padding: 1rem;
+  }
+
+  .teamSide {
+    flex-direction: row;
+    justify-content: center;
+    gap: 0.5rem;
+  }
+
+  .teamName {
+    max-width: none;
+    -webkit-line-clamp: 1;
+  }
+
+  .scoreCenter {
+    order: -1;
+    padding-bottom: 0.25rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    margin-bottom: 0.15rem;
+  }
+
+  .scoreDigit {
+    font-size: 3.2rem;
+  }
+
+  .nameFlank { display: none; }
+
+  .historyRow {
+    grid-template-columns: 1fr auto;
+    grid-template-rows: auto auto;
+  }
+
+  .historyDate { grid-column: 1; }
+  .historyName { grid-column: 1; grid-row: 2; }
+  .historyTeams { grid-column: 2; grid-row: 1; text-align: end; }
+  .historyPts { grid-column: 2; grid-row: 2; text-align: end; }
+}

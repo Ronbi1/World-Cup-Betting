@@ -10,6 +10,7 @@ const usersRoutes = require('./_routes/users.routes');
 const predictionsRoutes = require('./_routes/predictions.routes');
 const footballRoutes = require('./_routes/football.routes');
 const scoresRoutes = require('./_routes/scores.routes');
+const spotlightRoutes = require('./_routes/spotlight.routes');
 const { errorHandler } = require('./_lib/errorHandler');
 const { isSimulationMode } = require('./_lib/simulation');
 
@@ -39,6 +40,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/predictions', predictionsRoutes);
 app.use('/api/scores', scoresRoutes);
+app.use('/api/spotlight', spotlightRoutes);
 app.use('/api/football', footballRoutes);
 
 app.use((req, res) => {
