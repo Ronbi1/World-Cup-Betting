@@ -57,10 +57,13 @@ export default function HomePage() {
     if (!hasLive) return undefined;
 
     const id = setInterval(() => {
-      if (document.visibilityState !== 'hidden') refreshScores();
+      if (document.visibilityState !== 'hidden') {
+        refreshScores();
+        refreshSpotlight();
+      }
     }, LIVE_SCORE_POLL_MS);
     return () => clearInterval(id);
-  }, [todayMatches, refreshScores]);
+  }, [todayMatches, refreshScores, refreshSpotlight]);
 
   const [selectedMatch, setSelectedMatch] = useState(null);
   const [modalOpened, setModalOpened] = useState(false);

@@ -89,6 +89,10 @@ function setCache(key, data, ttlMs) {
   cache.set(key, { data, expiresAt: Date.now() + ttlMs });
 }
 
+function bustGamesCache() {
+  cache.delete('/get/games');
+}
+
 async function wc26Request(path, { ttlMs = DEFAULT_CACHE_TTL_MS, retryAuth = true } = {}) {
   const cacheKey = path;
   const cached = getCached(cacheKey);
@@ -390,6 +394,7 @@ module.exports = {
   apiBase,
   fetchUpstream,
   getCached,
+  bustGamesCache,
   transformGame,
   transformTeam,
   fetchSeasonMatches,

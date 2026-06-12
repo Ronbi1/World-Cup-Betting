@@ -1,7 +1,7 @@
 const express = require('express');
 const { supabase } = require('../_lib/supabase');
 const { requireAuth } = require('../_lib/auth');
-const { fetchFinishedMatches } = require('../_lib/football');
+const { fetchFinishedMatches, bustGamesCache } = require('../_lib/football');
 const { computeSpotlight } = require('../_lib/spotlight');
 const spotlightCache = require('../_lib/spotlightCache');
 const {
@@ -52,8 +52,15 @@ async function loadSpotlightInputs() {
 }
 
 // GET /api/spotlight — daily exact-score hero + recent history.
-router.get('/', requireAuth, async (_req, res, next) => {
+// ?refresh=1 skips server cache (used when a match just finished).
+router.get('/', requireAuth, async (req, res, next) => {
   try {
+    const forceRefresh = req.query.refresh === '1';
+    if (forceRefresh) {
+      spotlightCache.bust();
+      if (!isSimulationMode()) bustGamesCache();
+    }
+
     const cached = spotlightCache.read();
     if (cached) return res.json(cached);
 
