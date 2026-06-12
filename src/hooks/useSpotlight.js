@@ -7,10 +7,12 @@ export function useSpotlight() {
   const [error, setError] = useState(null);
   const cancelledRef = useRef(false);
 
-  const fetchData = useCallback(async (isInitial = false) => {
+  const fetchData = useCallback(async (isInitial = false, { bustCache = false } = {}) => {
     if (isInitial) setLoading(true);
     try {
-      const res = await serverApi.get('/spotlight');
+      const res = await serverApi.get('/spotlight', {
+        params: bustCache ? { refresh: '1' } : undefined,
+      });
       if (!cancelledRef.current) {
         setData(res.data);
         setError(null);
@@ -33,7 +35,15 @@ export function useSpotlight() {
     };
   }, [fetchData]);
 
-  const refresh = useCallback(() => fetchData(false), [fetchData]);
+  useEffect(() => {
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') fetchData(false, { bustCache: true });
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', onVisibilityChange);
+  }, [fetchData]);
+
+  const refresh = useCallback(() => fetchData(false, { bustCache: true }), [fetchData]);
 
   return { data, loading, error, refresh };
 }
