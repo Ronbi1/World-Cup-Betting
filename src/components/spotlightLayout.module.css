@@ -1,0 +1,112 @@
+/* Shared flex shell — keeps exact + chaos cards equal height in SpotlightPair */
+
+.cardShell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 1.25rem 1.35rem 1.15rem;
+  box-sizing: border-box;
+}
+
+.cardHeader {
+  flex-shrink: 0;
+  min-height: 3.85rem;
+  margin-bottom: 0.85rem;
+}
+
+.cardMain {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 15rem;
+}
+
+.cardFooter {
+  flex-shrink: 0;
+  margin-top: auto;
+  padding-top: 0.25rem;
+}
+
+.contextBlock {
+  min-height: 2.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0.65rem 0 0;
+  text-align: center;
+  line-height: 1.45;
+}
+
+.historyBlock {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.historyToggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  width: 100%;
+  min-height: 2.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.2);
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+
+.historyList {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.historyRow {
+  min-height: 2.35rem;
+  padding: 0.45rem 0.55rem;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.2);
+  font-size: 0.74rem;
+}
+
+.compactTitle {
+  font-size: clamp(1.3rem, 2.2vw, 1.65rem) !important;
+  line-height: 1.1 !important;
+}
+
+.compactEyebrow {
+  font-size: 0.65rem !important;
+  margin-bottom: 0.18rem !important;
+}
+
+.compactPeriod {
+  padding: 0.35rem 0.65rem !important;
+  font-size: 0.65rem !important;
+}
+
+.compactWinnerName {
+  font-size: clamp(1.75rem, 3.5vw, 2.35rem) !important;
+}
+
+.compactWinnerHero {
+  min-height: 3.5rem;
+  justify-content: center;
+}
+
+.scoreboardZone {
+  min-height: 9.25rem;
+  box-sizing: border-box;
+}
+
+.compactScoreDigit {
+  font-size: clamp(2.1rem, 5vw, 2.85rem) !important;
+}

@@ -13,6 +13,8 @@ import BetModal from '../components/BetModal';
 import LiveBetsModal from '../components/LiveBetsModal';
 import LiveScoreBanner from '../components/LiveScoreBanner';
 import Podium from '../components/Podium';
+import SpotlightPair from '../components/SpotlightPair';
+import { useSpotlight } from '../hooks/useSpotlight';
 import styles from './HomePage.module.css';
 
 const LIVE_SCORE_POLL_MS = 60_000;
@@ -25,9 +27,12 @@ export default function HomePage() {
   // Refresh the leaderboard the moment any match flips to FINISHED. The
   // GET /api/scores endpoint computes dynamically with a 30 s cache, so
   // this is cheap and gives users a near-instant update.
+  const { data: spotlight, loading: loadingSpotlight, refresh: refreshSpotlight } = useSpotlight();
+
   const handleMatchFinished = useCallback(() => {
     refreshScores();
-  }, [refreshScores]);
+    refreshSpotlight();
+  }, [refreshScores, refreshSpotlight]);
 
   const {
     matches: todayMatches,
@@ -228,6 +233,12 @@ export default function HomePage() {
           )}
         </div>
       </section>
+
+      <SpotlightPair
+        data={spotlight}
+        loading={loadingSpotlight}
+        currentUserId={user?.id}
+      />
 
       <div className={styles.grid}>
         <section className={`${styles.card} ${styles.fullWidth}`}>

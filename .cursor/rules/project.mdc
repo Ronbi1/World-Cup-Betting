@@ -163,6 +163,7 @@ The Express app inside the function is mounted **with the `/api/` prefix** becau
 | POST | `/api/predictions` | user | upsert one prediction |
 | GET  | `/api/scores` | user | leaderboard (cheap — just reads `users.scores`) |
 | POST | `/api/scores/recalculate` | admin | re-tally from finished matches; optional tournament bonuses |
+| GET  | `/api/spotlight` | user | daily exact hero + chaos pick (funniest miss) + 7-day history each; Israel day; 30 s cache |
 | GET  | `/api/football/matches` | user | all WC 2026 matches (104), normalized shape, cached 30 s |
 | GET  | `/api/football/matches/today` | user | matches kicking off today (UTC), normalized shape |
 | GET  | `/api/football/teams` | user | all WC 2026 teams (for the Tournament Winner dropdown) |

@@ -101,6 +101,31 @@
       "unranked": "ללא דירוג"
     }
   },
+  "spotlight": {
+    "eyebrow": "התותח של היום",
+    "title": "העיניים עליך",
+    "winner": "בזרקור",
+    "thatsYou": "זה אתה!",
+    "exactHit": "בום",
+    "predicted": "ניחש {{home}}–{{away}}",
+    "periodToday": "היום",
+    "periodYesterday": "אתמול",
+    "contextSolo": "הפגיעה המדויקת היחידה של היום — פשוט מושלם.",
+    "contextSoloAmong": "הבחירה המובילה מתוך {{count}} פגיעות מדויקות היום.",
+    "contextShared": "{{count}} פגיעות מדויקות באותו יום — חלק/ה את המשחק עם עוד {{matchCount}}.",
+    "pastWinners": "זרקורים קודמים ({{count}})"
+  },
+  "chaos": {
+    "eyebrow": "המאכזב של היום",
+    "title": "ניחוש גרוע",
+    "villain": "חלש",
+    "yikesYou": "אוי — זה אתה!",
+    "guessed": "ניחש",
+    "final": "בפועל",
+    "missBadge": "0 נק׳",
+    "context": "ניחש {{predHome}}–{{predAway}}, יצא {{actualHome}}–{{actualAway}} — פספס ב-{{gap}} שערים.",
+    "pastPicks": "גרועים קודמים ({{count}})"
+  },
   "leaderboard": {
     "rank": "#",
     "player": "שחקן",
