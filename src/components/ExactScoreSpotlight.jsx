@@ -88,8 +88,7 @@ export default function ExactScoreSpotlight({ data, loading, currentUserId, comp
 
   if (loading) {
     return (
-      <article className={`${styles.card} ${layout.cardShell} ${styles.cardSkeleton}`} aria-busy="true" aria-label={t('spotlight.title')}>
-        <div className={styles.skelEyebrow} />
+      <article className={`${styles.card} ${layout.cardShell} ${styles.cardSkeleton}`} aria-busy="true" aria-label={t('spotlight.winner')}>
         <div className={styles.skelName} />
         <div className={styles.skelScore} />
       </article>
@@ -100,16 +99,6 @@ export default function ExactScoreSpotlight({ data, loading, currentUserId, comp
 
   const { primary, history } = data;
   const isYou = primary.userId === currentUserId;
-
-  const periodLabel = (() => {
-    if (primary.period === 'today') return t('spotlight.periodToday');
-    if (primary.period === 'yesterday') return t('spotlight.periodYesterday');
-    return formatMatchDate(`${primary.date}T12:00:00.000Z`, locale, {
-      weekday: 'short',
-      day: 'numeric',
-      month: 'short',
-    });
-  })();
 
   const contextLine = (() => {
     if (primary.soloExact && primary.exactCountOnDay === 1) {
@@ -125,20 +114,9 @@ export default function ExactScoreSpotlight({ data, loading, currentUserId, comp
   })();
 
   return (
-    <article className={`${styles.card} ${layout.cardShell} ${isYou ? styles.cardYou : ''}`} aria-label={t('spotlight.title')}>
+    <article className={`${styles.card} ${layout.cardShell} ${isYou ? styles.cardYou : ''}`} aria-label={t('spotlight.winner')}>
       <div className={styles.glow} aria-hidden="true" />
       <div className={styles.beam} aria-hidden="true" />
-
-      <header className={`${styles.header} ${layout.cardHeader}`}>
-        <div className={styles.headerMain}>
-          <span className={`${styles.eyebrow} ${compact ? layout.compactEyebrow : ''}`}>
-            <span className={styles.star} aria-hidden="true">✦</span>
-            {t('spotlight.eyebrow')}
-          </span>
-          <h2 className={`${styles.title} ${compact ? layout.compactTitle : ''}`}>{t('spotlight.title')}</h2>
-        </div>
-        <span className={`${styles.periodChip} ${compact ? layout.compactPeriod : ''}`}>{periodLabel}</span>
-      </header>
 
       <div className={layout.cardMain}>
         <SpotlightBody entry={primary} isYou={isYou} t={t} compact={compact} />

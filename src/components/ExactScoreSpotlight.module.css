@@ -146,11 +146,11 @@
 }
 
 .winnerLabel {
-  font-size: 0.62rem;
+  font-size: 0.68rem;
   font-weight: 700;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: var(--clr-muted);
+  color: var(--clr-accent-gold);
 }
 
 .nameRow {

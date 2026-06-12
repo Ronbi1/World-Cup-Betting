@@ -102,8 +102,6 @@
     }
   },
   "spotlight": {
-    "eyebrow": "התותח של היום",
-    "title": "העיניים עליך",
     "winner": "בזרקור",
     "thatsYou": "זה אתה!",
     "exactHit": "בום",
@@ -116,9 +114,7 @@
     "pastWinners": "זרקורים קודמים ({{count}})"
   },
   "chaos": {
-    "eyebrow": "המאכזב של היום",
-    "title": "ניחוש גרוע",
-    "villain": "חלש",
+    "villain": "הימור פאדיחה",
     "yikesYou": "אוי — זה אתה!",
     "guessed": "ניחש",
     "final": "בפועל",
