@@ -102,8 +102,6 @@
     }
   },
   "spotlight": {
-    "eyebrow": "Daily hero",
-    "title": "Exact-Score Spotlight",
     "winner": "Spotlight",
     "thatsYou": "That's you!",
     "exactHit": "Boom",
@@ -116,9 +114,7 @@
     "pastWinners": "Past spotlights ({{count}})"
   },
   "chaos": {
-    "eyebrow": "Bold miss",
-    "title": "Chaos Pick",
-    "villain": "Today's chaos agent",
+    "villain": "Bad Gambler",
     "yikesYou": "Yikes — that's you!",
     "guessed": "Guessed",
     "final": "Final",
