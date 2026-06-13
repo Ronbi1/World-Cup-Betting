@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import TeamFlag from './TeamFlag';
 import { formatMatchDate } from '../utils/matchTime';
 import styles from './ChaosPickSpotlight.module.css';
 import layout from './spotlightLayout.module.css';
 
-function ChaosBody({ entry, isYou, t, compact }) {
+function ChaosBody({ entry, isYou, t, villainLabel, compact }) {
   const { match, prediction, name } = entry;
   const home = match.homeTeam;
   const away = match.awayTeam;
@@ -15,7 +15,7 @@ function ChaosBody({ entry, isYou, t, compact }) {
   return (
     <div className={`${styles.stage} ${isYou ? styles.stageYou : ''}`}>
       <div className={`${styles.winnerHero} ${compact ? layout.compactWinnerHero : ''}`}>
-        <span className={styles.winnerLabel}>{t('chaos.villain')}</span>
+        <span className={styles.winnerLabel}>{villainLabel}</span>
         <h3 className={`${styles.winnerName} ${compact ? layout.compactWinnerName : ''}`} title={name}>{name}</h3>
         {isYou && <span className={styles.youTag}>{t('chaos.yikesYou')}</span>}
       </div>
@@ -85,9 +85,16 @@ export default function ChaosPickSpotlight({ data, loading, currentUserId, compa
   const locale = i18n.resolvedLanguage === 'he' ? 'he-IL' : 'en-GB';
   const [historyOpen, setHistoryOpen] = useState(false);
 
+  const villainLabel = useMemo(() => {
+    const options = t('chaos.villain', { returnObjects: true });
+    if (!Array.isArray(options) || options.length === 0) return String(t('chaos.villain'));
+    if (!data?.primary?.date) return options[0];
+    return options[Math.floor(Math.random() * options.length)];
+  }, [t, i18n.resolvedLanguage, data?.primary?.date]);
+
   if (loading) {
     return (
-      <article className={`${styles.card} ${layout.cardShell} ${styles.cardSkeleton}`} aria-busy="true" aria-label={t('chaos.villain')}>
+      <article className={`${styles.card} ${layout.cardShell} ${styles.cardSkeleton}`} aria-busy="true" aria-label={villainLabel}>
         <div className={styles.skelTitle} />
         <div className={styles.skelScore} />
       </article>
@@ -108,11 +115,11 @@ export default function ChaosPickSpotlight({ data, loading, currentUserId, compa
   });
 
   return (
-    <article className={`${styles.card} ${layout.cardShell} ${isYou ? styles.cardYou : ''}`} aria-label={t('chaos.villain')}>
+    <article className={`${styles.card} ${layout.cardShell} ${isYou ? styles.cardYou : ''}`} aria-label={villainLabel}>
       <div className={styles.glow} aria-hidden="true" />
 
       <div className={layout.cardMain}>
-        <ChaosBody entry={primary} isYou={isYou} t={t} compact={compact} />
+        <ChaosBody entry={primary} isYou={isYou} t={t} villainLabel={villainLabel} compact={compact} />
       </div>
 
       <div className={layout.cardFooter}>

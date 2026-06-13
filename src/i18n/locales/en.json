@@ -114,7 +114,10 @@
     "pastWinners": "Past spotlights ({{count}})"
   },
   "chaos": {
-    "villain": "Bad Gambler",
+    "villain": [
+      "Bad Gambler",
+      "Wake Up Gambler"
+    ],
     "yikesYou": "Yikes — that's you!",
     "guessed": "Guessed",
     "final": "Final",
