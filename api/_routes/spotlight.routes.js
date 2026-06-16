@@ -1,7 +1,8 @@
 const express = require('express');
 const { supabase } = require('../_lib/supabase');
 const { requireAuth } = require('../_lib/auth');
-const { fetchFinishedMatches, bustGamesCache } = require('../_lib/football');
+const { bustGamesCache } = require('../_lib/football');
+const { getFinishedMatches, useMirror } = require('../_lib/matchesSource');
 const { computeSpotlight } = require('../_lib/spotlight');
 const spotlightCache = require('../_lib/spotlightCache');
 const { timeSupabase } = require('../_lib/requestTiming');
@@ -44,7 +45,8 @@ async function loadSpotlightInputs(req = null) {
   if (usersError) throw usersError;
   const users = usersRaw ?? [];
 
-  const finishedMatches = await fetchFinishedMatches({ onTiming });
+  // Uses matchesSource: mirror or live based on USE_MATCHES_MIRROR.
+  const finishedMatches = await getFinishedMatches({ onTiming });
   const finishedMatchIds = finishedMatches.map((m) => String(m.id));
 
   let predictions = [];
@@ -72,8 +74,11 @@ router.get('/', requireAuth, async (req, res, next) => {
     req.timing?.note('refresh', forceRefresh);
     if (forceRefresh) {
       spotlightCache.bust();
-      if (!isSimulationMode()) bustGamesCache();
+      // bustGamesCache only matters in live mode; the mirror path always
+      // reads the latest committed Supabase rows.
+      if (!isSimulationMode() && !useMirror()) bustGamesCache();
     }
+    req.timing?.note('source', useMirror() ? 'mirror' : 'live');
 
     const cached = spotlightCache.read();
     if (cached) {

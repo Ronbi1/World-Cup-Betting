@@ -1,7 +1,8 @@
 const express = require('express');
 const { supabase } = require('../_lib/supabase');
 const { requireAuth, requireAdmin, requireFreshAdmin } = require('../_lib/auth');
-const { fetchSeasonMatches, hasMatchStarted } = require('../_lib/football');
+const { hasMatchStarted } = require('../_lib/football');
+const { getSeasonMatches, useMirror } = require('../_lib/matchesSource');
 const leaderboardCache = require('../_lib/leaderboardCache');
 const { timeSupabase } = require('../_lib/requestTiming');
 const {
@@ -64,6 +65,7 @@ router.get('/', requireAuth, async (req, res, next) => {
 
     if (matchIds) {
       req.timing?.note('mode', 'matchIds');
+      req.timing?.note('source', useMirror() ? 'mirror' : 'live');
       const requestedIds = String(matchIds)
         .split(',')
         .map((id) => id.trim())
@@ -78,7 +80,7 @@ router.get('/', requireAuth, async (req, res, next) => {
         const onTiming = ({ ms, ok, source }) => {
           if (req?.timing) req.timing.markUpstream({ label: 'wc26.games', ms, ok, source });
         };
-        const allMatches = await fetchSeasonMatches({ onTiming });
+        const allMatches = await getSeasonMatches({ onTiming });
         const matchById = new Map(allMatches.map((m) => [String(m.id), m]));
         startedIds = requestedIds.filter((id) => {
           const m = matchById.get(String(id));
@@ -157,12 +159,14 @@ router.post('/', requireAuth, async (req, res, next) => {
       });
     }
 
-    // Kickoff lock — resolve the requested match against the cached upstream
-    // schedule and reject writes that arrive after kickoff. fetchSeasonMatches
-    // is cached (~30s) so the per-POST cost is a Map build, not a network call.
+    // Kickoff lock — resolve the requested match against the configured
+    // source (live worldcup26 or Supabase mirror, gated by USE_MATCHES_MIRROR).
+    // Same hasMatchStarted() check on the same transformGame-shape object
+    // either way, so the lock outcome is identical for any given (utcDate,
+    // status) pair.
     let match;
     try {
-      const allMatches = await fetchSeasonMatches();
+      const allMatches = await getSeasonMatches();
       const matchById = new Map(allMatches.map((m) => [String(m.id), m]));
       match = matchById.get(String(match_id));
     } catch (err) {

@@ -2,7 +2,7 @@ const express = require('express');
 const { supabase } = require('../_lib/supabase');
 const { requireAuth, requireAdmin, requireFreshAdmin } = require('../_lib/auth');
 const { computeLeaderboard, readTournamentBonus } = require('../_lib/scoring');
-const { fetchFinishedMatches } = require('../_lib/football');
+const { getFinishedMatches, useMirror } = require('../_lib/matchesSource');
 const leaderboardCache = require('../_lib/leaderboardCache');
 const { timeSupabase } = require('../_lib/requestTiming');
 const {
@@ -50,8 +50,10 @@ async function loadLeaderboardInputs(req = null) {
   if (usersError) throw usersError;
   const users = usersRaw ?? [];
 
-  // 2. Finished matches from the football provider (cached upstream at 30 s).
-  const finishedMatches = await fetchFinishedMatches({ onTiming });
+  // 2. Finished matches — Supabase mirror when USE_MATCHES_MIRROR=true,
+  //    otherwise live worldcup26 with the existing 30 s in-memory cache.
+  //    Same return shape either way (transformGame objects).
+  const finishedMatches = await getFinishedMatches({ onTiming });
   const finishedMatchIds = finishedMatches.map((m) => String(m.id));
 
   // 3. Predictions for finished matches — single query, all users.
@@ -79,9 +81,11 @@ router.get('/', requireAuth, async (req, res, next) => {
     const cached = leaderboardCache.read();
     if (cached) {
       req.timing?.note('cacheHit', true);
+      req.timing?.note('source', useMirror() ? 'mirror' : 'live');
       return res.json(cached);
     }
     req.timing?.note('cacheHit', false);
+    req.timing?.note('source', useMirror() ? 'mirror' : 'live');
 
     const { users, finishedMatches, predictions } = await loadLeaderboardInputs(req);
     req.timing?.note('users', users.length);

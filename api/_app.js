@@ -11,6 +11,8 @@ const predictionsRoutes = require('./_routes/predictions.routes');
 const footballRoutes = require('./_routes/football.routes');
 const scoresRoutes = require('./_routes/scores.routes');
 const spotlightRoutes = require('./_routes/spotlight.routes');
+const cronRoutes = require('./_routes/cron.routes');
+const adminRoutes = require('./_routes/admin.routes');
 const { errorHandler } = require('./_lib/errorHandler');
 const { isSimulationMode } = require('./_lib/simulation');
 const { requestTiming } = require('./_lib/requestTiming');
@@ -45,6 +47,10 @@ app.use('/api/predictions', requestTiming('/api/predictions'), predictionsRoutes
 app.use('/api/scores', requestTiming('/api/scores'), scoresRoutes);
 app.use('/api/spotlight', requestTiming('/api/spotlight'), spotlightRoutes);
 app.use('/api/football', requestTiming('/api/football'), footballRoutes);
+// Scheduled-only writer of matches_mirror + teams_mirror.
+app.use('/api/cron', cronRoutes);
+// Admin-only diagnostic + manual-trigger endpoints. Not in the UI.
+app.use('/api/admin', adminRoutes);
 
 app.use((req, res) => {
   res.status(404).json({ error: `Not found: ${req.method} ${req.originalUrl}` });

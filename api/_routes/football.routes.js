@@ -2,12 +2,13 @@
 // Frontend never sees upstream field names; everything is normalized
 // server-side by api/_lib/football.js. See that file for the shape.
 const express = require('express');
+const { getCacheState } = require('../_lib/football');
 const {
-  fetchSeasonMatches,
-  fetchTodayMatches,
-  fetchAllTeams,
-  getCacheState,
-} = require('../_lib/football');
+  getSeasonMatches,
+  getTodayMatches,
+  getAllTeams,
+  useMirror,
+} = require('../_lib/matchesSource');
 const { requireAuth } = require('../_lib/auth');
 
 const router = express.Router();
@@ -58,8 +59,9 @@ function annotateStale(req, res, body) {
 // All matches for the World Cup season.
 router.get('/matches', requireAuth, async (req, res, next) => {
   req.timing?.note('endpoint', 'matches');
+  req.timing?.note('source', useMirror() ? 'mirror' : 'live');
   try {
-    const matches = await fetchSeasonMatches({ onTiming: timingBridge(req, 'wc26.games') });
+    const matches = await getSeasonMatches({ onTiming: timingBridge(req, 'wc26.games') });
     noteCacheState(req);
     res.json(annotateStale(req, res, { matches }));
   } catch (err) {
@@ -71,8 +73,9 @@ router.get('/matches', requireAuth, async (req, res, next) => {
 // Matches kicking off today (UTC).
 router.get('/matches/today', requireAuth, async (req, res, next) => {
   req.timing?.note('endpoint', 'today');
+  req.timing?.note('source', useMirror() ? 'mirror' : 'live');
   try {
-    const matches = await fetchTodayMatches({ onTiming: timingBridge(req, 'wc26.games') });
+    const matches = await getTodayMatches({ onTiming: timingBridge(req, 'wc26.games') });
     noteCacheState(req);
     res.json(annotateStale(req, res, { matches }));
   } catch (err) {
@@ -84,8 +87,9 @@ router.get('/matches/today', requireAuth, async (req, res, next) => {
 // All teams in the World Cup (used for the Tournament Winner dropdown).
 router.get('/teams', requireAuth, async (req, res, next) => {
   req.timing?.note('endpoint', 'teams');
+  req.timing?.note('source', useMirror() ? 'mirror' : 'live');
   try {
-    const teams = await fetchAllTeams({ onTiming: timingBridge(req, 'wc26.teams') });
+    const teams = await getAllTeams({ onTiming: timingBridge(req, 'wc26.teams') });
     noteCacheState(req);
     res.json(annotateStale(req, res, { teams }));
   } catch (err) {
