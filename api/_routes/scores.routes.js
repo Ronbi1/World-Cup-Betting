@@ -2,8 +2,9 @@ const express = require('express');
 const { supabase } = require('../_lib/supabase');
 const { requireAuth, requireAdmin, requireFreshAdmin } = require('../_lib/auth');
 const { computeLeaderboard, readTournamentBonus } = require('../_lib/scoring');
-const { fetchFinishedMatches } = require('../_lib/football');
+const { getFinishedMatches, useMirror } = require('../_lib/matchesSource');
 const leaderboardCache = require('../_lib/leaderboardCache');
+const { timeSupabase } = require('../_lib/requestTiming');
 const {
   isSimulationMode,
   getSimulationUsers,
@@ -17,7 +18,7 @@ const router = express.Router();
 // callers (predictions admin-edit) can bust it without depending on this
 // router. See the module's header for invalidation rules.
 
-async function loadLeaderboardInputs() {
+async function loadLeaderboardInputs(req = null) {
   // SIMULATION ONLY — in-memory demo data; never touches Supabase.
   if (isSimulationMode()) {
     const finishedMatches = getSimulationFinishedMatches();
@@ -32,26 +33,40 @@ async function loadLeaderboardInputs() {
     };
   }
 
+  const onTiming = ({ ms, ok, source }) => {
+    if (req?.timing) req.timing.markUpstream({ label: 'wc26.games', ms, ok, source });
+  };
+
   // 1. Approved non-ADMIN users — these are the only rows that score.
-  const { data: usersRaw, error: usersError } = await supabase
-    .from('users')
-    .select('id, name, bet, scores')
-    .eq('status', 'APPROVED')
-    .eq('role', 'USER');
+  const { data: usersRaw, error: usersError } = await timeSupabase(
+    req,
+    'users.approved',
+    () => supabase
+      .from('users')
+      .select('id, name, bet, scores')
+      .eq('status', 'APPROVED')
+      .eq('role', 'USER'),
+  );
   if (usersError) throw usersError;
   const users = usersRaw ?? [];
 
-  // 2. Finished matches from the football provider (cached upstream at 30 s).
-  const finishedMatches = await fetchFinishedMatches();
+  // 2. Finished matches — Supabase mirror when USE_MATCHES_MIRROR=true,
+  //    otherwise live worldcup26 with the existing 30 s in-memory cache.
+  //    Same return shape either way (transformGame objects).
+  const finishedMatches = await getFinishedMatches({ onTiming });
   const finishedMatchIds = finishedMatches.map((m) => String(m.id));
 
   // 3. Predictions for finished matches — single query, all users.
   let predictions = [];
   if (finishedMatchIds.length > 0) {
-    const { data, error: predError } = await supabase
-      .from('predictions')
-      .select('user_id, match_id, home, away')
-      .in('match_id', finishedMatchIds);
+    const { data, error: predError } = await timeSupabase(
+      req,
+      'predictions.byFinishedMatchIds',
+      () => supabase
+        .from('predictions')
+        .select('user_id, match_id, home, away')
+        .in('match_id', finishedMatchIds),
+    );
     if (predError) throw predError;
     predictions = data ?? [];
   }
@@ -61,12 +76,21 @@ async function loadLeaderboardInputs() {
 
 // GET /api/scores — leaderboard, dynamically computed from finished matches.
 // READ-ONLY: never writes to the database.
-router.get('/', requireAuth, async (_req, res, next) => {
+router.get('/', requireAuth, async (req, res, next) => {
   try {
     const cached = leaderboardCache.read();
-    if (cached) return res.json(cached);
+    if (cached) {
+      req.timing?.note('cacheHit', true);
+      req.timing?.note('source', useMirror() ? 'mirror' : 'live');
+      return res.json(cached);
+    }
+    req.timing?.note('cacheHit', false);
+    req.timing?.note('source', useMirror() ? 'mirror' : 'live');
 
-    const { users, finishedMatches, predictions } = await loadLeaderboardInputs();
+    const { users, finishedMatches, predictions } = await loadLeaderboardInputs(req);
+    req.timing?.note('users', users.length);
+    req.timing?.note('finishedMatches', finishedMatches.length);
+    req.timing?.note('predictions', predictions.length);
     const leaderboard = computeLeaderboard({ users, finishedMatches, predictions });
 
     leaderboardCache.write(leaderboard);
@@ -100,7 +124,7 @@ router.post('/recalculate', requireAuth, requireAdmin, requireFreshAdmin, async 
         : undefined,
     };
 
-    const { users, finishedMatches, predictions } = await loadLeaderboardInputs();
+    const { users, finishedMatches, predictions } = await loadLeaderboardInputs(req);
 
     // computeLeaderboard handles the merge of overrides + persisted bonuses.
     const leaderboard = computeLeaderboard({

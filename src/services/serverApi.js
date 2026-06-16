@@ -11,9 +11,14 @@ import { STORAGE_KEYS } from '../utils/constants';
  *
  * Auth is via HttpOnly wc_session cookie (withCredentials: true).
  */
+// Timeout is intentionally longer than the backend upstream timeout
+// (api/_lib/football.js — 15 s for worldcup26.ir + auth headroom). A
+// shorter client timeout would cause the browser to abort a request the
+// server is about to complete — the symptom users saw in production as
+// "timeout of 10000ms exceeded". See plan: safe-diagnostics PR.
 const serverApi = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
-  timeout: 10_000,
+  timeout: 25_000,
   withCredentials: true,
   headers: { 'Content-Type': 'application/json' },
 });
