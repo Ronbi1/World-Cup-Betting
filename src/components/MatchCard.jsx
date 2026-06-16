@@ -15,16 +15,6 @@ const statusKey = (status) => {
   }
 };
 
-// Display-only helpers — flip score order in RTL so picks align with the
-// visual team columns on the card. Stored userPrediction.home/away unchanged.
-function formatPickDisplaySpaced(home, away, rtl) {
-  return rtl ? `${away} – ${home}` : `${home} – ${away}`;
-}
-
-function formatPickDisplayCompact(home, away, rtl) {
-  return rtl ? `${away}–${home}` : `${home}–${away}`;
-}
-
 // `now` is supplied by the parent list page via `useMinuteTick()` so every
 // card on the page re-renders against the same instant once per minute,
 // avoiding N independent intervals. Standalone callers (e.g. tests, future
@@ -32,10 +22,6 @@ function formatPickDisplayCompact(home, away, rtl) {
 export default function MatchCard({ match, compact = false, onClick, now, userPrediction }) {
   const { t, i18n } = useTranslation();
   const locale = i18n.resolvedLanguage === 'he' ? 'he-IL' : 'en-GB';
-  const isRtl =
-    typeof i18n.dir === 'function'
-      ? i18n.dir() === 'rtl'
-      : i18n.resolvedLanguage === 'he';
 
   const formatDate = (utcDate) => formatMatchDate(utcDate, locale);
   const formatTime = (utcDate) => formatMatchTime(utcDate, locale);
@@ -73,7 +59,7 @@ export default function MatchCard({ match, compact = false, onClick, now, userPr
     scoreContent = `${match.score.home ?? 0} – ${match.score.away ?? 0}`;
     scoreToneClass = isLive ? styles.scoreLive : styles.scoreFinal;
   } else if (showPredictedScoreInCenter) {
-    scoreContent = formatPickDisplaySpaced(userPrediction.home, userPrediction.away, isRtl);
+    scoreContent = `${userPrediction.home} – ${userPrediction.away}`;
     scoreToneClass = styles.scorePrediction;
   } else {
     scoreContent = formatTime(match.utcDate);
@@ -129,16 +115,10 @@ export default function MatchCard({ match, compact = false, onClick, now, userPr
           prediction AND we're not already showing it inside the scoreboard
           pill (i.e. live/finished where the real score takes the pill). */}
       {hasUserPrediction && (isFinished || isLive) && (
-        <span
-          className={styles.ticketStub}
-          aria-label={t('matchCard.yourPick', {
-            home: isRtl ? userPrediction.away : userPrediction.home,
-            away: isRtl ? userPrediction.home : userPrediction.away,
-          })}
-        >
+        <span className={styles.ticketStub} aria-label={t('matchCard.yourPick', { home: userPrediction.home, away: userPrediction.away })}>
           <span className={styles.ticketStubLabel}>PICK</span>
           <span className={`${styles.ticketStubScore} numerals`}>
-            {formatPickDisplayCompact(userPrediction.home, userPrediction.away, isRtl)}
+            {userPrediction.home}–{userPrediction.away}
           </span>
         </span>
       )}
