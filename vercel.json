@@ -13,7 +13,7 @@
   "crons": [
     {
       "path": "/api/cron/refresh-matches",
-      "schedule": "0 3 * * *"
+      "schedule":   "* * * * *"
     }
   ]
 }
