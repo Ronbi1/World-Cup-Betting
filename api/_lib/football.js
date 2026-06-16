@@ -72,28 +72,68 @@ function clearAuth() {
 }
 
 // ── Cache + single-flight ───────────────────────────────────────────────────
+// Cache entry shape:
+//   { data, expiresAt, staleAvailableUntil }
+// `data` is kept around after `expiresAt` so wc26Request can serve a stale
+// copy if a subsequent live fetch fails. The stale window is intentionally
+// generous (1 h) — every successful refresh resets it. The next PR will
+// replace this with a Supabase mirror; until then this fallback turns a
+// transient upstream blip from a hard 500 into a 200 + stale: true.
 const cache = new Map();
 const inFlight = new Map();
+const STALE_MAX_MS = 60 * 60_000; // keep stale data for up to 1 h after expiry
 
 function getCached(key) {
   const entry = cache.get(key);
   if (!entry) return null;
-  if (Date.now() > entry.expiresAt) {
+  if (Date.now() > entry.expiresAt) return null;
+  return entry.data;
+}
+
+function getStaleCached(key) {
+  const entry = cache.get(key);
+  if (!entry) return null;
+  if (Date.now() > entry.staleAvailableUntil) {
     cache.delete(key);
     return null;
   }
   return entry.data;
 }
 
+// Read-only introspection so route handlers can record cache hit/miss/stale
+// state in their timing log without re-running the cache lookup logic.
+function getCacheState(key) {
+  const entry = cache.get(key);
+  if (!entry) return { fresh: false, stale: false };
+  const now = Date.now();
+  if (now <= entry.expiresAt) return { fresh: true, stale: false };
+  if (now <= entry.staleAvailableUntil) return { fresh: false, stale: true };
+  return { fresh: false, stale: false };
+}
+
 function setCache(key, data, ttlMs) {
-  cache.set(key, { data, expiresAt: Date.now() + ttlMs });
+  cache.set(key, {
+    data,
+    expiresAt: Date.now() + ttlMs,
+    staleAvailableUntil: Date.now() + STALE_MAX_MS,
+  });
 }
 
 function bustGamesCache() {
   cache.delete('/get/games');
 }
 
-async function wc26Request(path, { ttlMs = DEFAULT_CACHE_TTL_MS, retryAuth = true } = {}) {
+// wc26Request(path, { ttlMs, retryAuth }, { onTiming })
+//   onTiming({ ms, ok, source }) fires once per upstream attempt:
+//     source: 'live'  → fresh upstream success
+//     source: 'stale' → upstream failed, served previous cached payload
+//     source: 'error' → upstream failed and no cache available (will throw)
+//   Fresh cache hits don't call onTiming — caller infers from getCacheState.
+async function wc26Request(
+  path,
+  { ttlMs = DEFAULT_CACHE_TTL_MS, retryAuth = true } = {},
+  { onTiming } = {},
+) {
   const cacheKey = path;
   const cached = getCached(cacheKey);
   if (cached) return cached;
@@ -104,14 +144,47 @@ async function wc26Request(path, { ttlMs = DEFAULT_CACHE_TTL_MS, retryAuth = tru
     const headers = {};
     if (token) headers.Authorization = `Bearer ${token}`;
 
+    const startedAt = Date.now();
     try {
       const res = await axios.get(`${WC26_BASE}${path}`, { headers, timeout: 15_000 });
       setCache(cacheKey, res.data, ttlMs);
+      if (typeof onTiming === 'function') {
+        onTiming({ ms: Date.now() - startedAt, ok: true, source: 'live' });
+      }
       return res.data;
     } catch (err) {
+      const ms = Date.now() - startedAt;
       if (retryAuth && err.response?.status === 401 && process.env.WC26_API_EMAIL) {
         clearAuth();
-        return wc26Request(path, { ttlMs, retryAuth: false });
+        return wc26Request(path, { ttlMs, retryAuth: false }, { onTiming });
+      }
+      // Safe stale fallback — better to serve last-known data than a 500.
+      const staleData = getStaleCached(cacheKey);
+      if (staleData) {
+        console.warn('[football] upstream failed, served stale', {
+          path,
+          status: err.response?.status,
+          message: err.message,
+        });
+        if (typeof onTiming === 'function') {
+          onTiming({ ms, ok: false, source: 'stale' });
+        }
+        // Tag the returned object so callers can detect served-stale.
+        // Non-enumerable so it never accidentally serializes into the
+        // wire response unless a route explicitly opts in.
+        try {
+          Object.defineProperty(staleData, '__wc26Stale', {
+            value: true,
+            enumerable: false,
+            configurable: true,
+          });
+        } catch {
+          /* frozen/sealed object — fine, route uses getCacheState() */
+        }
+        return staleData;
+      }
+      if (typeof onTiming === 'function') {
+        onTiming({ ms, ok: false, source: 'error' });
       }
       throw err;
     }
@@ -236,11 +309,11 @@ function teamTla(name) {
 let _teamsById = null;
 let _teamsPromise = null;
 
-function ensureTeams() {
+function ensureTeams({ onTiming } = {}) {
   if (_teamsById) return Promise.resolve();
   if (_teamsPromise) return _teamsPromise;
 
-  _teamsPromise = wc26Request('/get/teams', { ttlMs: 5 * 60_000 })
+  _teamsPromise = wc26Request('/get/teams', { ttlMs: 5 * 60_000 }, { onTiming })
     .then((data) => {
       _teamsById = {};
       for (const t of data?.teams ?? []) {
@@ -333,37 +406,40 @@ function transformTeam(raw) {
 }
 
 // ── High-level fetchers used by routes ──────────────────────────────────────
-async function fetchAllGamesRaw() {
-  await ensureTeams();
-  const data = await wc26Request('/get/games', { ttlMs: GAMES_CACHE_TTL_MS });
+// All fetchers accept an optional `{ onTiming }` callback so callers can
+// record upstream durations in their request-timing log. Passing nothing
+// preserves the original signature.
+async function fetchAllGamesRaw({ onTiming } = {}) {
+  await ensureTeams({ onTiming });
+  const data = await wc26Request('/get/games', { ttlMs: GAMES_CACHE_TTL_MS }, { onTiming });
   return data?.games ?? [];
 }
 
-async function fetchSeasonMatches() {
+async function fetchSeasonMatches({ onTiming } = {}) {
   if (isSimulationMode()) return getSimulationMatches();
-  const games = await fetchAllGamesRaw();
+  const games = await fetchAllGamesRaw({ onTiming });
   return games
     .map(transformGame)
     .sort((a, b) => new Date(a.utcDate || 0) - new Date(b.utcDate || 0));
 }
 
-async function fetchTodayMatches() {
+async function fetchTodayMatches({ onTiming } = {}) {
   if (isSimulationMode()) return getSimulationTodayMatches();
-  const all = await fetchSeasonMatches();
+  const all = await fetchSeasonMatches({ onTiming });
   const today = new Date().toISOString().slice(0, 10);
   return all.filter((m) => m.utcDate && m.utcDate.slice(0, 10) === today);
 }
 
-async function fetchAllTeams() {
+async function fetchAllTeams({ onTiming } = {}) {
   if (isSimulationMode()) return getSimulationTeams();
-  await ensureTeams();
+  await ensureTeams({ onTiming });
   const all = Object.values(_teamsById ?? {});
   return all.map(transformTeam).sort((a, b) => a.name.localeCompare(b.name));
 }
 
-async function fetchFinishedMatches() {
+async function fetchFinishedMatches({ onTiming } = {}) {
   if (isSimulationMode()) return getSimulationFinishedMatches();
-  const all = await fetchSeasonMatches();
+  const all = await fetchSeasonMatches({ onTiming });
   return all.filter((m) => m.status === 'FINISHED');
 }
 
@@ -394,6 +470,7 @@ module.exports = {
   apiBase,
   fetchUpstream,
   getCached,
+  getCacheState,
   bustGamesCache,
   transformGame,
   transformTeam,

@@ -3,6 +3,7 @@ const { supabase } = require('../_lib/supabase');
 const { requireAuth, requireAdmin, requireFreshAdmin } = require('../_lib/auth');
 const { fetchSeasonMatches, hasMatchStarted } = require('../_lib/football');
 const leaderboardCache = require('../_lib/leaderboardCache');
+const { timeSupabase } = require('../_lib/requestTiming');
 const {
   isSimulationMode,
   getSimulationPredictionsForUser,
@@ -30,6 +31,7 @@ router.get('/', requireAuth, async (req, res, next) => {
     const { userId, matchId, matchIds } = req.query;
 
     if (userId) {
+      req.timing?.note('mode', matchId ? 'userId+matchId' : 'userId');
       if (req.user.id !== userId && req.user.role !== 'ADMIN') {
         return res.status(403).json({ error: 'You can only view your own predictions.' });
       }
@@ -43,30 +45,40 @@ router.get('/', requireAuth, async (req, res, next) => {
         return res.json(rows);
       }
 
-      let query = supabase
-        .from('predictions')
-        .select('user_id, match_id, home, away')
-        .eq('user_id', userId);
-
-      if (matchId) query = query.eq('match_id', String(matchId));
-
-      const { data, error } = await query;
+      const { data, error } = await timeSupabase(
+        req,
+        matchId ? 'predictions.byUserAndMatch' : 'predictions.byUser',
+        () => {
+          let q = supabase
+            .from('predictions')
+            .select('user_id, match_id, home, away')
+            .eq('user_id', userId);
+          if (matchId) q = q.eq('match_id', String(matchId));
+          return q;
+        },
+      );
       if (error) throw error;
+      req.timing?.note('rows', (data ?? []).length);
       return res.json(data ?? []);
     }
 
     if (matchIds) {
+      req.timing?.note('mode', 'matchIds');
       const requestedIds = String(matchIds)
         .split(',')
         .map((id) => id.trim())
         .filter(Boolean);
+      req.timing?.note('requestedIds', requestedIds.length);
       if (requestedIds.length === 0) return res.json([]);
 
       // Resolve requested IDs against the season matches cache and keep
       // only those that have started.
       let startedIds = [];
       try {
-        const allMatches = await fetchSeasonMatches();
+        const onTiming = ({ ms, ok, source }) => {
+          if (req?.timing) req.timing.markUpstream({ label: 'wc26.games', ms, ok, source });
+        };
+        const allMatches = await fetchSeasonMatches({ onTiming });
         const matchById = new Map(allMatches.map((m) => [String(m.id), m]));
         startedIds = requestedIds.filter((id) => {
           const m = matchById.get(String(id));
@@ -76,10 +88,13 @@ router.get('/', requireAuth, async (req, res, next) => {
         // If the football provider is unreachable, fail closed: return no
         // predictions rather than leaking pre-kickoff bets. The frontend
         // already shows nothing for matches it doesn't know about.
+        req.timing?.note('footballLookupFailed', true);
+        req.timing?.setError?.(`football lookup failed: ${err.message}`);
         console.error('[predictions] match-status check failed:', err.message);
         return res.json([]);
       }
 
+      req.timing?.note('startedIds', startedIds.length);
       if (startedIds.length === 0) return res.json([]);
 
       // SIMULATION ONLY — in-memory demo predictions; no Supabase read.
@@ -87,11 +102,16 @@ router.get('/', requireAuth, async (req, res, next) => {
         return res.json(getSimulationPredictionsForMatchIds(startedIds));
       }
 
-      const { data, error } = await supabase
-        .from('predictions')
-        .select('user_id, match_id, home, away')
-        .in('match_id', startedIds);
+      const { data, error } = await timeSupabase(
+        req,
+        'predictions.byStartedMatchIds',
+        () => supabase
+          .from('predictions')
+          .select('user_id, match_id, home, away')
+          .in('match_id', startedIds),
+      );
       if (error) throw error;
+      req.timing?.note('rows', (data ?? []).length);
       return res.json(data ?? []);
     }
 

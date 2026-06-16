@@ -6,6 +6,7 @@ const {
   fetchSeasonMatches,
   fetchTodayMatches,
   fetchAllTeams,
+  getCacheState,
 } = require('../_lib/football');
 const { requireAuth } = require('../_lib/auth');
 
@@ -23,32 +24,72 @@ function sendUpstreamError(res, err, next) {
   next(err);
 }
 
+// onTiming → req.timing.markUpstream bridge.
+function timingBridge(req, label) {
+  return ({ ms, ok, source }) => {
+    if (req?.timing) req.timing.markUpstream({ label, ms, ok, source });
+  };
+}
+
+// Records cache state for the two upstream paths into the request log.
+function noteCacheState(req) {
+  if (!req?.timing) return;
+  const games = getCacheState('/get/games');
+  const teams = getCacheState('/get/teams');
+  req.timing.note('cache:/get/games', games);
+  req.timing.note('cache:/get/teams', teams);
+  // Headline flag for log filtering.
+  req.timing.note('cacheHit', games.fresh && teams.fresh);
+  req.timing.note('stale', games.stale || teams.stale);
+}
+
+// If we ended up serving stale data, attach optional metadata. The body
+// keeps its existing shape so older clients are unaffected.
+function annotateStale(req, res, body) {
+  const games = getCacheState('/get/games');
+  const teams = getCacheState('/get/teams');
+  if (games.stale || teams.stale) {
+    res.setHeader('X-Stale', '1');
+    return { ...body, stale: true };
+  }
+  return body;
+}
+
 // All matches for the World Cup season.
 router.get('/matches', requireAuth, async (req, res, next) => {
+  req.timing?.note('endpoint', 'matches');
   try {
-    const matches = await fetchSeasonMatches();
-    res.json({ matches });
+    const matches = await fetchSeasonMatches({ onTiming: timingBridge(req, 'wc26.games') });
+    noteCacheState(req);
+    res.json(annotateStale(req, res, { matches }));
   } catch (err) {
+    noteCacheState(req);
     sendUpstreamError(res, err, next);
   }
 });
 
 // Matches kicking off today (UTC).
 router.get('/matches/today', requireAuth, async (req, res, next) => {
+  req.timing?.note('endpoint', 'today');
   try {
-    const matches = await fetchTodayMatches();
-    res.json({ matches });
+    const matches = await fetchTodayMatches({ onTiming: timingBridge(req, 'wc26.games') });
+    noteCacheState(req);
+    res.json(annotateStale(req, res, { matches }));
   } catch (err) {
+    noteCacheState(req);
     sendUpstreamError(res, err, next);
   }
 });
 
 // All teams in the World Cup (used for the Tournament Winner dropdown).
 router.get('/teams', requireAuth, async (req, res, next) => {
+  req.timing?.note('endpoint', 'teams');
   try {
-    const teams = await fetchAllTeams();
-    res.json({ teams });
+    const teams = await fetchAllTeams({ onTiming: timingBridge(req, 'wc26.teams') });
+    noteCacheState(req);
+    res.json(annotateStale(req, res, { teams }));
   } catch (err) {
+    noteCacheState(req);
     sendUpstreamError(res, err, next);
   }
 });
