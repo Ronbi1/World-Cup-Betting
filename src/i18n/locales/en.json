@@ -198,6 +198,7 @@
     "hiddenTitle": "Predictions hidden until kickoff",
     "hiddenBody": "Top scorer and top assist picks stay private until the World Cup begins on June 11, 2026. Make your picks on your Profile page before then.",
     "tableUser": "Player",
+    "tableTournamentWinner": "Tournament Winner",
     "tableTopScorer": "Top Scorer",
     "tableTopAssist": "Top Assist",
     "fetchError": "Could not load tournament picks. Please try again later."

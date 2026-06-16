@@ -57,6 +57,7 @@ export default function TopScorersPage() {
             <thead>
               <tr>
                 <th>{t('topScorers.tableUser')}</th>
+                <th>{t('topScorers.tableTournamentWinner')}</th>
                 <th>{t('topScorers.tableTopScorer')}</th>
                 <th>{t('topScorers.tableTopAssist')}</th>
               </tr>
@@ -65,6 +66,7 @@ export default function TopScorersPage() {
               {[0, 1, 2, 3, 4].map((i) => (
                 <tr key={i} className={styles.skeletonRow}>
                   <td><span className={`${styles.shimmer} ${styles.shimmerName}`} /></td>
+                  <td><span className={`${styles.shimmer} ${styles.shimmerPick}`} /></td>
                   <td><span className={`${styles.shimmer} ${styles.shimmerPick}`} /></td>
                   <td><span className={`${styles.shimmer} ${styles.shimmerPick}`} /></td>
                 </tr>
@@ -78,6 +80,7 @@ export default function TopScorersPage() {
             <thead>
               <tr>
                 <th>{t('topScorers.tableUser')}</th>
+                <th>{t('topScorers.tableTournamentWinner')}</th>
                 <th>{t('topScorers.tableTopScorer')}</th>
                 <th>{t('topScorers.tableTopAssist')}</th>
               </tr>
@@ -95,6 +98,7 @@ export default function TopScorersPage() {
                         )}
                       </div>
                     </td>
+                    <td>{row.winningTeam ?? <span className={styles.na}>—</span>}</td>
                     <td>{row.topScorer ?? <span className={styles.na}>—</span>}</td>
                     <td>{row.topAssist ?? <span className={styles.na}>—</span>}</td>
                   </tr>

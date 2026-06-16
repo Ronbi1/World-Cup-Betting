@@ -9,7 +9,7 @@ const router = express.Router();
 const VALID_STATUSES = ['PENDING', 'APPROVED', 'REJECTED'];
 const VALID_ROLES = ['USER', 'ADMIN'];
 
-// GET /api/users/tournament-bets — approved users' top scorer/assist picks.
+// GET /api/users/tournament-bets — approved users' tournament winner / top scorer / assist picks.
 // Defense-in-depth: only available after tournament kickoff so pre-start
 // picks stay private (mirrors predictions.routes.js match-kickoff gate).
 router.get('/tournament-bets', requireAuth, async (req, res, next) => {
@@ -29,6 +29,7 @@ router.get('/tournament-bets', requireAuth, async (req, res, next) => {
     const rows = (data ?? []).map((u) => ({
       id: u.id,
       name: u.name,
+      winningTeam: u.bet?.winningTeam ?? null,
       topScorer: u.bet?.topScorer ?? null,
       topAssist: u.bet?.topAssist ?? null,
     }));
