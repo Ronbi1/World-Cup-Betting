@@ -23,12 +23,12 @@ It must be:
 
 ## Stack — Vercel + Supabase only
 - **Frontend:** React 19 + Vite 7 + Mantine v8, deployed to **Vercel**.
-- **Database:** **Supabase** (Postgres). Tables: `users`, `predictions`.
+- **Database:** **Supabase** (Postgres). Tables: `users`, `predictions`, `prediction_edits`, `matches_mirror`, `teams_mirror`, `tournament_bonus` (and any others added via migrations).
 - **Backend logic:** Vercel **Serverless Functions** under `/api/*`. Do **not** use Railway or any other Node host — keep hosting to Vercel + Supabase only, free of charge.
 - **External APIs:** [worldcup26.ir](https://worldcup26.ir/api-docs/) (WC 2026 fixtures + live scores; optional JWT service account kept server-side), Resend (email, optional).
 - Secrets live in Vercel env vars. The browser only sees `VITE_*` public vars.
 - Passwords hashed with **bcryptjs** (pure JS — `bcrypt` native binary breaks on Vercel).
-- Auth is **JWT** (7-day expiry), signed server-side, attached by `serverApi` axios interceptor.
+- Auth is **JWT** (7-day expiry), signed server-side, stored in an **HttpOnly `wc_session` cookie**. `serverApi` uses `withCredentials: true`. A non-sensitive UI cache `wc_user` lives in `localStorage`.
 
 ## Mobile / PWA
 This is a **React web app, not React Native**. It must be installable as a **PWA** so users can "Add to Home Screen" on iOS and Android. Required: web manifest, `vite-plugin-pwa` service worker, iOS `apple-touch-icon` + `apple-mobile-web-app-*` meta tags, and 192/512 px maskable icons.
@@ -42,6 +42,7 @@ Football fixtures only change between stages, not during them. Therefore:
 - **Never refetch the full schedule on route change.**
 - worldcup26.ir exposes live status via `time_elapsed` + `finished`. `useTodayMatches` polls adaptively: 30 s during `IN_PLAY`/`PAUSED`, 60 s within 15 min of kickoff, 5 min otherwise, plus refetch on tab visibility.
 - The serverless `/api/football/*` proxy adds a 30 s games cache + single-flight to absorb bursts. Team metadata (flags, names) is cached for the lifetime of the serverless instance.
+- When `USE_MATCHES_MIRROR=true`, user-facing routes read from Supabase `matches_mirror`/`teams_mirror` (populated by cron). Default is live worldcup26.ir.
 
 ## Profile page (`/profile`) — required content
 1. **Account details:** name, email, joined date.
@@ -51,7 +52,7 @@ Football fixtures only change between stages, not during them. Therefore:
    - 🎯 Top Assist
    - 📝 Match Predictions — number of matches the user has placed a prediction on.
 3. **📋 My Match Predictions** — list every match the user predicted, formatted as `Mexico vs South Africa  0–0`. Sort by match kickoff date.
-4. **🎯 Tournament Bets** — editable **only before** the tournament starts (Jun 11, 2026). After kickoff, render as locked / read-only.
+4. **🎯 Tournament Bets** — editable **only before** the tournament starts (Jun 11, 2026 19:00 UTC opening kickoff). After kickoff, render as locked / read-only.
    - 🏅 **World Cup Winner** — dropdown of all national teams playing in the World Cup (live football API).
    - ⚽ **Top Scorer** — dropdown from a fixed list (`TOP_SCORERS_LIST`, supplied by user; leave placeholder until then).
    - 🎯 **Top Assist** — dropdown from a fixed list (`TOP_ASSISTS_LIST`, supplied by user; leave placeholder until then).
@@ -71,75 +72,276 @@ This section is a snapshot of the working architecture so any future agent can o
 
 ## Repository layout
 ```
-World-Cup/
-├── api/                          # Vercel Serverless Functions (single Express app)
-│   ├── index.js                  # Vercel function entry → re-exports api/_app.js
-│   ├── _app.js                   # Express app, routes mounted at /api/*
-│   ├── package.json              # { "type": "commonjs" } — overrides root ESM
+World-Cup-Betting/
+├── api/                              # Vercel Serverless Functions (single Express app)
+│   ├── index.js                      # Vercel function entry → re-exports api/_app.js
+│   ├── _app.js                       # Express app, routes mounted at /api/*
+│   ├── package.json                  # { "type": "commonjs" } — overrides root ESM
+│   ├── mock/
+│   │   └── worldCupSimulation.js     # SIMULATION ONLY — in-memory demo tournament data
 │   ├── _lib/
-│   │   ├── supabase.js           # lazy Proxy client (service-role key)
-│   │   ├── football.js           # worldcup26.ir client: optional JWT auth,
-│   │   │                         #   cached single-flight fetcher, transformGame/Team,
-│   │   │                         #   status & stage mappers, teams cache,
-│   │   │                         #   fetchSeasonMatches / fetchTodayMatches /
-│   │   │                         #   fetchAllTeams / fetchFinishedMatches,
-│   │   │                         #   hasMatchStarted (shared kickoff predicate)
-│   │   ├── auth.js               # requireAuth + requireAdmin middleware
-│   │   ├── errorHandler.js       # central error sanitizer
-│   │   ├── email.js              # Resend approval mail (no-op when key absent)
-│   │   └── scoring.js            # POINTS table + calcPoints + computeLeaderboard
+│   │   ├── supabase.js               # lazy Proxy client (service-role key)
+│   │   ├── football.js               # worldcup26.ir client: optional JWT auth,
+│   │   │                             #   cached single-flight fetcher, transformGame/Team,
+│   │   │                             #   status & stage mappers, teams cache,
+│   │   │                             #   fetchSeasonMatches / fetchTodayMatches /
+│   │   │                             #   fetchAllTeams / fetchFinishedMatches,
+│   │   │                             #   hasMatchStarted (shared kickoff predicate)
+│   │   ├── matchesSource.js          # USE_MATCHES_MIRROR gate → live vs Supabase mirror
+│   │   ├── matchesRepo.js            # read matches_mirror + teams_mirror from Supabase
+│   │   ├── mirrorRefresh.js          # ONLY writer of matches_mirror + teams_mirror
+│   │   ├── auth.js                   # requireAuth + requireAdmin + requireFreshAdmin
+│   │   ├── sessionCookie.js          # set/clear HttpOnly wc_session cookie
+│   │   ├── cronAuth.js               # requireCronAuth (Bearer CRON_SECRET)
+│   │   ├── errorHandler.js           # central error sanitizer
+│   │   ├── email.js                  # Resend approval mail (no-op when key absent)
+│   │   ├── scoring.js                # POINTS table + calcPoints + computeLeaderboard
+│   │   ├── leaderboardCache.js       # 30 s leaderboard cache + bust helpers
+│   │   ├── spotlight.js              # daily exact hero + chaos pick logic
+│   │   ├── spotlightCache.js         # 30 s spotlight cache
+│   │   ├── simulation.js             # VITE_SIMULATION_MODE flag + mock accessors
+│   │   ├── tournament.js             # tournament bonus read/write helpers
+│   │   └── requestTiming.js          # diagnostic timing middleware
 │   └── _routes/
-│       ├── auth.routes.js        # POST /api/auth/{login,register} + GET /me
-│       ├── users.routes.js       # GET / PATCH /:id/status / DELETE / PATCH /:id/bet
-│       ├── predictions.routes.js # GET (3 patterns) + POST upsert (kickoff-locked)
-│       ├── scores.routes.js      # GET leaderboard (30 s cache) / POST /recalculate
-│       └── football.routes.js    # /api/football/{matches,matches/today,teams}
-│                                 #   — typed named endpoints, NOT a generic proxy
+│       ├── auth.routes.js            # POST login/register/logout + GET /me
+│       ├── users.routes.js           # GET list, PATCH status/role/bet, DELETE, GET tournament-bets
+│       ├── predictions.routes.js     # GET (3 patterns) + POST upsert + POST admin-edit + GET /edits
+│       ├── scores.routes.js          # GET leaderboard (cached) / POST /recalculate
+│       ├── football.routes.js        # /api/football/{matches,matches/today,teams}
+│       ├── spotlight.routes.js       # GET /api/spotlight
+│       ├── cron.routes.js            # GET /api/cron/refresh-matches (Vercel Cron)
+│       └── admin.routes.js           # POST mirror-backfill, GET mirror-compare (curl-only, not in UI)
 ├── public/
 │   ├── favicon.svg
 │   ├── pwa-192.png  pwa-512.png
-│   ├── pwa-maskable-512.png      # 10% padding safe area
-│   └── apple-touch-icon.png      # 180x180
+│   ├── pwa-maskable-512.png          # 10% padding safe area
+│   └── apple-touch-icon.png          # 180x180
 ├── src/
-│   ├── App.jsx                   # router + ProtectedRoute + legacy storage purge
-│   ├── main.jsx                  # MantineProvider + DirectionProvider + i18n bootstrap
+│   ├── App.jsx                       # router + ProtectedRoute + AppLayout + legacy storage purge
+│   ├── App.css                       # orphan — only #root z-index; NOT imported
+│   ├── main.jsx                      # MantineProvider + DirectionProvider + i18n bootstrap
+│   ├── index.css                     # global design tokens, reset, safe-area, tap targets
 │   ├── i18n/
-│   │   ├── index.js              # i18next + LanguageDetector + html dir/lang sync
-│   │   └── locales/{en,he}.json  # ALL user-facing strings
-│   ├── pages/
-│   │   ├── LoginPage.jsx  RegisterPage.jsx
-│   │   ├── HomePage.jsx          # today's matches + leaderboard + admin recalc
-│   │   ├── AllGamesPage.jsx      # full schedule, stage tabs, status filter
-│   │   ├── ProfilePage.jsx       # 4 sections per the spec above
-│   │   ├── AdminPage.jsx         # approve / reject / delete + delete modal
-│   │   ├── TopScorersPage.jsx    # Golden Boot — STATIC list from constants.js
-│   │   │                         #   (upstream provider has no /scorers endpoint)
-│   │   └── RulesPage.jsx         # scoring rules + scoring-update cadence + privacy
-│   ├── components/
-│   │   ├── Navbar.jsx            # responsive hamburger + LanguageSwitcher
-│   │   ├── LanguageSwitcher.jsx  # EN / עב toggle
-│   │   ├── MantineDirectionSync.jsx  # bridges i18n → Mantine RTL
-│   │   ├── MatchCard.jsx  TeamFlag.jsx  SkeletonCard.jsx
-│   │   ├── BetModal.jsx          # Mantine Modal + NumberInput, upsert prediction
-│   │   │                         #   (locked, read-only view after kickoff)
-│   │   ├── LiveBetsReveal.jsx    # everyone's predictions for started/finished matches
-│   │   └── LiveScoreBanner.jsx   # live score strip on HomePage (IN_PLAY / PAUSED)
+│   │   ├── index.js                  # i18next + LanguageDetector + html dir/lang sync
+│   │   └── locales/{en,he}.json      # ALL user-facing strings
+│   ├── pages/                        # 8 pages + 7 CSS modules (AuthPage shared by login/register)
+│   │   ├── LoginPage.jsx  RegisterPage.jsx  AuthPage.module.css
+│   │   ├── HomePage.jsx              # leaderboard + today's matches + spotlights + admin tools
+│   │   ├── AllGamesPage.jsx          # full schedule, stage/group filters, status filter
+│   │   ├── ProfilePage.jsx           # 4 sections per the spec above
+│   │   ├── AdminPage.jsx             # approve / reject / delete / role + audit log + delete modal
+│   │   ├── TopScorersPage.jsx        # aggregated tournament-bet picks across all users
+│   │   └── RulesPage.jsx             # scoring rules + cadence + privacy
+│   ├── components/                   # 15 JSX + 16 CSS modules
+│   │   ├── Navbar.jsx                # responsive hamburger + LanguageSwitcher + admin link
+│   │   ├── LanguageSwitcher.jsx      # EN / עב toggle
+│   │   ├── MantineDirectionSync.jsx  # bridges i18n → Mantine RTL (renders nothing)
+│   │   ├── SimulationBanner.jsx      # orange SIMULATION / DEMO MODE strip
+│   │   ├── MatchCard.jsx             # match row: teams, status, live score, prediction hint
+│   │   ├── TeamFlag.jsx              # crest image + TLA fallback badge
+│   │   ├── SkeletonCard.jsx          # loading placeholder shaped like MatchCard
+│   │   ├── BetModal.jsx              # Mantine Modal — pre-kickoff prediction entry (0–20)
+│   │   ├── LiveBetsModal.jsx         # post-kickoff: everyone's predictions vs live/final score
+│   │   ├── LiveScoreBanner.jsx       # horizontal strip of in-play match scores
+│   │   ├── Podium.jsx                # top-3 leaderboard visualization
+│   │   ├── SpotlightPair.jsx         # two-column wrapper for daily spotlights
+│   │   ├── ExactScoreSpotlight.jsx   # "best exact score" card + history toggle
+│   │   ├── ChaosPickSpotlight.jsx    # "chaos pick" card + history toggle
+│   │   ├── spotlightLayout.module.css  # shared spotlight card shell primitives
+│   │   └── AdminOverrideModal.jsx    # admin-only prediction override (any user, any match)
 │   ├── context/
-│   │   ├── AuthContext.jsx       # AuthProvider (sole export — Fast-Refresh-safe)
-│   │   └── useAuth.js            # Context object + useAuth hook
-│   ├── hooks/{useMatches, useTodayMatches}.js
-│   ├── services/{footballService, serverApi}.js
+│   │   ├── AuthContext.jsx           # AuthProvider (sole export — Fast-Refresh-safe)
+│   │   └── useAuth.js                # Context object + useAuth hook
+│   ├── hooks/
+│   │   ├── useMatches.js             # session-cached full schedule (one fetch per stage)
+│   │   ├── useTodayMatches.js        # adaptive polling for today's matches
+│   │   ├── useUserPredictions.js     # thin wrapper over auth predictions
+│   │   ├── useMinuteTick.js          # shared per-minute `now` for countdowns
+│   │   └── useSpotlight.js           # fetches /api/spotlight daily highlights
+│   ├── services/
+│   │   ├── serverApi.js              # axios + withCredentials cookie auth + 401 handler
+│   │   └── footballService.js        # fetchMatches / fetchTodayMatches / fetchTeams wrappers
 │   └── utils/
-│       ├── constants.js          # ROLES, REG_STATUS, MATCH_STATUS, STAGE_ORDER,
-│       │                         #   TOURNAMENT_START/ENDED, TOP_SCORERS/ASSISTS_LIST
-│       └── matchTime.js          # shared client-side hasMatchStarted helper
-├── scripts/resize-icons.ps1      # one-shot PWA icon generator (PowerShell + GDI+)
-├── dev-server.cjs                # Standalone local server on :3000 (npm run dev:api)
-├── vite.config.js                # React + VitePWA + dev proxy /api → :3000
-├── vercel.json                   # SPA rewrite (excludes /api)
-├── eslint.config.js              # 3 layers: src ESM, vite.config ESM, api CJS
-└── package.json                  # root ESM, single dependency tree (frontend + backend)
+│       ├── constants.js              # ROLES, REG_STATUS, MATCH_STATUS, STAGE_ORDER,
+│       │                             #   TOURNAMENT_START/ENDED, TOP_SCORERS/ASSISTS_LIST
+│       ├── matchTime.js              # kickoff formatting, countdown, Israel timezone helpers
+│       ├── simulation.js             # isSimulationMode() frontend flag
+│       └── apiErrors.js              # extractApiError for user-facing messages
+├── tests/                            # vitest — mirror, matchesSource, scoring, etc.
+├── scripts/resize-icons.ps1          # one-shot PWA icon generator (PowerShell + GDI+)
+├── dev-server.cjs                    # Standalone local server on :3000 (npm run dev:api)
+├── vite.config.js                    # React + VitePWA + dev proxy /api → :3000
+├── vercel.json                       # SPA rewrite + /api catch-all + cron schedule
+├── eslint.config.js                  # 3 layers: src ESM, vite.config ESM, api CJS
+└── package.json                      # root ESM, single dependency tree (frontend + backend)
 ```
+
+---
+
+## Frontend architecture
+
+### Provider tree (`main.jsx`)
+```
+StrictMode
+  DirectionProvider (initialDirection from html lang)
+    MantineProvider (defaultColorScheme="dark")
+      MantineDirectionSync
+      Notifications (position="top-right")
+      BrowserRouter
+        AuthProvider
+          AppRoutes (App.jsx)
+```
+
+### Routing (`App.jsx`) — React Router v7, NOT file-based
+| Path | Access | Page | Notes |
+|------|--------|------|-------|
+| `/login` | Public | `LoginPage` | Redirects to `/` if logged in; `?reason=expired` banner |
+| `/register` | Public | `RegisterPage` | Redirects to `/` if logged in |
+| `/` | Protected | `HomePage` | Leaderboard embedded here — no `/leaderboard` route |
+| `/games` | Protected | `AllGamesPage` | Full tournament schedule |
+| `/profile` | Protected | `ProfilePage` | Account + tournament bets + prediction history |
+| `/rules` | Protected | `RulesPage` | Static i18n rules content |
+| `/scorers` | Protected | `TopScorersPage` | Aggregated tournament-bet picks |
+| `/admin` | Protected | `AdminPage` | User management (no server-side route guard — UI only) |
+| `*` | — | Redirect to `/` | Catch-all |
+
+**Guards:**
+- `ProtectedRoute` waits for `authReady` (boot `/auth/me` probe) before redirecting to `/login`.
+- Protected routes wrap content in `AppLayout` = `SimulationBanner` + `Navbar` + `{children}`.
+- Auth pages render **standalone** (no Navbar) with `LanguageSwitcher` in corner.
+
+### Auth flow (frontend)
+1. Boot: `AuthContext` calls `GET /api/auth/me` (always 200: `{ user }` or `{ user: null }`).
+2. Valid session → hydrate `user` state + `localStorage wc_user` cache.
+3. `serverApi` sends `withCredentials: true`; JWT never touches JS.
+4. 401 on any API call (except `/auth/me`) → clear cache → redirect `/login?reason=expired`.
+5. PWA: `AuthContext` refetches predictions on `visibilitychange` return.
+
+### Data hooks — when to use which
+| Hook | Used by | Purpose |
+|------|---------|---------|
+| `useAuth()` | All pages, Navbar, modals | user, predictions, scores, users, admin helpers |
+| `useMatches()` | AllGamesPage, ProfilePage, AdminOverrideModal | Session-cached full 104-match schedule |
+| `useTodayMatches({ onMatchFinished })` | HomePage | Adaptive polling; callback triggers leaderboard refresh |
+| `useUserPredictions()` | HomePage, AllGamesPage | Thin wrapper over auth predictions map |
+| `useMinuteTick()` | HomePage, AllGamesPage | Shared `now` Date for countdown consistency |
+| `useSpotlight()` | HomePage | Daily exact-score + chaos-pick highlights |
+
+### UI file map by feature
+| Feature | Primary files |
+|---------|---------------|
+| **Home / Leaderboard** | `pages/HomePage.jsx` + `.module.css`, `components/Podium.jsx` + `.module.css` |
+| **All Games** | `pages/AllGamesPage.jsx` + `.module.css` |
+| **Match cards** | `components/MatchCard.jsx` + `.module.css`, `TeamFlag.jsx`, `SkeletonCard.jsx` |
+| **Prediction modal** | `components/BetModal.jsx` + `.module.css` |
+| **Live match display** | `LiveScoreBanner.jsx`, `LiveBetsModal.jsx`, live state in `MatchCard.jsx` |
+| **Profile** | `pages/ProfilePage.jsx` + `.module.css` |
+| **Rules** | `pages/RulesPage.jsx` + `.module.css` |
+| **Login / Register** | `LoginPage.jsx`, `RegisterPage.jsx`, `AuthPage.module.css` |
+| **Admin users** | `pages/AdminPage.jsx` + `.module.css` |
+| **Admin override** | `components/AdminOverrideModal.jsx` + `.module.css` |
+| **Admin score tools** | Admin section inside `HomePage.jsx` (recalculate + tournament bonus) |
+| **Daily spotlights** | `SpotlightPair`, `ExactScoreSpotlight`, `ChaosPickSpotlight` + CSS modules |
+| **Nav / shell** | `Navbar.jsx`, `SimulationBanner.jsx`, `App.jsx` |
+| **i18n copy** | `i18n/locales/en.json`, `he.json` |
+
+### Leaderboard rules (UI + backend)
+- **Admins do NOT appear in the leaderboard.** Backend filters `role = 'USER'` and `status = 'APPROVED'` in `scores.routes.js`. Frontend `HomePage` also filters `u.role !== 'ADMIN'`.
+- Leaderboard is on `/` only — inline `LeaderboardTable` + `Podium`, not a separate page.
+- Rank-change indicators and "you" row styling live in `HomePage.module.css`.
+
+---
+
+## Styling and design system
+
+**No Tailwind.** Global tokens in `src/index.css` + **CSS Modules** per page/component. Mantine used for modals, buttons (in modals), and toast notifications only.
+
+### Design tokens (`index.css` `:root`)
+| Category | Key variables |
+|----------|---------------|
+| Background | `--clr-bg`, `--clr-bg-deep`, `--clr-bg-mid` (navy stack) |
+| Surfaces | `--clr-surface`, `--clr-surface-raised`, `--clr-border` |
+| Accents | `--clr-accent` (cyan), `--clr-accent-cyan`, `--clr-accent-orange`, `--clr-accent-green` |
+| Gold (milestones) | `--clr-accent-gold`, `--clr-accent-gold-deep`, `--clr-accent-gold-bg` |
+| Live matches | `--clr-live-red`, `--clr-live-red-glow` |
+| Text | `--clr-text-primary`, `--clr-text-secondary`, `--clr-muted` |
+| Typography | `--font-sans`, `--font-mono`, `--font-display` (Bebas Neue — loaded in index.html) |
+| Gradients | `--grad-hero`, `--grad-primary-btn` (orange CTA), `--grad-success-btn`, `--grad-cyan`, `--grad-navbar`, `--grad-pitch` |
+| Shadows | `--shadow-card`, `--shadow-card-hover`, `--shadow-hero` |
+| Safe area | `--safe-area-inset-top/bottom/left/right` (PWA notch/home indicator) |
+
+### Recurring UI patterns
+- **Cards:** gradient surface + `--shadow-card` + 14–16px radius; hover lift on interactive cards.
+- **Section titles:** 3px `border-inline-start: var(--clr-accent-cyan)`.
+- **Primary buttons:** `--grad-primary-btn` orange gradient (`.submitBtn`, `.recalcBtn`, `.stepperBtn:hover`).
+- **Success buttons:** `--grad-success-btn` green gradient.
+- **Badges:** `.statusBadge` in MatchCard (scheduled/live/finished); outcome badges in LiveBetsModal; gold `.bonusChip` on HomePage.
+- **Numerals:** global `.numerals` class — tabular mono for scores/leaderboard/countdowns.
+- **Loading:** `SkeletonCard` shimmer; spotlight skeleton bars; inline `…` loader in `ProtectedRoute`.
+- **Empty states:** `.empty` pattern — centered emoji + i18n text (`home.leaderboardEmpty`, `allGames.empty`, etc.).
+- **Error states:** `.errorBox` / `.apiError` red boxes; `.errorBanner` on auth pages; Mantine toasts in BetModal.
+
+### RTL / LTR
+Three layers must stay in sync:
+1. **`i18n/index.js`** — sets `<html lang dir>` on init + `languageChanged`. `RTL_LANGUAGES = Set(['he','ar','fa','ur'])`.
+2. **`MantineDirectionSync.jsx`** — calls Mantine `setDirection('rtl'|'ltr')`.
+3. **CSS logical properties** — prefer `margin-inline-*`, `padding-inline-*`, `inset-inline-*`, `text-align: start/end`.
+
+**Forced LTR (do not break):** score steppers in `BetModal` (`dir="ltr"`), ticket stub / score pill in `MatchCard` (`direction: ltr; unicode-bidi: isolate`). Numeric UI must stay LTR in Hebrew mode.
+
+**Date formatting pattern (everywhere):**
+```javascript
+const locale = i18n.resolvedLanguage === 'he' ? 'he-IL' : 'en-GB';
+```
+
+### Mobile / PWA
+- `index.html`: `viewport-fit=cover`, `theme-color`, apple PWA meta tags.
+- `index.css`: 44px min tap targets, safe-area body padding, root font 16→15→14px at 600/400px breakpoints.
+- `Navbar.module.css`: hamburger menu at 700px; sticky nav with safe-area top padding.
+- Breakpoints are **per-file** (no shared token): common values 900, 768, 700, 640, 600, 560, 480, 400, 380, 360px.
+- PWA manifest generated by `vite-plugin-pwa` in `vite.config.js`. Service worker excludes `/api/*` from navigation fallback.
+- Regenerate icons: `powershell -ExecutionPolicy Bypass -File scripts/resize-icons.ps1`
+
+---
+
+## Safe vs fragile edit zones
+
+### Safest for UI-only changes (presentation)
+- Any `*.module.css` file
+- `src/index.css` design tokens
+- `RulesPage.jsx` + CSS (mostly static i18n)
+- `Podium.jsx` + CSS (visual only, props-driven)
+- `SkeletonCard.jsx` + CSS
+- `Navbar.module.css` (keep link paths and admin conditional)
+- Spotlight components + CSS
+- `AuthPage.module.css`, Login/Register layout markup
+
+### Edit with care (display + some logic)
+- `MatchCard.jsx` — preserve click handlers, status logic, forced LTR on scores
+- `BetModal.jsx` — preserve save API call, lock display, score bounds 0–20
+- `LiveBetsModal.jsx` — preserve outcome badge logic tied to scoring
+- `AllGamesPage.jsx` — preserve filter state and grouping logic
+- `HomePage.jsx` — large file; leaderboard filtering, polling callbacks, admin section
+
+### Do NOT touch unless explicitly asked
+| Area | Why fragile |
+|------|-------------|
+| `api/_lib/scoring.js` | Single source of truth for points |
+| `api/_routes/predictions.routes.js` | Kickoff lock, admin-edit audit trail |
+| `api/_routes/cron.routes.js` | Scheduled mirror writer |
+| `api/_routes/scores.routes.js` | Leaderboard computation + cache |
+| `api/_lib/mirrorRefresh.js` | Only mirror writer |
+| `api/_lib/football.js` | Upstream cache, transform, rate-limit protection |
+| `AuthContext.jsx` | Session boot, authReady timing, PWA refetch |
+| `serverApi.js` | Cookie auth, 401 anti-loop on `/auth/me` |
+| `App.jsx` ProtectedRoute | authReady gate prevents login bounce |
+| `useTodayMatches.js` | Adaptive polling intervals |
+| `useMinuteTick.js` | Shared countdown clock |
+| `matchTime.js` | Kickoff/timezone helpers |
+| `constants.js` TOURNAMENT_START | Tournament bet lock gate |
+| `vercel.json` | SPA rewrites + cron schedule |
+
+---
 
 ## How requests flow
 | URL | In production (Vercel) | In dev (`npm run dev:all`) |
@@ -149,24 +351,42 @@ World-Cup/
 
 The Express app inside the function is mounted **with the `/api/` prefix** because Vercel forwards `req.url` with the prefix intact. Local dev keeps full parity.
 
+**Vercel Cron:** `vercel.json` schedules `GET /api/cron/refresh-matches` every minute → `refreshMirror()` writes `matches_mirror` + `teams_mirror`.
+
 ## REST surface (under `/api`)
 | Method | Path | Auth | Purpose |
 |---|---|---|---|
-| GET  | `/api/health` | – | uptime probe |
+| GET  | `/api/health` | – | uptime probe + simulationMode flag |
 | POST | `/api/auth/register` | – | create user (status `PENDING`) |
-| POST | `/api/auth/login` | – | bcryptjs verify → JWT + sanitized user |
+| POST | `/api/auth/login` | – | bcryptjs verify → JWT in HttpOnly cookie |
+| POST | `/api/auth/logout` | – | clear session cookie |
+| GET  | `/api/auth/me` | cookie | always 200: `{ user }` or `{ user: null }` |
 | GET  | `/api/users` | admin | list all users |
+| GET  | `/api/users/tournament-bets` | user | aggregated tournament bet picks |
 | PATCH| `/api/users/:id/status` | admin | approve / reject (sends Resend email on APPROVED) |
+| PATCH| `/api/users/:id/role` | admin | promote/demote ADMIN ↔ USER |
 | DELETE | `/api/users/:id` | admin | cascade-delete user + predictions |
-| PATCH| `/api/users/:id/bet` | self/admin | update tournament bet |
+| PATCH| `/api/users/:id/bet` | self/admin | update tournament bet (winner/scorer/assist) |
 | GET  | `/api/predictions` | user | `?userId=`, `?userId=&matchId=`, or `?matchIds=1,2,3` |
-| POST | `/api/predictions` | user | upsert one prediction |
-| GET  | `/api/scores` | user | leaderboard (cheap — just reads `users.scores`) |
-| POST | `/api/scores/recalculate` | admin | re-tally from finished matches; optional tournament bonuses |
-| GET  | `/api/spotlight` | user | daily exact hero + chaos pick (funniest miss) + 7-day history each; Israel day; 30 s cache |
+| POST | `/api/predictions` | user | upsert one prediction (kickoff-locked; admins NOT exempt) |
+| POST | `/api/predictions/admin-edit` | admin | override any user's prediction (audit-first to `prediction_edits`) |
+| GET  | `/api/predictions/edits` | user | audit log (`?matchIds=` or `?limit=`); visible to all authenticated users |
+| GET  | `/api/scores` | user | leaderboard (computed from finished matches; 30 s cache) |
+| POST | `/api/scores/recalculate` | admin | re-tally + optional tournament bonuses; writes `users.scores` |
+| GET  | `/api/spotlight` | user | daily exact hero + chaos pick + 7-day history; Israel day; 30 s cache |
 | GET  | `/api/football/matches` | user | all WC 2026 matches (104), normalized shape, cached 30 s |
 | GET  | `/api/football/matches/today` | user | matches kicking off today (UTC), normalized shape |
-| GET  | `/api/football/teams` | user | all WC 2026 teams (for the Tournament Winner dropdown) |
+| GET  | `/api/football/teams` | user | all WC 2026 teams (Tournament Winner dropdown) |
+| GET  | `/api/cron/refresh-matches` | cron secret | mirror refresh (Vercel Cron every minute) |
+| POST | `/api/admin/mirror-backfill` | admin | manual mirror refresh (curl-only, not in UI) |
+| GET  | `/api/admin/mirror-compare` | admin | read-only live vs mirror diff (curl-only, not in UI) |
+
+### Normalized match shape (what the frontend receives)
+Internal shape only — never upstream field names:
+```javascript
+{ id, utcDate, status, stage, group, homeTeam: { name, crest, tla, … },
+  awayTeam: { … }, score: { home, away, fullTime }, minute, … }
+```
 
 ## Scoring rules (single source of truth: `api/_lib/scoring.js`)
 | Outcome | Points |
@@ -180,41 +400,48 @@ The Express app inside the function is mounted **with the `/api/` prefix** becau
 | Top Assist | 5 |
 
 ## Environment variables
-Set these in `.env` locally and in **Vercel project settings** for production.
+Set these in `.env` locally and in **Vercel project settings** for production. See `.env.example` for the full list.
 
-| Name | Where | Required |
-|---|---|---|
-| `SUPABASE_URL` | server | yes |
-| `SUPABASE_SERVICE_ROLE_KEY` | server | yes |
-| `JWT_SECRET` | server | yes |
-| `WC26_API_BASE_URL` | server | optional — defaults to `https://worldcup26.ir` |
-| `WC26_API_EMAIL` | server | optional — service account for upstream JWT if required |
-| `WC26_API_PASSWORD` | server | optional — paired with `WC26_API_EMAIL` |
-| `RESEND_API_KEY` | server | optional (no-op when blank) |
-| `RESEND_FROM_EMAIL` | server | optional |
-| `CLIENT_ORIGIN` | server | optional — locks CORS in prod |
-| `VITE_API_BASE_URL` | browser | optional — leave blank to use same-origin `/api` |
+| Name | Where | Required | Notes |
+|---|---|---|---|
+| `SUPABASE_URL` | server | yes | |
+| `SUPABASE_SERVICE_ROLE_KEY` | server | yes | |
+| `JWT_SECRET` | server | yes | |
+| `WC26_API_BASE_URL` | server | optional | defaults to `https://worldcup26.ir` |
+| `WC26_API_EMAIL` | server | optional | upstream JWT service account |
+| `WC26_API_PASSWORD` | server | optional | paired with `WC26_API_EMAIL` |
+| `RESEND_API_KEY` | server | optional | no-op when blank |
+| `RESEND_FROM_EMAIL` | server | optional | |
+| `CLIENT_ORIGIN` | server | optional | locks CORS in prod |
+| `USE_MATCHES_MIRROR` | server | optional | exact `"true"` → read Supabase mirror |
+| `CRON_SECRET` | server | optional | Bearer auth for Vercel Cron |
+| `VITE_API_BASE_URL` | browser | optional | leave blank for same-origin `/api` |
+| `VITE_SIMULATION_MODE` | both | optional | exact `"true"` → in-memory demo data; read-only writes |
 
-The browser **must never** see `SUPABASE_SERVICE_ROLE_KEY`, `WC26_API_PASSWORD`, `RESEND_API_KEY`, or `JWT_SECRET`.
+The browser **must never** see `SUPABASE_SERVICE_ROLE_KEY`, `WC26_API_PASSWORD`, `RESEND_API_KEY`, `JWT_SECRET`, or `CRON_SECRET`.
+
+**Simulation mode:** When `VITE_SIMULATION_MODE=true`, backend serves mock data from `api/mock/worldCupSimulation.js`; all writes return 403. Frontend shows orange `SimulationBanner`. **Never set in production Vercel env** — Vite bakes it into the build.
 
 ## Conventions every agent must follow
 
 ### Frontend
 - All user-visible text goes through `useTranslation()` and lives in both `locales/en.json` AND `locales/he.json`. **Never** add a key to one without the other.
-- Use logical CSS properties (`margin-inline-start/end`, `padding-inline-*`, `inset-inline-*`) so layouts flip cleanly in RTL. Avoid `margin-left/right` unless the side is intentionally physical.
+- Use logical CSS properties (`margin-inline-start/end`, `padding-inline-*`, `inset-inline-*`) so layouts flip cleanly in RTL. Avoid `margin-left/right` unless the side is intentionally physical (safe-area insets).
 - Date/time formatting: `toLocaleDateString(locale, …)` where `locale = i18n.resolvedLanguage === 'he' ? 'he-IL' : 'en-GB'`.
-- Reuse: `AuthContext` (auth + users + scores), `serverApi` (axios with JWT + 401 handler), `useMatches` (session-cached schedule), `useTodayMatches` (smart polling).
-- CSS Modules only — no global classes, no Tailwind, no styled-components.
+- Reuse: `AuthContext` (auth + users + scores), `serverApi` (axios with cookie auth + 401 handler), `useMatches` (session-cached schedule), `useTodayMatches` (smart polling).
+- CSS Modules only — no global classes (except `index.css` utilities), no Tailwind, no styled-components.
 - Mantine components must work in RTL — `MantineDirectionSync` already wires this; do not duplicate.
+- Prefer editing `*.module.css` over JSX when doing UI-only work. Do not refactor unrelated files.
 
 ### Backend (Vercel functions)
 - Files under `api/` are **CommonJS** (`require`/`module.exports`) — `api/package.json` enforces this. Files under `src/` are ESM.
 - Never call `createClient()` at module load. Use the lazy `supabase` Proxy from `api/_lib/supabase.js`.
 - Every worldcup26.ir call MUST go through `wc26Request()` / `fetchUpstream()` in `api/_lib/football.js` so it shares the cache + single-flight registry. Never call `axios.get('https://worldcup26.ir/...')` directly from a route file.
-- All external football data is normalized server-side via `transformGame` / `transformTeam` in `api/_lib/football.js`. **Route handlers never leak upstream field names (`home_team_id`, `time_elapsed`, etc.) to the browser** — the frontend speaks the internal shape (`{ id, utcDate, status, stage, homeTeam: { name, crest, … }, score: { home, away, fullTime }, … }`).
+- All external football data is normalized server-side via `transformGame` / `transformTeam` in `api/_lib/football.js`. **Route handlers never leak upstream field names (`home_team_id`, `time_elapsed`, etc.) to the browser** — the frontend speaks the internal shape.
 - Errors: throw or `next(err)`. The central handler in `_lib/errorHandler.js` sanitizes DB errors to a generic message; route-level errors with `err.status` pass through.
-- Auth: `requireAuth` first, `requireAdmin` second (it relies on `req.user`).
+- Auth: `requireAuth` first, `requireAdmin` second, `requireFreshAdmin` for sensitive admin mutations (re-validates role from DB).
 - Users can only mutate their own data unless admin — every protected route enforces this server-side, even if the client already filtered.
+- Mirror writes ONLY via `refreshMirror()` in `api/_lib/mirrorRefresh.js` — called by cron and admin backfill. Never write mirror tables from user-facing routes.
 
 ### PWA
 - Icons live in `public/`; the manifest is generated by `vite-plugin-pwa` from `vite.config.js`. To regenerate after replacing the source icon, run:
@@ -229,10 +456,11 @@ The browser **must never** see `SUPABASE_SERVICE_ROLE_KEY`, `WC26_API_PASSWORD`,
 3. Document the new endpoint in this control file's REST surface table.
 
 ## Known follow-ups (pick these up as they unblock)
-- **`TOP_SCORERS_LIST` and `TOP_ASSISTS_LIST` are intentionally empty arrays** in `src/utils/constants.js`. The Profile page dropdowns AND the `TopScorersPage` both read from these lists. The owner will paste the final names; agents must not invent them.
-- Knockout bracket slots in worldcup26.ir may show placeholder labels (`Winner Match 74`, etc.) until teams are determined. `AllGamesPage` shows a "Schedule Not Available Yet" empty state if `/get/games` returns no events.
+- **`TOP_SCORERS_LIST` and `TOP_ASSISTS_LIST`** in `src/utils/constants.js` may still have placeholder tiers. Profile dropdowns AND `TopScorersPage` read from these lists. The owner supplies final names; agents must not invent them.
+- Knockout bracket slots in worldcup26.ir may show placeholder labels (`Winner Match 74`, etc.) until teams are determined. `AllGamesPage` shows an empty state if no events returned.
 - **Match IDs are worldcup26 `1`–`104`**, not TheSportsDB `idEvent` values. Any predictions stored under old IDs will not join to the new schedule.
 - The admin must run **POST `/api/scores/recalculate`** after tournament end with `{ tournamentWinner, actualTopScorer, actualTopAssist }` to award the 15/5/5 bonus points. The HomePage admin panel exposes this UI.
+- **`USE_MATCHES_MIRROR` rollout:** verify via `GET /api/admin/mirror-compare` (all categories match) before enabling in production.
 
 ## Hard "do not"s
 - Do **not** re-introduce the deleted `server/` Express folder or any non-Vercel host.
@@ -242,4 +470,6 @@ The browser **must never** see `SUPABASE_SERVICE_ROLE_KEY`, `WC26_API_PASSWORD`,
 - Do **not** re-introduce a generic pass-through proxy at `/api/football/*`. The proxy is intentionally narrow: a handful of typed, normalized endpoints so the upstream schema can be swapped without touching the frontend.
 - Do **not** invent player names for `TOP_SCORERS_LIST` / `TOP_ASSISTS_LIST`. The owner supplies them.
 - Do **not** add a new top-level dependency without first checking whether existing libs (Mantine, axios, react-router) already cover the need.
+- Do **not** change scoring logic, auth logic, database schema, API behavior, cron behavior, or prediction locking rules unless the owner explicitly asks.
+- Do **not** set `VITE_SIMULATION_MODE=true` in production Vercel env.
 - Do **not** edit the front-matter `description` of this file or the "Your role" / "What this app is" sections without explicit owner approval — those are product intent, not implementation detail.
