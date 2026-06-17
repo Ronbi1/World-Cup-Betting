@@ -11,7 +11,7 @@ import styles from './Podium.module.css';
 //
 // `currentUserId` highlights the tile belonging to the viewer regardless
 // of where they sit on the podium (or no tile at all if they're not top 3).
-export default function Podium({ top3, currentUserId }) {
+export default function Podium({ top3, currentUserId, onPlayerClick }) {
   const { t } = useTranslation();
 
   if (!top3 || top3.length === 0) return null;
@@ -31,30 +31,59 @@ export default function Podium({ top3, currentUserId }) {
       {slots.map(({ row, rank, tone }) => (
         <li
           key={tone}
-          className={`${styles.tile} ${styles[`tile_${tone}`]} ${rank === 1 ? styles.tileFirst : ''} ${row?.id === currentUserId ? styles.tileYou : ''} ${!row ? styles.tileEmpty : ''}`}
-          aria-label={row ? `${rank}: ${row.name} — ${row.points} ${t('leaderboard.points')}` : undefined}
+          className={`${styles.tile} ${styles[`tile_${tone}`]} ${rank === 1 ? styles.tileFirst : ''} ${row?.id === currentUserId ? styles.tileYou : ''} ${!row ? styles.tileEmpty : ''} ${row && onPlayerClick ? styles.tileClickable : ''}`}
         >
-          <span className={`${styles.rankMark} numerals`}>{rank}</span>
           {row ? (
-            <>
-              <span className={styles.name} title={row.name}>{row.name}</span>
-              <span className={styles.pointsRow}>
-                <span className={`${styles.pointsValue} numerals`}>{row.points}</span>
-                <span className={styles.pointsUnit}>{t('home.hero.pts')}</span>
-              </span>
-              <span className={styles.statsRow}>
-                <span className="numerals">{row.exactScores}</span>
-                <span className={styles.statsLabel}>{t('leaderboard.exact')}</span>
-                <span className={styles.statsDot} aria-hidden="true">·</span>
-                <span className="numerals">{row.correctResults}</span>
-                <span className={styles.statsLabel}>{t('leaderboard.results')}</span>
-              </span>
-              {row.id === currentUserId && (
-                <span className={styles.youTag}>{t('leaderboard.you')}</span>
-              )}
-            </>
+            onPlayerClick ? (
+              <button
+                type="button"
+                className={styles.tileBtn}
+                onClick={() => onPlayerClick(row)}
+                title={t('playerScore.openBreakdown')}
+                aria-label={`${rank}: ${row.name} — ${row.points} ${t('leaderboard.points')}`}
+              >
+                <span className={`${styles.rankMark} numerals`} aria-hidden="true">{rank}</span>
+                <span className={styles.name} title={row.name}>{row.name}</span>
+                <span className={styles.pointsRow}>
+                  <span className={`${styles.pointsValue} numerals`}>{row.points}</span>
+                  <span className={styles.pointsUnit}>{t('home.hero.pts')}</span>
+                </span>
+                <span className={styles.statsRow}>
+                  <span className="numerals">{row.exactScores}</span>
+                  <span className={styles.statsLabel}>{t('leaderboard.exact')}</span>
+                  <span className={styles.statsDot} aria-hidden="true">·</span>
+                  <span className="numerals">{row.correctResults}</span>
+                  <span className={styles.statsLabel}>{t('leaderboard.results')}</span>
+                </span>
+                {row.id === currentUserId && (
+                  <span className={styles.youTag}>{t('leaderboard.you')}</span>
+                )}
+              </button>
+            ) : (
+              <>
+                <span className={`${styles.rankMark} numerals`} aria-hidden="true">{rank}</span>
+                <span className={styles.name} title={row.name}>{row.name}</span>
+                <span className={styles.pointsRow}>
+                  <span className={`${styles.pointsValue} numerals`}>{row.points}</span>
+                  <span className={styles.pointsUnit}>{t('home.hero.pts')}</span>
+                </span>
+                <span className={styles.statsRow}>
+                  <span className="numerals">{row.exactScores}</span>
+                  <span className={styles.statsLabel}>{t('leaderboard.exact')}</span>
+                  <span className={styles.statsDot} aria-hidden="true">·</span>
+                  <span className="numerals">{row.correctResults}</span>
+                  <span className={styles.statsLabel}>{t('leaderboard.results')}</span>
+                </span>
+                {row.id === currentUserId && (
+                  <span className={styles.youTag}>{t('leaderboard.you')}</span>
+                )}
+              </>
+            )
           ) : (
-            <span className={styles.emptySlot}>—</span>
+            <>
+              <span className={`${styles.rankMark} numerals`} aria-hidden="true">{rank}</span>
+              <span className={styles.emptySlot}>—</span>
+            </>
           )}
         </li>
       ))}

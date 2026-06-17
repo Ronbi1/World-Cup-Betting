@@ -13,6 +13,7 @@ import BetModal from '../components/BetModal';
 import LiveBetsModal from '../components/LiveBetsModal';
 import LiveScoreBanner from '../components/LiveScoreBanner';
 import Podium from '../components/Podium';
+import PlayerScoreModal from '../components/PlayerScoreModal';
 import SpotlightPair from '../components/SpotlightPair';
 import { useSpotlight } from '../hooks/useSpotlight';
 import styles from './HomePage.module.css';
@@ -75,6 +76,13 @@ export default function HomePage() {
   const [bonusTournamentWinner, setBonusTournamentWinner] = useState('');
   const [bonusTopScorer, setBonusTopScorer] = useState('');
   const [bonusTopAssist, setBonusTopAssist] = useState('');
+  const [scoreModalPlayer, setScoreModalPlayer] = useState(null);
+  const [scoreModalOpened, setScoreModalOpened] = useState(false);
+
+  const handlePlayerClick = (row) => {
+    setScoreModalPlayer(row);
+    setScoreModalOpened(true);
+  };
 
   // Click branching:
   //   • pre-match (not started)  → BetModal: place / edit your prediction
@@ -333,13 +341,18 @@ export default function HomePage() {
             <p className={styles.empty}>{t('home.leaderboardEmpty')}</p>
           ) : (
             <>
-              <Podium top3={top3} currentUserId={user?.id} />
+              <Podium
+                top3={top3}
+                currentUserId={user?.id}
+                onPlayerClick={handlePlayerClick}
+              />
               {rest.length > 0 && (
                 <LeaderboardTable
                   rows={rest}
                   startRank={top3.length + 1}
                   styles={styles}
                   t={t}
+                  onPlayerClick={handlePlayerClick}
                 />
               )}
             </>
@@ -360,6 +373,13 @@ export default function HomePage() {
         currentUserId={user?.id}
         opened={liveBetsOpened}
         onClose={() => setLiveBetsOpened(false)}
+      />
+
+      <PlayerScoreModal
+        player={scoreModalPlayer}
+        currentUserId={user?.id}
+        opened={scoreModalOpened}
+        onClose={() => setScoreModalOpened(false)}
       />
     </main>
   );
@@ -389,7 +409,7 @@ function saveRankSnapshot(snapshot) {
   }
 }
 
-function LeaderboardTable({ rows, startRank, styles, t }) {
+function LeaderboardTable({ rows, startRank, styles, t, onPlayerClick }) {
   const [expandedId, setExpandedId] = useState(null);
   // Read once on mount; we compare against this for the lifetime of the
   // component, then refresh on unmount so the next visit sees today's order
@@ -433,7 +453,22 @@ function LeaderboardTable({ rows, startRank, styles, t }) {
             const hasAnyBet = row.bet?.winningTeam || row.bet?.topScorer || row.bet?.topAssist;
             return (
               <Fragment key={row.id}>
-                <tr className={row.isCurrentUser ? styles.currentUserRow : ''}>
+                <tr
+                  className={`${row.isCurrentUser ? styles.currentUserRow : ''} ${onPlayerClick ? styles.clickableRow : ''}`}
+                  onClick={onPlayerClick ? () => onPlayerClick(row) : undefined}
+                  role={onPlayerClick ? 'button' : undefined}
+                  tabIndex={onPlayerClick ? 0 : undefined}
+                  onKeyDown={
+                    onPlayerClick
+                      ? (e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            onPlayerClick(row);
+                          }
+                        }
+                      : undefined
+                  }
+                >
                   <td className={`${styles.rank} numerals`}>
                     <span className={styles.rankInner}>
                       <span>{rank}</span>
@@ -457,13 +492,16 @@ function LeaderboardTable({ rows, startRank, styles, t }) {
                   </td>
                   <td className={styles.playerCell}>
                     <span className={styles.playerInner}>
-                      <span className={styles.playerName} title={row.name}>{row.name}</span>
+                      <span className={styles.playerName}>{row.name}</span>
                       {row.isCurrentUser && <span className={styles.youTag}>{t('leaderboard.you')}</span>}
                       {hasAnyBet && (
                         <button
                           type="button"
                           className={`${styles.expandToggle} ${isExpanded ? styles.expandToggleOpen : ''}`}
-                          onClick={() => toggleExpanded(row.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleExpanded(row.id);
+                          }}
                           aria-label={isExpanded ? 'Hide bets' : 'Show bets'}
                           aria-expanded={isExpanded}
                         >
