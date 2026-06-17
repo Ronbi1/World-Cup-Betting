@@ -371,6 +371,27 @@
     },
     "editedBadge": "Edited by admin"
   },
+  "playerScore": {
+    "title": "{{name}} — Score Breakdown",
+    "openBreakdown": "View score breakdown",
+    "totalPoints": "Total Points",
+    "matchPointsSubtotal": "Match points",
+    "tournamentBonus": "Tournament bonus",
+    "streakBonus": "Streak bonus",
+    "streakBonusNote": "+{{points}} exact-score streak bonus (3 in a row)",
+    "syncNote": "Match data is refreshing — totals update when scores sync.",
+    "empty": "No matches to show yet.",
+    "pending": "—",
+    "virtualBet": "Default 0–0 (no bet saved)",
+    "privacyNote": "Only started matches are shown for other players.",
+    "tournamentBonusNote": "+{{points}} tournament bonus (winner / top scorer / assist)",
+    "col": {
+      "match": "Match",
+      "bet": "Bet",
+      "result": "Score",
+      "points": "Pts"
+    }
+  },
   "common": {
     "yes": "Yes",
     "no": "No",

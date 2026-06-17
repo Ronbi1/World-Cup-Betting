@@ -372,6 +372,27 @@
     },
     "editedBadge": "נערך על-ידי מנהל"
   },
+  "playerScore": {
+    "title": "{{name}} — פירוט נקודות",
+    "openBreakdown": "צפה בפירוט הנקודות",
+    "totalPoints": "סה״כ נקודות",
+    "matchPointsSubtotal": "נקודות ממשחקים",
+    "tournamentBonus": "בונוס טורניר",
+    "streakBonus": "בונוס רצף",
+    "streakBonusNote": "+{{points}} בונוס רצף פגיעות בול (3 ברצף)",
+    "syncNote": "נתוני המשחקים מתעדכנים — הסכומים יתיישרו כשהתוצאות יסתנכרנו.",
+    "empty": "אין משחקים להצגה עדיין.",
+    "pending": "—",
+    "virtualBet": "ברירת מחדל 0–0 (לא נשמר ניחוש)",
+    "privacyNote": "לשחקנים אחרים מוצגים רק משחקים שהתחילו.",
+    "tournamentBonusNote": "+{{points}} בונוס טורניר (מנצחת / מלך שערים / בישולים)",
+    "col": {
+      "match": "משחק",
+      "bet": "ניחוש",
+      "result": "תוצאה",
+      "points": "נק׳"
+    }
+  },
   "common": {
     "yes": "כן",
     "no": "לא",

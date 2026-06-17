@@ -42,6 +42,37 @@
 
 .tile:hover { transform: translateY(-2px); }
 
+.tileClickable {
+  padding: 0;
+  cursor: pointer;
+}
+.tileClickable:hover { border-color: var(--clr-accent); }
+
+.tileBtn {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.3rem;
+  width: 100%;
+  height: 100%;
+  padding: 1.5rem 0.85rem 1.1rem;
+  background: none;
+  border: none;
+  border-radius: inherit;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-align: center;
+}
+
+.tileClickable.tileFirst .tileBtn {
+  padding-top: 2rem;
+}
+
 /* Huge condensed rank numeral as a background watermark — sits behind
    everything via z-index, hugged to the upper portion of the tile. */
 .rankMark {
@@ -211,6 +242,8 @@
 @media (max-width: 600px) {
   .podium { gap: 0.5rem; }
   .tile { min-height: 130px; padding: 1.1rem 0.5rem 0.9rem; border-radius: 12px; }
+  .tileClickable { padding: 0; }
+  .tileClickable .tileBtn { padding: 1.1rem 0.5rem 0.9rem; }
   .tileFirst { min-height: 160px; }
   .rankMark { font-size: 5.5rem; }
   .tileFirst .rankMark { font-size: 6.8rem; }
@@ -223,6 +256,8 @@
 
 @media (max-width: 380px) {
   .tile { padding: 0.9rem 0.35rem 0.75rem; }
+  .tileClickable { padding: 0; }
+  .tileClickable .tileBtn { padding: 0.9rem 0.35rem 0.75rem; }
   .name { font-size: 0.75rem; }
   .pointsUnit { display: none; }
 }

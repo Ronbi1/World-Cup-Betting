@@ -19,6 +19,29 @@ const router = express.Router();
 // server. Drift here would surface as a 400 on otherwise-valid clicks.
 const MAX_PREDICTION_SCORE = 20;
 
+// Resolve which of the given match ids have kicked off. Fail closed (empty
+// set) when the football provider is unreachable — same policy as matchIds.
+async function filterStartedMatchIds(requestedIds, req) {
+  if (!requestedIds.length) return [];
+
+  try {
+    const onTiming = ({ ms, ok, source }) => {
+      if (req?.timing) req.timing.markUpstream({ label: 'wc26.games', ms, ok, source });
+    };
+    const allMatches = await getSeasonMatches({ onTiming });
+    const matchById = new Map(allMatches.map((m) => [String(m.id), m]));
+    return requestedIds.filter((id) => {
+      const m = matchById.get(String(id));
+      return m ? hasMatchStarted(m) : false;
+    });
+  } catch (err) {
+    req.timing?.note('footballLookupFailed', true);
+    req.timing?.setError?.(`football lookup failed: ${err.message}`);
+    console.error('[predictions] match-status check failed:', err.message);
+    return [];
+  }
+}
+
 // GET /api/predictions
 //   ?userId=X             → all predictions by a user (ProfilePage)
 //   ?userId=X&matchId=Y   → single prediction (BetModal pre-fill)
@@ -33,15 +56,20 @@ router.get('/', requireAuth, async (req, res, next) => {
 
     if (userId) {
       req.timing?.note('mode', matchId ? 'userId+matchId' : 'userId');
-      if (req.user.id !== userId && req.user.role !== 'ADMIN') {
-        return res.status(403).json({ error: 'You can only view your own predictions.' });
-      }
+      const isSelf = req.user.id === userId;
+      const isAdmin = req.user.role === 'ADMIN';
 
       // SIMULATION ONLY — in-memory demo predictions; no Supabase read.
       if (isSimulationMode()) {
         let rows = getSimulationPredictionsForUser(String(userId));
         if (matchId) {
           rows = rows.filter((p) => String(p.match_id) === String(matchId));
+        }
+        if (!isSelf && !isAdmin) {
+          const startedIds = new Set(
+            await filterStartedMatchIds(rows.map((p) => String(p.match_id)), req),
+          );
+          rows = rows.filter((p) => startedIds.has(String(p.match_id)));
         }
         return res.json(rows);
       }
@@ -59,8 +87,21 @@ router.get('/', requireAuth, async (req, res, next) => {
         },
       );
       if (error) throw error;
-      req.timing?.note('rows', (data ?? []).length);
-      return res.json(data ?? []);
+
+      let rows = data ?? [];
+
+      // Pool members may inspect another player's bets only after kickoff
+      // (same privacy model as ?matchIds=). Self and admin see everything.
+      if (!isSelf && !isAdmin) {
+        const startedIds = new Set(
+          await filterStartedMatchIds(rows.map((p) => String(p.match_id)), req),
+        );
+        rows = rows.filter((p) => startedIds.has(String(p.match_id)));
+        req.timing?.note('startedFilter', true);
+      }
+
+      req.timing?.note('rows', rows.length);
+      return res.json(rows);
     }
 
     if (matchIds) {
@@ -73,28 +114,7 @@ router.get('/', requireAuth, async (req, res, next) => {
       req.timing?.note('requestedIds', requestedIds.length);
       if (requestedIds.length === 0) return res.json([]);
 
-      // Resolve requested IDs against the season matches cache and keep
-      // only those that have started.
-      let startedIds = [];
-      try {
-        const onTiming = ({ ms, ok, source }) => {
-          if (req?.timing) req.timing.markUpstream({ label: 'wc26.games', ms, ok, source });
-        };
-        const allMatches = await getSeasonMatches({ onTiming });
-        const matchById = new Map(allMatches.map((m) => [String(m.id), m]));
-        startedIds = requestedIds.filter((id) => {
-          const m = matchById.get(String(id));
-          return m ? hasMatchStarted(m) : false;
-        });
-      } catch (err) {
-        // If the football provider is unreachable, fail closed: return no
-        // predictions rather than leaking pre-kickoff bets. The frontend
-        // already shows nothing for matches it doesn't know about.
-        req.timing?.note('footballLookupFailed', true);
-        req.timing?.setError?.(`football lookup failed: ${err.message}`);
-        console.error('[predictions] match-status check failed:', err.message);
-        return res.json([]);
-      }
+      const startedIds = await filterStartedMatchIds(requestedIds, req);
 
       req.timing?.note('startedIds', startedIds.length);
       if (startedIds.length === 0) return res.json([]);
