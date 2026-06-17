@@ -8,6 +8,19 @@ import { formatMatchDate, hasMatchStarted } from '../utils/matchTime';
 import { calcMatchPoints, computeExactScoreBonus } from '../utils/scoring';
 import styles from './PlayerScoreModal.module.css';
 
+function ScoreFrame({ home, away, virtual, title }) {
+  return (
+    <span
+      className={`${styles.scorePill} numerals ${virtual ? styles.virtualBet : ''}`}
+      title={title}
+    >
+      <span className={styles.scoreNum}>{home}</span>
+      <span className={styles.scoreSep} aria-hidden="true">–</span>
+      <span className={styles.scoreNum}>{away}</span>
+    </span>
+  );
+}
+
 function resolveBet(predMap, match) {
   const saved = predMap[String(match.id)];
   if (saved) return { home: saved.home, away: saved.away, virtual: false };
@@ -125,6 +138,7 @@ export default function PlayerScoreModal({ player, currentUserId, opened, onClos
   if (!player) return null;
 
   const exactBonus = player.exactScoreBonus ?? streakBonus;
+  const hasStreakBonus = exactBonus > 0;
   const leaderboardTotal = player.points ?? 0;
   const explainedTotal = matchPointsTotal + exactBonus;
   const tournamentBonusGap = Math.max(0, leaderboardTotal - explainedTotal);
@@ -149,6 +163,22 @@ export default function PlayerScoreModal({ player, currentUserId, opened, onClos
           <span className={styles.summaryLabel}>{t('playerScore.totalPoints')}</span>
           <span className={`${styles.summaryValue} numerals`}>{leaderboardTotal}</span>
         </div>
+        <div
+          className={styles.summaryItem}
+          title={hasStreakBonus ? t('leaderboard.exactBonusTooltip') : t('playerScore.streakBadgeEmpty')}
+        >
+          <span className={styles.summaryLabel}>{t('playerScore.streakBadgeLabel')}</span>
+          <span
+            className={`${styles.streakBadge} ${hasStreakBonus ? styles.streakBadgeEarned : styles.streakBadgePending}`}
+            aria-label={hasStreakBonus ? t('playerScore.streakBadgeEarned') : t('playerScore.streakBadgeEmpty')}
+          >
+            {hasStreakBonus ? (
+              <span className={styles.streakCheck} aria-hidden="true">✓</span>
+            ) : (
+              <span className={styles.streakPending} aria-hidden="true">—</span>
+            )}
+          </span>
+        </div>
       </div>
 
       {loading ? (
@@ -163,7 +193,7 @@ export default function PlayerScoreModal({ player, currentUserId, opened, onClos
             <table className={styles.table}>
               <thead>
                 <tr>
-                  <th>{t('playerScore.col.match')}</th>
+                  <th className={styles.colMatch}>{t('playerScore.col.match')}</th>
                   <th className={styles.colCenter}>{t('playerScore.col.bet')}</th>
                   <th className={styles.colCenter}>{t('playerScore.col.result')}</th>
                   <th className={styles.colPoints}>{t('playerScore.col.points')}</th>
@@ -185,7 +215,7 @@ export default function PlayerScoreModal({ player, currentUserId, opened, onClos
 
                   return (
                     <tr key={match.id} className={rowClass}>
-                      <td>
+                      <td className={styles.colMatch}>
                         <span className={styles.matchTeams}>
                           {homeName} {t('matchCard.vs')} {awayName}
                         </span>
@@ -193,25 +223,21 @@ export default function PlayerScoreModal({ player, currentUserId, opened, onClos
                       </td>
                       <td className={styles.colCenter}>
                         {bet ? (
-                          <span
-                            className={`${styles.scoreChip} numerals ${bet.virtual ? styles.virtualBet : ''}`}
+                          <ScoreFrame
+                            home={bet.home}
+                            away={bet.away}
+                            virtual={bet.virtual}
                             title={bet.virtual ? t('playerScore.virtualBet') : undefined}
-                          >
-                            {bet.home}–{bet.away}
-                          </span>
+                          />
                         ) : (
                           '—'
                         )}
                       </td>
                       <td className={styles.colCenter}>
                         {finishedWithScore ? (
-                          <span className={`${styles.scoreChip} numerals`}>
-                            {actual.home}–{actual.away}
-                          </span>
+                          <ScoreFrame home={actual.home} away={actual.away} />
                         ) : hasMatchStarted(match) ? (
-                          <span className={`${styles.scoreChip} numerals`}>
-                            {actual?.home ?? 0}–{actual?.away ?? 0}
-                          </span>
+                          <ScoreFrame home={actual?.home ?? 0} away={actual?.away ?? 0} />
                         ) : (
                           '—'
                         )}
