@@ -39,9 +39,24 @@ function buildExactHitFixture(userId, hitCount, totalMatches = hitCount) {
   return { finishedMatches, predictions };
 }
 
+function buildPatternFixture(userId, pattern) {
+  const finishedMatches = [];
+  const predictions = [];
+  for (let i = 0; i < pattern.length; i += 1) {
+    const matchId = i + 1;
+    finishedMatches.push(makeMatch(matchId, 1, 0));
+    if (pattern[i]) {
+      predictions.push(makePrediction(userId, matchId, 1, 0));
+    } else {
+      predictions.push(makePrediction(userId, matchId, 9, 9));
+    }
+  }
+  return { finishedMatches, predictions };
+}
+
 // ─── Tests ───────────────────────────────────────────────────────────────────
 
-describe('computeLeaderboard — exact-score bonus threshold', () => {
+describe('computeLeaderboard — exact-score streak bonus', () => {
   it.each([
     [0, 0],
     [1, 0],
@@ -52,7 +67,7 @@ describe('computeLeaderboard — exact-score bonus threshold', () => {
     [9, 3],
     [12, 3],
   ])(
-    'with %i exact hits → exactScoreBonus = %i (bonus never stacks)',
+    'with %i consecutive exact hits → exactScoreBonus = %i (bonus never stacks)',
     (hitCount, expectedBonus) => {
       const userId = 'u1';
       const users = [makeUser(userId)];
@@ -88,6 +103,66 @@ describe('computeLeaderboard — exact-score bonus threshold', () => {
     expect(row.exactScoreBonus).toBe(POINTS.EXACT_SCORE_BONUS);
     expect(POINTS.EXACT_SCORE_BONUS).toBe(3);
     expect(POINTS.EXACT_SCORE_BONUS_MIN).toBe(3);
+  });
+
+  it('does not award bonus for 3 total exact hits that are not consecutive', () => {
+    const userId = 'u-nonconsecutive';
+    const { finishedMatches, predictions } = buildPatternFixture(userId, [
+      true,
+      false,
+      true,
+      false,
+      true,
+    ]);
+    const [row] = computeLeaderboard({
+      users: [makeUser(userId)],
+      finishedMatches,
+      predictions,
+    });
+
+    expect(row.exactScores).toBe(3);
+    expect(row.exactScoreBonus).toBe(0);
+    expect(row.points).toBe(3 * POINTS.EXACT_BASE);
+  });
+
+  it('awards bonus when the 3rd consecutive exact hit appears later in the run', () => {
+    const userId = 'u-late-streak';
+    const { finishedMatches, predictions } = buildPatternFixture(userId, [
+      true,
+      false,
+      true,
+      true,
+      true,
+    ]);
+    const [row] = computeLeaderboard({
+      users: [makeUser(userId)],
+      finishedMatches,
+      predictions,
+    });
+
+    expect(row.exactScores).toBe(4);
+    expect(row.exactScoreBonus).toBe(POINTS.EXACT_SCORE_BONUS);
+    expect(row.points).toBe(4 * POINTS.EXACT_BASE + POINTS.EXACT_SCORE_BONUS);
+  });
+
+  it('resets the streak after a miss — two exact, miss, three exact still qualifies', () => {
+    const userId = 'u-reset-streak';
+    const { finishedMatches, predictions } = buildPatternFixture(userId, [
+      true,
+      true,
+      false,
+      true,
+      true,
+      true,
+    ]);
+    const [row] = computeLeaderboard({
+      users: [makeUser(userId)],
+      finishedMatches,
+      predictions,
+    });
+
+    expect(row.exactScores).toBe(5);
+    expect(row.exactScoreBonus).toBe(POINTS.EXACT_SCORE_BONUS);
   });
 });
 

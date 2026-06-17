@@ -13,10 +13,10 @@
 //   Top assist     → 15 pts
 //
 // Leaderboard bonus (one-time, applied at compute time):
-//   Reaching at least 3 exact-score hits across the tournament → +3 pts.
-//   The bonus is awarded once and does NOT stack as more exact-score hits
-//   accumulate. Because 0-0 is the default prediction state in this app,
-//   virtual 0-0 exact hits count toward the threshold just like saved ones.
+//   3 consecutive exact-score hits (in kickoff order) → +3 pts.
+//   The bonus is awarded once and does NOT stack if the streak grows
+//   beyond 3. Because 0-0 is the default prediction state in this app,
+//   virtual 0-0 exact hits count toward the streak just like saved ones.
 //
 // Missing prediction handling:
 //   A user who never saved a prediction for a finished match is treated
@@ -99,7 +99,9 @@ const normalize = (s) => (s ?? '').toString().trim().toLowerCase();
 //   exactScoreBonus is 0 or POINTS.EXACT_SCORE_BONUS — already included in `points`.
 function computeLeaderboard({ users, finishedMatches, predictions, tournamentOverrides = null }) {
   const safeUsers = Array.isArray(users) ? users : [];
-  const safeMatches = Array.isArray(finishedMatches) ? finishedMatches : [];
+  const safeMatches = (Array.isArray(finishedMatches) ? finishedMatches : [])
+    .slice()
+    .sort((a, b) => new Date(a.utcDate || 0) - new Date(b.utcDate || 0));
   const safePredictions = Array.isArray(predictions) ? predictions : [];
 
   // Build lookup maps once.
@@ -114,6 +116,8 @@ function computeLeaderboard({ users, finishedMatches, predictions, tournamentOve
     let points = 0;
     let correctResults = 0;
     let exactScores = 0;
+    let consecutiveExact = 0;
+    let earnedExactBonus = false;
 
     for (const match of safeMatches) {
       const key = `${u.id}:${String(match.id)}`;
@@ -122,16 +126,21 @@ function computeLeaderboard({ users, finishedMatches, predictions, tournamentOve
       const r = calcPoints(pred, match);
       points += r.points;
       if (r.correct) correctResults += 1;
-      if (r.exact) exactScores += 1;
+      if (r.exact) {
+        exactScores += 1;
+        consecutiveExact += 1;
+        if (consecutiveExact >= POINTS.EXACT_SCORE_BONUS_MIN) {
+          earnedExactBonus = true;
+        }
+      } else {
+        consecutiveExact = 0;
+      }
     }
 
-    // One-time exact-score bonus. Awarded as soon as the user reaches the
-    // threshold; does NOT stack. Computed at the leaderboard level so per-match
-    // scoring (calcPoints) stays untouched.
-    const exactScoreBonus =
-      exactScores >= POINTS.EXACT_SCORE_BONUS_MIN
-        ? POINTS.EXACT_SCORE_BONUS
-        : 0;
+    // One-time exact-score streak bonus. Awarded when the user hits 3 exact
+    // scores in a row; does NOT stack. Computed at the leaderboard level so
+    // per-match scoring (calcPoints) stays untouched.
+    const exactScoreBonus = earnedExactBonus ? POINTS.EXACT_SCORE_BONUS : 0;
     points += exactScoreBonus;
 
     // Tournament bonus: admin overrides win, otherwise read persisted.
