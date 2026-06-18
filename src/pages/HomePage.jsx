@@ -41,14 +41,12 @@ export default function HomePage() {
     matches: todayMatches,
     loading: loadingMatches,
     error: matchError,
-    lastUpdated,
-    refresh: refreshMatches,
     applyLiveUpdate,
   } = useTodayMatches({ onMatchFinished: handleMatchFinished });
 
   // Supabase Realtime: instant score/event push + goal/card toasts. No-op
   // (polling stays in charge) when realtime env vars aren't configured.
-  const { connected: realtimeConnected } = useLiveMatchChannel({ onMatch: applyLiveUpdate });
+  useLiveMatchChannel({ onMatch: applyLiveUpdate });
 
   // Provisional leaderboard overlay: real scores + live in-play deltas,
   // recomputed locally on every socket push. No per-tick API calls; the real
@@ -202,12 +200,7 @@ export default function HomePage() {
   return (
     <main className={styles.page}>
       {!loadingMatches && todayMatches.length > 0 && (
-        <LiveScoreBanner
-          matches={todayMatches}
-          lastUpdated={lastUpdated}
-          onRefresh={refreshMatches}
-          fallback={!realtimeConnected}
-        />
+        <LiveScoreBanner matches={todayMatches} />
       )}
 
       <section className={styles.hero}>
