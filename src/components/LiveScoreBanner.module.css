@@ -1,4 +1,7 @@
 .banner {
+  /* LTR island — same rationale as the match card: the live scoreline always
+     reads home-left / away-right. */
+  direction: ltr;
   background: linear-gradient(135deg, #0a1f2e 0%, #0a1628 50%, #11224a 100%);
   border: 1px solid var(--clr-accent-green-deep);
   border-radius: 16px;

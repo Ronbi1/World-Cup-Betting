@@ -10,6 +10,10 @@
    matches, freeing the centered pill for the real score. */
 .card {
   position: relative;
+  /* The match card is an LTR island: scoreline, timeline and score always read
+     home-left / away-right in any language. Hebrew text still renders RTL
+     inside each badge/name; only the layout stays LTR. */
+  direction: ltr;
   background: linear-gradient(145deg, var(--clr-surface) 0%, rgba(24, 37, 68, 0.95) 100%);
   border: 1px solid var(--clr-border);
   border-radius: 14px;
@@ -289,10 +293,6 @@
   pointer-events: none;
 }
 
-/* In RTL the stub mirrors to the opposite corner (via inset-inline-end on the
-   page's direction) — flip the playful tilt to match. */
-[dir='rtl'] .ticketStub { transform: rotate(-2deg); }
-
 .ticketStubLabel {
   font-weight: 700;
   font-size: 0.55rem;
@@ -400,7 +400,7 @@
    Kept separate from the accordion clip (.reportInner) so the grid-rows
    animation and the scroll container never fight over the same element. */
 .reportScroll {
-  max-height: 13rem;
+  max-height: 20rem;
   overflow-y: auto;
   overscroll-behavior: contain;
 }
