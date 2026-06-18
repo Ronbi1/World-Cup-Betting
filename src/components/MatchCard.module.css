@@ -427,13 +427,19 @@
 
 .eventMark { flex: 0 0 auto; }
 
-/* Goal — a gold ball-mark with a soft highlight + glow. */
+/* Goal — a white football with the classic pentagon, so it's unmistakable
+   against the rectangular yellow/red cards. */
 .markGoal {
-  width: 11px;
-  height: 11px;
+  width: 13px;
+  height: 13px;
   border-radius: 50%;
-  background: radial-gradient(circle at 34% 30%, #fff6d8 0%, var(--clr-accent-gold) 55%, var(--clr-accent-gold-deep) 100%);
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.25), 0 0 6px rgba(212, 175, 55, 0.45);
+  background:
+    radial-gradient(circle at 50% 50%, #181818 0 2px, transparent 2.4px),
+    radial-gradient(circle at 50% 6%, #181818 0 1px, transparent 1.3px),
+    radial-gradient(circle at 88% 66%, #181818 0 1px, transparent 1.3px),
+    radial-gradient(circle at 12% 66%, #181818 0 1px, transparent 1.3px),
+    #ffffff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.45), 0 0 5px rgba(255, 255, 255, 0.12);
 }
 
 /* Bookings — rotated chips that read as real referee cards. */
