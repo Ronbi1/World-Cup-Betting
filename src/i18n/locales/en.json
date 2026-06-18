@@ -142,6 +142,9 @@
     "vs": "vs",
     "yourPick": "Your pick: {{home}} – {{away}}",
     "halfTime": "Half-time",
+    "report": "Match report",
+    "bets": "Bets",
+    "noEvents": "No goals or cards yet",
     "countdown": {
       "soon": "Starts soon",
       "minutes": "Starts in {{minutes}}m",
@@ -156,6 +159,11 @@
     "finished": "FT",
     "postponed": "PPD",
     "cancelled": "CNX"
+  },
+  "liveToast": {
+    "goal": "GOAL!",
+    "yellow": "Yellow card",
+    "red": "Red card"
   },
   "allGames": {
     "title": "All Matches",
@@ -178,6 +186,7 @@
       "teamAll": "All Teams",
       "teamLabel": "Team"
     },
+    "playedGames": "Played games ({{count}})",
     "noMatchesFilter": "No matches match the current filter.",
     "loadError": "Failed to load matches: {{error}}",
     "scheduleNotAvailable": "Schedule Not Available Yet",

@@ -121,5 +121,21 @@ export function useTodayMatches({ onMatchFinished } = {}) {
 
   const refresh = useCallback(() => fetchData(false), [fetchData]);
 
-  return { matches, loading, error, lastUpdated, refresh };
+  // Merge a single match pushed over Supabase Realtime into the current set,
+  // so a live goal/card reflects instantly without waiting for the next poll.
+  // Only touches matches already in today's list; unknown ids are ignored.
+  const applyLiveUpdate = useCallback((row) => {
+    if (!row?.id) return;
+    setMatches((prev) => {
+      const idx = prev.findIndex((m) => String(m.id) === String(row.id));
+      if (idx === -1) return prev;
+      const nextArr = prev.slice();
+      nextArr[idx] = { ...nextArr[idx], ...row };
+      matchesRef.current = nextArr;
+      return nextArr;
+    });
+    setLastUpdated(new Date());
+  }, []);
+
+  return { matches, loading, error, lastUpdated, refresh, applyLiveUpdate };
 }

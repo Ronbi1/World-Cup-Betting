@@ -35,7 +35,9 @@ async function refreshMirror({
   // 2) Compute insert-vs-update deltas by pre-reading the existing IDs.
   //    Cheap (one indexed select per table).
   const [{ data: existingMatchIdsRaw, error: existingMatchErr }, { data: existingTeamIdsRaw, error: existingTeamErr }] = await Promise.all([
-    supabase.from('matches_mirror').select('id'),
+    supabase
+      .from('matches_mirror')
+      .select('id, status, home_score, away_score, time_elapsed, normalized'),
     supabase.from('teams_mirror').select('id'),
   ]);
   if (existingMatchErr) throw existingMatchErr;
@@ -43,35 +45,58 @@ async function refreshMirror({
   const existingMatchIds = new Set((existingMatchIdsRaw ?? []).map((r) => r.id));
   const existingTeamIds = new Set((existingTeamIdsRaw ?? []).map((r) => r.id));
 
+  // Live/finished matches are owned by the /api/cron/live-scores tick. The
+  // schedule refresh must NOT revert their dynamic fields (score/status/time/
+  // normalized) back to a possibly-staler worldcup26 snapshot. We keep those
+  // columns as-is for any match already past kickoff, and only refresh the
+  // schedule/team metadata. SCHEDULED matches (and brand-new rows) take the
+  // upstream values as before.
+  const existingMatchById = new Map((existingMatchIdsRaw ?? []).map((r) => [r.id, r]));
+  const LIVE_OWNED = new Set(['IN_PLAY', 'PAUSED', 'FINISHED']);
+
   // 3) Project rows. We store the entire transformGame output in `normalized`
   //    so the read side can reconstruct the wire shape verbatim. The flat
   //    columns exist only for indexing.
   const nowIso = new Date().toISOString();
 
-  const matchRows = normalizedMatches.map((m) => ({
-    id: m.id,
-    utc_date: m.utcDate,
-    status: m.status,
-    stage: m.stage,
-    group: m.group,
-    home_team_id: m.homeTeam?.id ?? null,
-    home_team_name: m.homeTeam?.name ?? null,
-    home_team_short_name: m.homeTeam?.shortName ?? null,
-    home_team_tla: m.homeTeam?.tla ?? null,
-    home_team_crest: m.homeTeam?.crest ?? null,
-    away_team_id: m.awayTeam?.id ?? null,
-    away_team_name: m.awayTeam?.name ?? null,
-    away_team_short_name: m.awayTeam?.shortName ?? null,
-    away_team_tla: m.awayTeam?.tla ?? null,
-    away_team_crest: m.awayTeam?.crest ?? null,
-    home_score: m.score?.fullTime?.home ?? null,
-    away_score: m.score?.fullTime?.away ?? null,
-    matchday: m.matchday ?? null,
-    time_elapsed: m.timeElapsed ?? null,
-    normalized: m,
-    source_updated_at: null,
-    mirror_updated_at: nowIso,
-  }));
+  const matchRows = normalizedMatches.map((m) => {
+    // Schedule/team metadata — always refreshed from upstream.
+    const row = {
+      id: m.id,
+      utc_date: m.utcDate,
+      status: m.status,
+      stage: m.stage,
+      group: m.group,
+      home_team_id: m.homeTeam?.id ?? null,
+      home_team_name: m.homeTeam?.name ?? null,
+      home_team_short_name: m.homeTeam?.shortName ?? null,
+      home_team_tla: m.homeTeam?.tla ?? null,
+      home_team_crest: m.homeTeam?.crest ?? null,
+      away_team_id: m.awayTeam?.id ?? null,
+      away_team_name: m.awayTeam?.name ?? null,
+      away_team_short_name: m.awayTeam?.shortName ?? null,
+      away_team_tla: m.awayTeam?.tla ?? null,
+      away_team_crest: m.awayTeam?.crest ?? null,
+      home_score: m.score?.fullTime?.home ?? null,
+      away_score: m.score?.fullTime?.away ?? null,
+      matchday: m.matchday ?? null,
+      time_elapsed: m.timeElapsed ?? null,
+      normalized: m,
+      source_updated_at: null,
+      mirror_updated_at: nowIso,
+    };
+
+    // Preserve the live tick's dynamic fields for any match it owns.
+    const existing = existingMatchById.get(m.id);
+    if (existing && LIVE_OWNED.has(existing.status)) {
+      row.status = existing.status;
+      row.home_score = existing.home_score;
+      row.away_score = existing.away_score;
+      row.time_elapsed = existing.time_elapsed;
+      row.normalized = existing.normalized;
+    }
+    return row;
+  });
 
   const teamRows = normalizedTeams.map((t) => ({
     id: t.id,

@@ -143,6 +143,9 @@
     "vs": "נגד",
     "yourPick": "הניחוש שלך: {{home}} – {{away}}",
     "halfTime": "מחצית",
+    "report": "דוח משחק",
+    "bets": "הימורים",
+    "noEvents": "אין שערים או כרטיסים עדיין",
     "countdown": {
       "soon": "מתחיל בקרוב",
       "minutes": "מתחיל בעוד {{minutes}} דקות",
@@ -157,6 +160,11 @@
     "finished": "סיום",
     "postponed": "נדחה",
     "cancelled": "בוטל"
+  },
+  "liveToast": {
+    "goal": "גול!",
+    "yellow": "כרטיס צהוב",
+    "red": "כרטיס אדום"
   },
   "allGames": {
     "title": "כל המשחקים",
@@ -179,6 +187,7 @@
       "teamAll": "כל הקבוצות",
       "teamLabel": "קבוצה"
     },
+    "playedGames": "משחקים שהסתיימו ({{count}})",
     "noMatchesFilter": "אין משחקים שתואמים את הסינון הנוכחי.",
     "loadError": "טעינת המשחקים נכשלה: {{error}}",
     "scheduleNotAvailable": "לוח המשחקים טרם זמין",
