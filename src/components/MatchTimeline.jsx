@@ -42,15 +42,18 @@ export default function MatchTimeline({ events, match }) {
     <ol className={styles.timeline}>
       {events.map((ev, i) => {
         const isHome = eventSide(ev, match) === 'home';
+        // A scoring play is always a goal — guards rows scraped before the
+        // "Penalty - Scored" → goal fix (which stored them as kind: 'red').
+        const kind = ev.scoringPlay ? 'goal' : ev.kind;
         const scorer = ev.players?.[0] || ev.team || '';
-        const tag = ev.kind === 'goal' ? eventTag(ev.text) : null;
+        const tag = kind === 'goal' ? eventTag(ev.text) : null;
         const markCls =
-          ev.kind === 'goal' ? styles.markGoal
-            : ev.kind === 'red' ? styles.markRed
+          kind === 'goal' ? styles.markGoal
+            : kind === 'red' ? styles.markRed
               : styles.markYellow;
         const kindLabel =
-          ev.kind === 'goal' ? t('liveToast.goal')
-            : ev.kind === 'red' ? t('liveToast.red')
+          kind === 'goal' ? t('liveToast.goal')
+            : kind === 'red' ? t('liveToast.red')
               : t('liveToast.yellow');
 
         const name = (

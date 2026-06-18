@@ -167,11 +167,13 @@ export default function MatchCard({ match, compact = false, onClick, onBets, now
       {showReport && (
         <div className={`${styles.reportWrap} ${expanded ? styles.reportOpen : ''}`}>
           <div className={styles.reportInner}>
-            {events.length > 0 ? (
-              <MatchTimeline events={events} match={match} />
-            ) : (
-              <p className={styles.reportEmpty}>{t('matchCard.noEvents')}</p>
-            )}
+            <div className={styles.reportScroll}>
+              {events.length > 0 ? (
+                <MatchTimeline events={events} match={match} />
+              ) : (
+                <p className={styles.reportEmpty}>{t('matchCard.noEvents')}</p>
+              )}
+            </div>
           </div>
         </div>
       )}
