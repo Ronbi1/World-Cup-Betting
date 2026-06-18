@@ -69,6 +69,9 @@ export default function MatchTimeline({ events, match }) {
           <li
             key={ev.id ?? `${ev.kind}-${i}`}
             className={`${styles.event} ${isHome ? styles.eventHome : styles.eventAway}`}
+            // Explicit row per event (chronological), so the 2-column grid
+            // never packs several events onto one shared row.
+            style={{ gridRow: i + 1 }}
             aria-label={`${ev.clock ?? ''} ${kindLabel} ${scorer}`.trim()}
           >
             {isHome ? <>{name}{mark}{min}</> : <>{min}{mark}{name}</>}
