@@ -153,6 +153,8 @@
   display: flex;
   align-items: center;
   gap: 0.3rem;
+  /* Keep "home – away" order in RTL — the flex would otherwise reverse it. */
+  direction: ltr;
 }
 
 .scoreNum {
