@@ -184,6 +184,7 @@
       "teamAll": "כל הקבוצות",
       "teamLabel": "קבוצה"
     },
+    "playedGames": "משחקים שהסתיימו ({{count}})",
     "noMatchesFilter": "אין משחקים שתואמים את הסינון הנוכחי.",
     "loadError": "טעינת המשחקים נכשלה: {{error}}",
     "scheduleNotAvailable": "לוח המשחקים טרם זמין",

@@ -183,6 +183,7 @@
       "teamAll": "All Teams",
       "teamLabel": "Team"
     },
+    "playedGames": "Played games ({{count}})",
     "noMatchesFilter": "No matches match the current filter.",
     "loadError": "Failed to load matches: {{error}}",
     "scheduleNotAvailable": "Schedule Not Available Yet",

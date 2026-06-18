@@ -1,10 +1,11 @@
-import { Fragment, useState, useEffect, useCallback, useMemo } from 'react';
+import { Fragment, useState, useEffect, useCallback, useMemo, useRef, useLayoutEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/useAuth';
 import { REG_STATUS, MATCH_STATUS } from '../utils/constants';
 import { isSimulationMode } from '../utils/simulation';
 import { useTodayMatches } from '../hooks/useTodayMatches';
 import { useLiveMatchChannel } from '../hooks/useLiveMatchChannel';
+import { useLiveLeaderboard } from '../hooks/useLiveLeaderboard';
 import { useMinuteTick } from '../hooks/useMinuteTick';
 import { useUserPredictions } from '../hooks/useUserPredictions';
 import { formatKickoffCountdown, formatMatchTime, hasMatchStarted } from '../utils/matchTime';
@@ -48,6 +49,11 @@ export default function HomePage() {
   // Supabase Realtime: instant score/event push + goal/card toasts. No-op
   // (polling stays in charge) when realtime env vars aren't configured.
   useLiveMatchChannel({ onMatch: applyLiveUpdate });
+
+  // Provisional leaderboard overlay: real scores + live in-play deltas,
+  // recomputed locally on every socket push. No per-tick API calls; the real
+  // `scores` are never mutated (this is a separate display array).
+  const { scores: liveScores } = useLiveLeaderboard({ baseScores: scores, matches: todayMatches });
 
   // Single shared minute-tick for all MatchCards rendered on this page.
   // Each card uses it to compute its own countdown text without spawning
@@ -125,7 +131,7 @@ export default function HomePage() {
   //   - regular users see the /scores response, which contains every approved
   //     user already
   const leaderboard = (isSimulationMode || !isAdmin
-    ? scores.map((s) => ({
+    ? liveScores.map((s) => ({
         id: s.userId,
         name: s.name,
         bet: null,
@@ -138,7 +144,7 @@ export default function HomePage() {
     : users
         .filter((u) => u.status === REG_STATUS.APPROVED && u.role !== 'ADMIN')
         .map((u) => {
-          const s = scores.find((sc) => sc.userId === u.id);
+          const s = liveScores.find((sc) => sc.userId === u.id);
           return {
             id: u.id,
             name: u.name,
@@ -431,6 +437,42 @@ function LeaderboardTable({ rows, startRank, styles, t, onPlayerClick }) {
     saveRankSnapshot(next);
   }, [rows, startRank]);
 
+  // FLIP: when the live leaderboard reorders, slide each row from its old
+  // position to its new one, and flash any row whose points changed. Pure DOM
+  // (inline transform + Web Animations API) — no library, no CSS-module edits.
+  const rowEls = useRef(new Map());
+  const prevTops = useRef(new Map());
+  const prevPoints = useRef(new Map());
+
+  useLayoutEffect(() => {
+    for (const row of rows) {
+      const el = rowEls.current.get(row.id);
+      if (!el) continue;
+
+      const newTop = el.offsetTop;
+      const oldTop = prevTops.current.get(row.id);
+      if (oldTop != null && oldTop !== newTop) {
+        const dy = oldTop - newTop;
+        el.style.transition = 'none';
+        el.style.transform = `translateY(${dy}px)`;
+        requestAnimationFrame(() => {
+          el.style.transition = 'transform 480ms cubic-bezier(.2, .8, .2, 1)';
+          el.style.transform = '';
+        });
+      }
+      prevTops.current.set(row.id, newTop);
+
+      const oldPts = prevPoints.current.get(row.id);
+      if (oldPts != null && oldPts !== row.points && typeof el.animate === 'function') {
+        el.animate(
+          [{ backgroundColor: 'rgba(63, 185, 80, 0.30)' }, { backgroundColor: 'transparent' }],
+          { duration: 1100, easing: 'ease-out' },
+        );
+      }
+      prevPoints.current.set(row.id, row.points);
+    }
+  });
+
   const toggleExpanded = (id) => {
     setExpandedId((prev) => (prev === id ? null : id));
   };
@@ -460,6 +502,10 @@ function LeaderboardTable({ rows, startRank, styles, t, onPlayerClick }) {
             return (
               <Fragment key={row.id}>
                 <tr
+                  ref={(el) => {
+                    if (el) rowEls.current.set(row.id, el);
+                    else rowEls.current.delete(row.id);
+                  }}
                   className={`${row.isCurrentUser ? styles.currentUserRow : ''} ${onPlayerClick ? styles.clickableRow : ''}`}
                   onClick={onPlayerClick ? () => onPlayerClick(row) : undefined}
                   role={onPlayerClick ? 'button' : undefined}

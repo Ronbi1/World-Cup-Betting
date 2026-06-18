@@ -51,7 +51,8 @@ export default function AllGamesPage() {
   const { t } = useTranslation();
   const [activeStage, setActiveStage] = useState('GROUP_STAGE');
   const [filterStatus, setFilterStatus] = useState('ALL');
-  const [viewMode, setViewMode] = useState('byGroup');
+  const [viewMode, setViewMode] = useState('chronological');
+  const [playedExpanded, setPlayedExpanded] = useState(false);
   const [filterDate, setFilterDate] = useState('');
   const [filterGroup, setFilterGroup] = useState('ALL');
   const [filterTeam, setFilterTeam] = useState('ALL');
@@ -146,6 +147,18 @@ export default function AllGamesPage() {
     () => [...filteredMatches].sort(sortByKickoff),
     [filteredMatches],
   );
+
+  // In chronological view, already-played (finished) games are tucked away in
+  // a collapsed accordion so the list leads with live/upcoming fixtures.
+  const { playedMatches, upcomingMatches } = useMemo(() => {
+    const played = [];
+    const upcoming = [];
+    for (const m of chronologicalMatches) {
+      if (m.status === MATCH_STATUS.FINISHED) played.push(m);
+      else upcoming.push(m);
+    }
+    return { playedMatches: played, upcomingMatches: upcoming };
+  }, [chronologicalMatches]);
 
   const hasFilteredResults = viewMode === 'chronological'
     ? chronologicalMatches.length > 0
@@ -351,8 +364,34 @@ export default function AllGamesPage() {
             <p>{t('allGames.noMatchesFilter')}</p>
           </div>
         ) : viewMode === 'chronological' ? (
-          <div className={styles.matchGrid}>
-            {chronologicalMatches.map(renderMatchCard)}
+          <div className={styles.chronoContent}>
+            {playedMatches.length > 0 && (
+              <section className={styles.playedAccordion}>
+                <button
+                  type="button"
+                  className={styles.playedToggle}
+                  onClick={() => setPlayedExpanded((prev) => !prev)}
+                  aria-expanded={playedExpanded}
+                >
+                  <span className={styles.playedToggleLabel}>
+                    {t('allGames.playedGames', { count: playedMatches.length })}
+                  </span>
+                  <span className={`${styles.playedChevron} ${playedExpanded ? styles.playedChevronOpen : ''}`}>
+                    ▾
+                  </span>
+                </button>
+                {playedExpanded && (
+                  <div className={styles.matchGrid}>
+                    {playedMatches.map(renderMatchCard)}
+                  </div>
+                )}
+              </section>
+            )}
+            {upcomingMatches.length > 0 && (
+              <div className={styles.matchGrid}>
+                {upcomingMatches.map(renderMatchCard)}
+              </div>
+            )}
           </div>
         ) : (
           <div className={styles.stageContent}>
