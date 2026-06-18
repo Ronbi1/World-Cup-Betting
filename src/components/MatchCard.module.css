@@ -203,6 +203,10 @@
   color: var(--clr-text-primary);
   letter-spacing: 0.04em;
   line-height: 1;
+  /* A score reads "home – away" in any language — isolate it as an LTR run so
+     RTL never reorders "2 – 1" into "1 – 2". */
+  direction: ltr;
+  unicode-bidi: isolate;
 }
 
 .scoreLive {
@@ -275,8 +279,6 @@
   font-size: 0.62rem;
   line-height: 1;
   letter-spacing: 0.08em;
-  direction: ltr;
-  unicode-bidi: isolate;
   /* Serrated bottom edge via radial-gradient mask — every 6px a half-disc
      is "punched" out, mimicking a tear-off perforation. */
   mask-image: radial-gradient(circle 2.5px at 3px 100%, transparent 2.5px, #000 2.6px);
@@ -286,6 +288,10 @@
   -webkit-mask-size: 6px 100%;
   pointer-events: none;
 }
+
+/* In RTL the stub mirrors to the opposite corner (via inset-inline-end on the
+   page's direction) — flip the playful tilt to match. */
+[dir='rtl'] .ticketStub { transform: rotate(-2deg); }
 
 .ticketStubLabel {
   font-weight: 700;
@@ -297,6 +303,8 @@
   font-weight: 800;
   font-size: 0.85rem;
   letter-spacing: 0.04em;
+  direction: ltr; /* keep "2–1" LTR; the stub itself follows the page direction */
+  unicode-bidi: isolate;
 }
 
 @media (max-width: 600px) {

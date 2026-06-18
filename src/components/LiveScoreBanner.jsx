@@ -7,7 +7,7 @@ import styles from './LiveScoreBanner.module.css';
 const isLive = (status) =>
   status === MATCH_STATUS.IN_PLAY || status === MATCH_STATUS.PAUSED;
 
-export default function LiveScoreBanner({ matches, lastUpdated, onRefresh }) {
+export default function LiveScoreBanner({ matches, lastUpdated, onRefresh, fallback = false }) {
   const { t, i18n } = useTranslation();
   const liveMatches = matches.filter((m) => isLive(m.status));
 
@@ -25,25 +25,30 @@ export default function LiveScoreBanner({ matches, lastUpdated, onRefresh }) {
 
   return (
     <div className={styles.banner}>
-      <div className={styles.bannerHeader}>
-        <div className={styles.liveIndicator}>
-          <span className={styles.liveDot} />
-          <span className={styles.liveText}>{t('matchStatus.live')}</span>
-          <span className={styles.matchCount}>{liveMatches.length}</span>
-        </div>
+      {/* Header is poll-era UI: a manual refresh + "updated Xs ago". With the
+          realtime socket connected, updates push themselves, so we hide it and
+          only show it when we've fallen back to polling. */}
+      {fallback && (
+        <div className={styles.bannerHeader}>
+          <div className={styles.liveIndicator}>
+            <span className={styles.liveDot} />
+            <span className={styles.liveText}>{t('matchStatus.live')}</span>
+            <span className={styles.matchCount}>{liveMatches.length}</span>
+          </div>
 
-        <div className={styles.updateInfo}>
-          <span className={styles.lastUpdated}>{formatLastUpdated(lastUpdated)}</span>
-          <button
-            className={styles.refreshBtn}
-            onClick={onRefresh}
-            title={t('common.refresh')}
-            aria-label={t('common.refresh')}
-          >
-            ↻
-          </button>
+          <div className={styles.updateInfo}>
+            <span className={styles.lastUpdated}>{formatLastUpdated(lastUpdated)}</span>
+            <button
+              className={styles.refreshBtn}
+              onClick={onRefresh}
+              title={t('common.refresh')}
+              aria-label={t('common.refresh')}
+            >
+              ↻
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       <div className={styles.scoresRow}>
         {liveMatches.map((match) => {
