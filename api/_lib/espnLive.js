@@ -93,7 +93,27 @@ async function fetchEspnSummaryEvents(espnId, { axiosClient = axios } = {}) {
     timeout: ESPN_TIMEOUT_MS,
     headers: { 'User-Agent': 'wc-betting-live/1.0' },
   });
-  const keyEvents = res.data?.keyEvents ?? [];
+  const data = res.data || {};
+
+  // Resolve each event's side from THIS response's own home/away competitors
+  // (id/abbreviation/displayName all from ESPN, so they match reliably). The
+  // value is ESPN-relative; liveScores re-orients it to the mirror's home/away.
+  const cs = data.header?.competitions?.[0]?.competitors || [];
+  const homeTeam = cs.find((c) => c.homeAway === 'home')?.team || {};
+  const awayTeam = cs.find((c) => c.homeAway === 'away')?.team || {};
+  const keysOf = (tm) => [tm.id, tm.abbreviation, tm.displayName]
+    .map((v) => String(v ?? '').trim().toLowerCase())
+    .filter(Boolean);
+  const homeKeys = new Set(keysOf(homeTeam));
+  const awayKeys = new Set(keysOf(awayTeam));
+  const espnSideOf = (t) => {
+    const cand = keysOf(t || {});
+    if (cand.some((c) => homeKeys.has(c))) return 'home';
+    if (cand.some((c) => awayKeys.has(c))) return 'away';
+    return null;
+  };
+
+  const keyEvents = data.keyEvents ?? [];
   return keyEvents.map((e) => {
     const kind = eventKind(e.type?.text);
     const clock = e.clock?.displayValue ?? null;
@@ -108,6 +128,7 @@ async function fetchEspnSummaryEvents(espnId, { axiosClient = axios } = {}) {
       clock,
       period: e.period?.number ?? null,
       team,
+      espnSide: espnSideOf(e.team),
       players,
       scoringPlay: e.scoringPlay === true,
     };
