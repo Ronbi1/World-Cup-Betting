@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import TeamFlag from './TeamFlag';
+import MatchTimeline from './MatchTimeline';
 import styles from './MatchCard.module.css';
 import { MATCH_STATUS } from '../utils/constants';
 import { formatMatchDate, formatMatchTime, formatKickoffCountdown } from '../utils/matchTime';
@@ -9,7 +10,7 @@ const statusKey = (status) => {
   switch (status) {
     case MATCH_STATUS.FINISHED: return { key: 'finished', cls: 'finished' };
     case MATCH_STATUS.IN_PLAY: return { key: 'live', cls: 'live' };
-    case MATCH_STATUS.PAUSED: return { key: 'halfTime', cls: 'live' };
+    case MATCH_STATUS.PAUSED: return { key: 'halfTime', cls: 'break' };
     case MATCH_STATUS.POSTPONED: return { key: 'postponed', cls: 'postponed' };
     case MATCH_STATUS.CANCELLED: return { key: 'cancelled', cls: 'postponed' };
     default: return { key: 'scheduled', cls: 'scheduled' };
@@ -19,57 +20,6 @@ const statusKey = (status) => {
 // Only goals + cards make the on-ticket report; subs and other events stay in
 // the (richer) data but would clutter this compact view.
 const EVENT_KINDS = new Set(['goal', 'yellow', 'red']);
-
-const eventTag = (text = '') => {
-  const s = text.toLowerCase();
-  if (s.includes('own goal')) return 'OG';
-  if (s.includes('penalty')) return 'P';
-  return null;
-};
-
-// The match report — a two-sided timeline down a center spine: home events
-// branch left, away events branch right, minutes hug the middle. Goals are
-// gold ball-marks; bookings are rotated yellow/red referee-card chips.
-function MatchReport({ events, match, t }) {
-  return (
-    <ol className={styles.report}>
-      {events.map((ev, i) => {
-        const isHome =
-          ev.team &&
-          (ev.team === match.homeTeam?.name || ev.team === match.homeTeam?.shortName);
-        const scorer = ev.players?.[0] || ev.team || '';
-        const tag = ev.kind === 'goal' ? eventTag(ev.text) : null;
-        const markCls =
-          ev.kind === 'goal' ? styles.markGoal
-            : ev.kind === 'red' ? styles.markRed
-              : styles.markYellow;
-        const kindLabel =
-          ev.kind === 'goal' ? t('liveToast.goal')
-            : ev.kind === 'red' ? t('liveToast.red')
-              : t('liveToast.yellow');
-
-        const name = (
-          <span className={styles.eventName}>
-            {scorer}
-            {tag && <span className={styles.eventTag}>{tag}</span>}
-          </span>
-        );
-        const mark = <span className={`${styles.eventMark} ${markCls}`} aria-hidden="true" />;
-        const min = <span className={`${styles.eventMin} numerals`}>{ev.clock}</span>;
-
-        return (
-          <li
-            key={ev.id ?? `${ev.kind}-${i}`}
-            className={`${styles.event} ${isHome ? styles.eventHome : styles.eventAway}`}
-            aria-label={`${ev.clock ?? ''} ${kindLabel} ${scorer}`.trim()}
-          >
-            {isHome ? <>{name}{mark}{min}</> : <>{min}{mark}{name}</>}
-          </li>
-        );
-      })}
-    </ol>
-  );
-}
 
 // `now` is supplied by the parent list page via `useMinuteTick()` so every
 // card on the page re-renders against the same instant once per minute,
@@ -218,7 +168,7 @@ export default function MatchCard({ match, compact = false, onClick, onBets, now
         <div className={`${styles.reportWrap} ${expanded ? styles.reportOpen : ''}`}>
           <div className={styles.reportInner}>
             {events.length > 0 ? (
-              <MatchReport events={events} match={match} t={t} />
+              <MatchTimeline events={events} match={match} />
             ) : (
               <p className={styles.reportEmpty}>{t('matchCard.noEvents')}</p>
             )}

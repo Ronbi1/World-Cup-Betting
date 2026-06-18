@@ -155,7 +155,17 @@ async function refreshLiveScores({
         if (next.status === 'IN_PLAY' || next.status === 'PAUSED' || justFinished) {
           try {
             const events = await fetchEspnEvents(espn.espnId);
-            next.events = events.slice(-MAX_EVENTS);
+            // Re-orient each event's ESPN-relative side to the mirror match's
+            // home/away, so the UI can place it on the correct team's side
+            // without fragile name matching.
+            const mirrorHome = String(m.homeTeam?.tla || '').toUpperCase();
+            const direct = espn.homeCode === mirrorHome;
+            next.events = events.slice(-MAX_EVENTS).map((ev) => ({
+              ...ev,
+              side: ev.espnSide == null
+                ? null
+                : direct ? ev.espnSide : (ev.espnSide === 'home' ? 'away' : 'home'),
+            }));
           } catch {
             /* keep prior events */
           }
