@@ -8,6 +8,27 @@ const eventTag = (text = '') => {
   return null;
 };
 
+const norm = (s) => String(s ?? '').toLowerCase().replace(/[^a-z]/g, '');
+
+// Which team an event belongs to. Prefer the scraper's `side` (from ESPN's
+// own home/away ids — always right). Fall back for older rows that predate
+// side tagging: match the event's team against each side's name/shortName/TLA
+// with substring tolerance, since ESPN names differ from worldcup26's
+// (e.g. "Czechia" vs "Czech Republic", but both relate to "CZE").
+function eventSide(ev, match) {
+  if (ev.side === 'home' || ev.side === 'away') return ev.side;
+  const t = norm(ev.team);
+  if (!t) return 'home';
+  const rel = (a, b) => Boolean(a && b && (a === b || a.includes(b) || b.includes(a)));
+  const isHome = [match.homeTeam?.name, match.homeTeam?.shortName, match.homeTeam?.tla]
+    .map(norm).some((h) => rel(t, h));
+  const isAway = [match.awayTeam?.name, match.awayTeam?.shortName, match.awayTeam?.tla]
+    .map(norm).some((a) => rel(t, a));
+  if (isHome && !isAway) return 'home';
+  if (isAway && !isHome) return 'away';
+  return 'home';
+}
+
 // Two-sided goal/card timeline down a center spine: home events branch to the
 // home side, away to the away side, minutes hug the middle. Fully RTL-safe
 // (logical properties + grid columns mirror with `direction`). Shared by the
@@ -20,9 +41,7 @@ export default function MatchTimeline({ events, match }) {
   return (
     <ol className={styles.timeline}>
       {events.map((ev, i) => {
-        const isHome = ev.side
-          ? ev.side === 'home'
-          : Boolean(ev.team && (ev.team === match.homeTeam?.name || ev.team === match.homeTeam?.shortName));
+        const isHome = eventSide(ev, match) === 'home';
         const scorer = ev.players?.[0] || ev.team || '';
         const tag = ev.kind === 'goal' ? eventTag(ev.text) : null;
         const markCls =
