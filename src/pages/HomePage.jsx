@@ -4,6 +4,7 @@ import { useAuth } from '../context/useAuth';
 import { REG_STATUS, MATCH_STATUS } from '../utils/constants';
 import { isSimulationMode } from '../utils/simulation';
 import { useTodayMatches } from '../hooks/useTodayMatches';
+import { useLiveMatchChannel } from '../hooks/useLiveMatchChannel';
 import { useMinuteTick } from '../hooks/useMinuteTick';
 import { useUserPredictions } from '../hooks/useUserPredictions';
 import { formatKickoffCountdown, formatMatchTime, hasMatchStarted } from '../utils/matchTime';
@@ -41,7 +42,12 @@ export default function HomePage() {
     error: matchError,
     lastUpdated,
     refresh: refreshMatches,
+    applyLiveUpdate,
   } = useTodayMatches({ onMatchFinished: handleMatchFinished });
+
+  // Supabase Realtime: instant score/event push + goal/card toasts. No-op
+  // (polling stays in charge) when realtime env vars aren't configured.
+  useLiveMatchChannel({ onMatch: applyLiveUpdate });
 
   // Single shared minute-tick for all MatchCards rendered on this page.
   // Each card uses it to compute its own countdown text without spawning

@@ -158,6 +158,11 @@
     "postponed": "נדחה",
     "cancelled": "בוטל"
   },
+  "liveToast": {
+    "goal": "גול!",
+    "yellow": "כרטיס צהוב",
+    "red": "כרטיס אדום"
+  },
   "allGames": {
     "title": "כל המשחקים",
     "subtitle": "גביע העולם 2026 · לוח מלא",

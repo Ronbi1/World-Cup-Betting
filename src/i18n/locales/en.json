@@ -157,6 +157,11 @@
     "postponed": "PPD",
     "cancelled": "CNX"
   },
+  "liveToast": {
+    "goal": "GOAL!",
+    "yellow": "Yellow card",
+    "red": "Red card"
+  },
   "allGames": {
     "title": "All Matches",
     "subtitle": "FIFA World Cup 2026 · Full Schedule",
