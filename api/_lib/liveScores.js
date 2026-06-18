@@ -147,10 +147,12 @@ async function refreshLiveScores({
       if (espn) {
         next = fromEspn(m, espn);
         usedEspn = true;
-        // Enrich in-play matches with goal/card events for the toast feed.
-        // Best-effort: a summary failure keeps the prior events, never blocks
-        // the score update.
-        if (next.status === 'IN_PLAY' || next.status === 'PAUSED') {
+        // Enrich with goal/card events: while in play, AND once more on the
+        // transition to FINISHED so a late goal in the dying seconds is
+        // captured for the persisted timeline. Best-effort — a summary failure
+        // keeps the prior events and never blocks the score update.
+        const justFinished = next.status === 'FINISHED' && m.status !== 'FINISHED';
+        if (next.status === 'IN_PLAY' || next.status === 'PAUSED' || justFinished) {
           try {
             const events = await fetchEspnEvents(espn.espnId);
             next.events = events.slice(-MAX_EVENTS);

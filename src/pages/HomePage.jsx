@@ -291,6 +291,7 @@ export default function HomePage() {
                   match={m}
                   compact
                   onClick={handleMatchClick}
+                  onBets={handleMatchClick}
                   now={now}
                   userPrediction={predictions[String(m.id)]}
                 />

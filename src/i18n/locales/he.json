@@ -143,6 +143,9 @@
     "vs": "נגד",
     "yourPick": "הניחוש שלך: {{home}} – {{away}}",
     "halfTime": "מחצית",
+    "report": "דוח משחק",
+    "bets": "הימורים",
+    "noEvents": "אין שערים או כרטיסים עדיין",
     "countdown": {
       "soon": "מתחיל בקרוב",
       "minutes": "מתחיל בעוד {{minutes}} דקות",

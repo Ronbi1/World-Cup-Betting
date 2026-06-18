@@ -142,6 +142,9 @@
     "vs": "vs",
     "yourPick": "Your pick: {{home}} – {{away}}",
     "halfTime": "Half-time",
+    "report": "Match report",
+    "bets": "Bets",
+    "noEvents": "No goals or cards yet",
     "countdown": {
       "soon": "Starts soon",
       "minutes": "Starts in {{minutes}}m",

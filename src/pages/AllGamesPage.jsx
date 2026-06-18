@@ -187,6 +187,7 @@ export default function AllGamesPage() {
       <MatchCard
         match={m}
         onClick={handleMatchClick}
+        onBets={handleMatchClick}
         now={now}
         userPrediction={predictions[String(m.id)]}
       />
