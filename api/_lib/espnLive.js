@@ -79,8 +79,11 @@ async function fetchEspnScoreboard({ axiosClient = axios } = {}) {
 function eventKind(typeText) {
   const s = String(typeText || '').toLowerCase();
   if (s.includes('goal')) return 'goal';
-  if (s.includes('red')) return 'red';
-  if (s.includes('yellow')) return 'yellow';
+  // Match the full "... card" phrase, never bare "red"/"yellow": ESPN labels a
+  // converted penalty "Penalty - Scored", and "sco(red)" would match "red".
+  // ("Yellow-Red Card" — a second yellow — correctly resolves to red.)
+  if (s.includes('red card')) return 'red';
+  if (s.includes('yellow card')) return 'yellow';
   if (s.includes('substitution')) return 'sub';
   return 'other';
 }
@@ -115,7 +118,9 @@ async function fetchEspnSummaryEvents(espnId, { axiosClient = axios } = {}) {
 
   const keyEvents = data.keyEvents ?? [];
   return keyEvents.map((e) => {
-    const kind = eventKind(e.type?.text);
+    // A scoring play is always a goal, whatever ESPN labels the type
+    // (regular goals are "Goal", penalties are "Penalty - Scored").
+    const kind = e.scoringPlay === true ? 'goal' : eventKind(e.type?.text);
     const clock = e.clock?.displayValue ?? null;
     const team = e.team?.displayName ?? null;
     const players = (e.participants || [])
