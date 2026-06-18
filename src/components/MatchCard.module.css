@@ -387,23 +387,23 @@
 .betsBtn:active { transform: translateY(1px); }
 .betsBtn:focus-visible { outline: 2px solid var(--clr-accent-gold); outline-offset: 2px; }
 
-/* Grid-rows 0fr→1fr is the smooth, height-agnostic accordion. */
+/* Accordion via max-height, and the OPEN state is itself the scroll container
+   so a long events log scrolls instead of stretching the card. (A grid-rows
+   accordion grows its track to full content and defeats a nested scroll cap.)
+   scrollbar-gutter keeps the width stable so it never jitters. */
 .reportWrap {
-  display: grid;
-  grid-template-rows: 0fr;
-  transition: grid-template-rows 0.32s ease;
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.32s ease;
 }
-.reportOpen { grid-template-rows: 1fr; }
-.reportInner { min-height: 0; overflow: hidden; }
-
-/* Cap the open height so long timelines scroll instead of stretching the card.
-   Kept separate from the accordion clip (.reportInner) so the grid-rows
-   animation and the scroll container never fight over the same element. */
-.reportScroll {
-  max-height: 20rem;
+.reportOpen {
+  max-height: 26rem; /* a little taller by default; scrolls past this */
   overflow-y: auto;
   overscroll-behavior: contain;
+  scrollbar-gutter: stable;
 }
+.reportInner { min-height: 0; }
+.reportScroll { min-height: 0; }
 
 .reportEmpty {
   margin: 0;
