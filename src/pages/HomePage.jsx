@@ -48,7 +48,7 @@ export default function HomePage() {
 
   // Supabase Realtime: instant score/event push + goal/card toasts. No-op
   // (polling stays in charge) when realtime env vars aren't configured.
-  useLiveMatchChannel({ onMatch: applyLiveUpdate });
+  const { connected: realtimeConnected } = useLiveMatchChannel({ onMatch: applyLiveUpdate });
 
   // Provisional leaderboard overlay: real scores + live in-play deltas,
   // recomputed locally on every socket push. No per-tick API calls; the real
@@ -206,6 +206,7 @@ export default function HomePage() {
           matches={todayMatches}
           lastUpdated={lastUpdated}
           onRefresh={refreshMatches}
+          fallback={!realtimeConnected}
         />
       )}
 

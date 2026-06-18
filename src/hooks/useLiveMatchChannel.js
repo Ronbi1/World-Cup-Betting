@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { notifications } from '@mantine/notifications';
 import { supabase, isRealtimeEnabled } from '../services/supabaseClient';
@@ -16,6 +16,10 @@ const isLive = (s) => s === MATCH_STATUS.IN_PLAY || s === MATCH_STATUS.PAUSED;
 
 export function useLiveMatchChannel({ onMatch } = {}) {
   const { t } = useTranslation();
+  // Whether the realtime socket is actually subscribed. Lets callers hide
+  // poll-era UI (refresh button / "updated Xs ago") while pushes are live, and
+  // show it when we've fallen back to polling.
+  const [connected, setConnected] = useState(false);
   const seenRef = useRef(new Map()); // matchId -> { home, away, eventIds:Set }
   const onMatchRef = useRef(onMatch);
   const tRef = useRef(t);
@@ -74,8 +78,10 @@ export function useLiveMatchChannel({ onMatch } = {}) {
         { event: 'UPDATE', schema: 'public', table: 'matches_mirror' },
         (payload) => handle(payload.new?.normalized),
       )
-      .subscribe();
+      .subscribe((status) => setConnected(status === 'SUBSCRIBED'));
 
-    return () => { supabase.removeChannel(channel); };
+    return () => { setConnected(false); supabase.removeChannel(channel); };
   }, []);
+
+  return { connected };
 }
