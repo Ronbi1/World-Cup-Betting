@@ -7,49 +7,14 @@ import styles from './LiveScoreBanner.module.css';
 const isLive = (status) =>
   status === MATCH_STATUS.IN_PLAY || status === MATCH_STATUS.PAUSED;
 
-export default function LiveScoreBanner({ matches, lastUpdated, onRefresh, fallback = false }) {
-  const { t, i18n } = useTranslation();
+export default function LiveScoreBanner({ matches }) {
+  const { t } = useTranslation();
   const liveMatches = matches.filter((m) => isLive(m.status));
 
   if (liveMatches.length === 0) return null;
 
-  // Localized "X seconds ago" via Intl.RelativeTimeFormat.
-  const formatLastUpdated = (date) => {
-    if (!date) return '';
-    const rtf = new Intl.RelativeTimeFormat(i18n.resolvedLanguage || 'en', { numeric: 'auto' });
-    const seconds = Math.floor((new Date() - date) / 1000);
-    if (seconds < 10) return rtf.format(0, 'second');
-    if (seconds < 60) return rtf.format(-seconds, 'second');
-    return rtf.format(-Math.floor(seconds / 60), 'minute');
-  };
-
   return (
     <div className={styles.banner}>
-      {/* Header is poll-era UI: a manual refresh + "updated Xs ago". With the
-          realtime socket connected, updates push themselves, so we hide it and
-          only show it when we've fallen back to polling. */}
-      {fallback && (
-        <div className={styles.bannerHeader}>
-          <div className={styles.liveIndicator}>
-            <span className={styles.liveDot} />
-            <span className={styles.liveText}>{t('matchStatus.live')}</span>
-            <span className={styles.matchCount}>{liveMatches.length}</span>
-          </div>
-
-          <div className={styles.updateInfo}>
-            <span className={styles.lastUpdated}>{formatLastUpdated(lastUpdated)}</span>
-            <button
-              className={styles.refreshBtn}
-              onClick={onRefresh}
-              title={t('common.refresh')}
-              aria-label={t('common.refresh')}
-            >
-              ↻
-            </button>
-          </div>
-        </div>
-      )}
-
       <div className={styles.scoresRow}>
         {liveMatches.map((match) => {
           const events = (match.events || []).filter(

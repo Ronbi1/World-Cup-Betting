@@ -394,7 +394,14 @@
   transition: grid-template-rows 0.32s ease;
 }
 .reportOpen { grid-template-rows: 1fr; }
-.reportInner { min-height: 0; overflow: hidden; }
+/* Cap the open height so long timelines scroll instead of stretching the card.
+   overflow-x stays hidden (accordion clip + RTL safety); y scrolls when needed. */
+.reportInner {
+  min-height: 0;
+  max-height: 14rem;
+  overflow: hidden auto;
+  overscroll-behavior: contain;
+}
 
 .reportEmpty {
   margin: 0;
