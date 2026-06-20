@@ -22,8 +22,6 @@ const {
 } = require('./espnLive');
 const defaultFootball = require('./football');
 
-const MAX_EVENTS = 20; // rolling window kept on each match for client diffing
-
 const LIVE_LOOKAHEAD_MS = 15 * 60_000; // start polling 15 min before kickoff
 const LIVE_LOOKBACK_MS = 3 * 60 * 60_000; // ...until 3 h after (covers ET + delays)
 const LIVE_OWNED = new Set(['IN_PLAY', 'PAUSED']);
@@ -160,7 +158,11 @@ async function refreshLiveScores({
             // without fragile name matching.
             const mirrorHome = String(m.homeTeam?.tla || '').toUpperCase();
             const direct = espn.homeCode === mirrorHome;
-            next.events = events.slice(-MAX_EVENTS).map((ev) => ({
+            // Keep the FULL ESPN event list — no cap. A match tops out around
+            // ~40-50 keyEvents (a few KB), so there's nothing to bound, and a
+            // tail-slice silently dropped early goals (they cluster in the first
+            // half and get outnumbered by delay/sub markers).
+            next.events = events.map((ev) => ({
               ...ev,
               side: ev.espnSide == null
                 ? null

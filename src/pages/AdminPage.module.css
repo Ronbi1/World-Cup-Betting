@@ -166,6 +166,20 @@
 }
 .roleBtn:disabled { opacity: 0.45; cursor: not-allowed; }
 
+.input {
+  padding: 0.5rem 0.75rem;
+  background: var(--clr-bg-deep);
+  border: 1px solid var(--clr-border);
+  border-radius: 8px;
+  color: var(--clr-text-primary);
+  font-size: 0.9rem;
+}
+.input:focus {
+  outline: none;
+  border-color: var(--clr-accent);
+}
+.input::placeholder { color: var(--clr-muted); }
+
 /* ── Delete button (trash icon) ─────────────────────────────────────────── */
 .deleteBtn {
   background: transparent;

@@ -1,0 +1,87 @@
+/* Live-event toast strip, docked just below the sticky navbar. An LTR island
+   (scores read "Brazil 3–0 Haiti" left-to-right) regardless of page direction. */
+.ticker {
+  position: sticky;
+  top: calc(60px + var(--safe-area-inset-top));
+  z-index: 90; /* under the navbar (100), above page content */
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem max(0.75rem, var(--safe-area-inset-left)) 0.4rem max(0.75rem, var(--safe-area-inset-right));
+  background: color-mix(in srgb, var(--clr-bg-deep) 88%, transparent);
+  backdrop-filter: blur(6px);
+  border-bottom: 1px solid var(--clr-border);
+  pointer-events: none; /* let clicks pass through the empty strip… */
+}
+.ticker > * { pointer-events: auto; } /* …but not the toasts/buttons */
+
+.toast {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  max-width: 100%;
+  padding: 0.35rem 0.4rem 0.35rem 0.7rem;
+  border-radius: 999px;
+  background: var(--clr-surface-raised);
+  border: 1px solid var(--clr-border);
+  border-left: 3px solid var(--clr-muted);
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.3);
+  font-size: 0.82rem;
+  line-height: 1.2;
+  animation: toastIn 0.25s ease-out;
+}
+
+.title { font-weight: 800; white-space: nowrap; }
+
+.msg {
+  color: var(--clr-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: min(60vw, 460px);
+}
+
+.close {
+  flex-shrink: 0;
+  width: 1.25rem;
+  height: 1.25rem;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--clr-muted);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.close:hover { background: rgba(255, 255, 255, 0.08); color: var(--clr-text-primary); }
+
+.bell {
+  flex-shrink: 0;
+  border: 1px solid var(--clr-border);
+  border-radius: 999px;
+  background: var(--clr-surface);
+  padding: 0.3rem 0.5rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.bell:hover { background: var(--clr-surface-raised); }
+
+/* Kind accents */
+.goal { border-left-color: var(--clr-accent-green); }
+.goal .title { color: var(--clr-accent-green); }
+.yellow { border-left-color: var(--clr-accent-amber); }
+.yellow .title { color: var(--clr-accent-amber); }
+.red { border-left-color: var(--clr-live-red); }
+.red .title { color: var(--clr-live-red); }
+
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast { animation: none; }
+}

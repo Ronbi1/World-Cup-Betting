@@ -163,7 +163,9 @@
   "liveToast": {
     "goal": "GOAL!",
     "yellow": "Yellow card",
-    "red": "Red card"
+    "red": "Red card",
+    "test": "TEST",
+    "enableNotifications": "Enable goal alerts"
   },
   "allGames": {
     "title": "All Matches",
@@ -308,6 +310,20 @@
       "lastAdmin": "Cannot demote the last admin",
       "promoteConfirm": "Promote {{name}} to admin? They will gain full admin permissions.",
       "demoteConfirm": "Demote {{name}} to regular user? They will lose all admin permissions."
+    },
+    "notifyTest": {
+      "sectionTitle": "Notification Test",
+      "sectionHint": "Send free text through the live-event path (header toast + browser notification). Local to your browser — it is not broadcast to other users.",
+      "placeholder": "Type a test message…",
+      "send": "Send test",
+      "enable": "Enable browser notifications",
+      "permission": "Browser notification permission: {{state}}",
+      "perm": {
+        "granted": "granted",
+        "denied": "denied (enable it in your browser site settings)",
+        "default": "not yet requested",
+        "unsupported": "not supported by this browser"
+      }
     },
     "override": {
       "sectionTitle": "Override Prediction",
