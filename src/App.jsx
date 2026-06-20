@@ -18,6 +18,8 @@ import TopScorersPage from './pages/TopScorersPage';
 import RulesPage from './pages/RulesPage';
 import Navbar from './components/Navbar';
 import SimulationBanner from './components/SimulationBanner';
+import LiveEventTicker from './components/LiveEventTicker';
+import { LiveEventsProvider } from './context/LiveEventsContext';
 
 // ─── Route guard: redirect to /login when not authenticated ──────────────────
 // Waits for `authReady` (boot-time /auth/me probe) before deciding so a
@@ -51,6 +53,7 @@ function AppLayout({ children }) {
     <>
       <SimulationBanner />
       <Navbar />
+      <LiveEventTicker />
       {children}
     </>
   );
@@ -146,7 +149,9 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <AppRoutes />
+        <LiveEventsProvider>
+          <AppRoutes />
+        </LiveEventsProvider>
       </AuthProvider>
     </BrowserRouter>
   );

@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/useAuth';
+import { useLiveEvents } from '../context/useLiveEvents';
 import { REG_STATUS, ROLES } from '../utils/constants';
 import AdminOverrideModal from '../components/AdminOverrideModal';
 import styles from './AdminPage.module.css';
@@ -31,9 +32,11 @@ function DeleteModal({ user, onConfirm, onCancel, loading }) {
 
 export default function AdminPage() {
   const { users, updateUserStatus, updateUserRole, deleteUser, isAdmin, fetchAuditLog } = useAuth();
+  const { sendTestEvent, permission, requestNotifications } = useLiveEvents();
   const { t, i18n } = useTranslation();
   const locale = i18n.resolvedLanguage === 'he' ? 'he-IL' : 'en-GB';
 
+  const [testText, setTestText] = useState('');
   const [confirmUser, setConfirmUser] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState('');
@@ -271,6 +274,41 @@ export default function AdminPage() {
           </div>
         </section>
       )}
+
+      {/* Notification test bench — pushes free text through the same path real
+          goal/card events take (header toast + browser notification). Local to
+          this browser only; it does not broadcast to other users. */}
+      <section className={styles.section}>
+        <h2 className={styles.sectionTitle}>🔔 {t('admin.notifyTest.sectionTitle')}</h2>
+        <p className={styles.empty}>{t('admin.notifyTest.sectionHint')}</p>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.75rem' }}>
+          <input
+            type="text"
+            className={styles.input}
+            value={testText}
+            onChange={(e) => setTestText(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') { sendTestEvent(testText); setTestText(''); } }}
+            placeholder={t('admin.notifyTest.placeholder')}
+            style={{ flex: '1 1 240px', minWidth: 0 }}
+          />
+          <button
+            className={styles.approveBtn}
+            onClick={() => { sendTestEvent(testText); setTestText(''); }}
+          >
+            {t('admin.notifyTest.send')}
+          </button>
+          {permission !== 'granted' && permission !== 'unsupported' && (
+            <button className={styles.roleBtn} onClick={requestNotifications}>
+              {t('admin.notifyTest.enable')}
+            </button>
+          )}
+        </div>
+        <p className={styles.empty} style={{ marginTop: '0.5rem' }}>
+          {t('admin.notifyTest.permission', {
+            state: t(`admin.notifyTest.perm.${permission}`, permission),
+          })}
+        </p>
+      </section>
 
       {/* Admin override entry point. Single source of truth for the override
           flow — kept off the regular MatchCard / BetModal path so the normal
