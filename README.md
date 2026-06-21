@@ -44,7 +44,7 @@ All bets are **locked** when the tournament starts on **June 11, 2026**.
 | Worst-case delay (match finishes upstream → leaderboard updates in UI) | **≤ ~1 minute** (server cache 30 s + client refetch) |
 | `POST /api/scores/recalculate` (admin) | Writes a snapshot to `users.scores` and persists the tournament-bonus inputs (`{winner, topScorer, topAssist}`) so they survive future recomputes. Only used at end of tournament. |
 
-Missing predictions are treated as a **virtual 0-0** at scoring time — no DB rows are auto-created. If a user never opens the prediction modal for a match and the match finishes 0-0, they get the 3-pt "exact" credit; otherwise they get whatever 0-0 would score against the real result (often 1 pt for correct result if the actual was 0-0… wait, that's the same; usually 0).
+Missing predictions earn **0 points** and count as a miss — they break any exact-score streak in progress. A user who never opens the prediction modal for a match gets no credit for that match, regardless of the final score. No DB rows are auto-created.
 
 ---
 

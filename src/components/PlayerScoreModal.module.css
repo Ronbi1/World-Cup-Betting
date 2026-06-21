@@ -187,10 +187,6 @@
   opacity: 0.9;
 }
 
-.virtualBet {
-  opacity: 0.75;
-}
-
 .pointsExact { color: var(--clr-accent-gold); }
 .pointsResult { color: #86efac; }
 .pointsZero { color: var(--clr-muted); }

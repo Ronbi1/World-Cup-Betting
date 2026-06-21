@@ -166,22 +166,23 @@ describe('computeLeaderboard — exact-score streak bonus', () => {
   });
 });
 
-describe('computeLeaderboard — virtual 0-0 default prediction', () => {
-  it('counts a single virtual 0-0 exact hit (no prediction row, actual 0-0)', () => {
-    const userId = 'u-virtual-1';
+describe('computeLeaderboard — missing prediction earns 0 and breaks streak', () => {
+  it('missing prediction + actual 0-0 → 0 exact, 0 correct, 0 points (no virtual default)', () => {
+    const userId = 'u-missing-00';
     const users = [makeUser(userId)];
     const finishedMatches = [makeMatch(1, 0, 0)];
-    const predictions = []; // no row → virtual 0-0
+    const predictions = []; // no row → unscored
 
     const [row] = computeLeaderboard({ users, finishedMatches, predictions });
 
-    expect(row.exactScores).toBe(1);
-    expect(row.exactScoreBonus).toBe(0); // only 1 hit, no bonus yet
-    expect(row.points).toBe(POINTS.EXACT_BASE); // 3 pts, total goals ≤ 4
+    expect(row.exactScores).toBe(0);
+    expect(row.correctResults).toBe(0);
+    expect(row.exactScoreBonus).toBe(0);
+    expect(row.points).toBe(0);
   });
 
-  it('three default 0-0 exact hits trigger the +3 bonus (user saved nothing)', () => {
-    const userId = 'u-virtual-3';
+  it('three missing predictions over three 0-0 finishes → no streak, no bonus', () => {
+    const userId = 'u-missing-3';
     const users = [makeUser(userId)];
     const finishedMatches = [
       makeMatch(1, 0, 0),
@@ -192,16 +193,14 @@ describe('computeLeaderboard — virtual 0-0 default prediction', () => {
 
     const [row] = computeLeaderboard({ users, finishedMatches, predictions });
 
-    expect(row.exactScores).toBe(3);
-    expect(row.exactScoreBonus).toBe(3);
-    // 3 exact 0-0 hits × 3 pts + 3 bonus = 12, all folded into `points`.
-    expect(row.points).toBe(3 * POINTS.EXACT_BASE + POINTS.EXACT_SCORE_BONUS);
+    expect(row.exactScores).toBe(0);
+    expect(row.exactScoreBonus).toBe(0);
+    expect(row.points).toBe(0);
   });
 
-  it('missing prediction + non-0-0 actual is scored as default 0-0 (not exact, not correct, 0 pts)', () => {
-    const userId = 'u-virtual-miss';
+  it('missing prediction + non-0-0 actual → 0 pts (not exact, not correct)', () => {
+    const userId = 'u-missing-miss';
     const users = [makeUser(userId)];
-    // Default 0-0 vs actual 2-1: outcome draw vs home win → 0 pts.
     const finishedMatches = [makeMatch(1, 2, 1)];
     const predictions = [];
 
@@ -213,8 +212,8 @@ describe('computeLeaderboard — virtual 0-0 default prediction', () => {
     expect(row.points).toBe(0);
   });
 
-  it('virtual 0-0 vs actual 0-1 → outcome draw vs away win → 0 pts, not exact', () => {
-    const userId = 'u-virtual-away';
+  it('missing prediction + actual 0-1 → 0 pts (no away-win credit, no virtual draw)', () => {
+    const userId = 'u-missing-away';
     const [row] = computeLeaderboard({
       users: [makeUser(userId)],
       finishedMatches: [makeMatch(1, 0, 1)],
@@ -223,6 +222,34 @@ describe('computeLeaderboard — virtual 0-0 default prediction', () => {
     expect(row.exactScores).toBe(0);
     expect(row.correctResults).toBe(0);
     expect(row.points).toBe(0);
+  });
+
+  it('missing prediction breaks the exact-score streak — exact, exact, MISSING, exact, exact → no +3', () => {
+    const userId = 'u-missing-streak';
+    const finishedMatches = [
+      makeMatch(1, 1, 0),
+      makeMatch(2, 1, 0),
+      makeMatch(3, 1, 0), // no prediction for this one
+      makeMatch(4, 1, 0),
+      makeMatch(5, 1, 0),
+    ];
+    const predictions = [
+      makePrediction(userId, 1, 1, 0),
+      makePrediction(userId, 2, 1, 0),
+      // match 3 intentionally omitted — missing prediction
+      makePrediction(userId, 4, 1, 0),
+      makePrediction(userId, 5, 1, 0),
+    ];
+
+    const [row] = computeLeaderboard({
+      users: [makeUser(userId)],
+      finishedMatches,
+      predictions,
+    });
+
+    expect(row.exactScores).toBe(4);
+    expect(row.exactScoreBonus).toBe(0); // longest run is 2 — missing broke the streak
+    expect(row.points).toBe(4 * POINTS.EXACT_BASE);
   });
 });
 
@@ -301,7 +328,7 @@ describe('computeLeaderboard — high-scoring + correct-result paths', () => {
     const predictions = [
       makePrediction(userId, 1, 1, 0),
       makePrediction(userId, 2, 4, 3),
-      // no row for match 3 → virtual 0-0; actual 0-1 → wrong
+      // no row for match 3 → missing prediction → 0 pts (also breaks streak)
     ];
 
     const [row] = computeLeaderboard({

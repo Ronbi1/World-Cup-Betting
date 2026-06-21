@@ -44,7 +44,12 @@ export function computeExactScoreBonus(finishedMatches, predByMatchId) {
   let earned = false;
 
   for (const match of finishedMatches) {
-    const pred = predByMatchId.get(String(match.id)) ?? { home: 0, away: 0 };
+    const pred = predByMatchId.get(String(match.id));
+    // Missing prediction → counts as a miss, streak resets.
+    if (!pred) {
+      consecutiveExact = 0;
+      continue;
+    }
     const { exact } = calcMatchPoints(pred, match);
     if (exact) {
       consecutiveExact += 1;

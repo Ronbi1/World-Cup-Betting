@@ -218,11 +218,13 @@ Pure documentation. Zero runtime code touched. Files modified:
 
 ### PR B — what shipped (one-time +3 exact-score bonus)
 
-Product rule (locked by the owner): in this app **virtual 0-0 is the
-default prediction state**, not a forgotten/missing prediction. Every
-match is treated as 0-0 for every user unless the user actively changes
-it. Therefore a default 0-0 that hits exactly counts as an exact-score
-hit, and so it counts toward the new +3 threshold as well.
+Product rule (UPDATED — current): a missing prediction is **NOT** scored.
+A user who never saves a prediction for a match earns 0 points for that
+match, regardless of the final score, and the missing match breaks any
+exact-score streak in progress. (Historical note: an earlier version of
+this app treated missing predictions as a virtual 0-0; that default was
+removed. The +3 streak threshold still exists but only real saved exact
+hits count toward it.)
 
 Formula:
 
@@ -324,9 +326,10 @@ A targeted QA+fixes pass. Highlights:
   so they survive future recomputes. Frontend refetches `/scores` the
   instant any tracked match flips to `FINISHED`, plus a 60 s opportunistic
   poll on HomePage while any match is live.
-- **Missing predictions = virtual 0-0**. No DB rows are auto-created;
-  `computeLeaderboard` iterates approved-user × finished-match and treats
-  a missing prediction row as `{ home: 0, away: 0 }`.
+- **Missing predictions = unscored** (updated rule). No DB rows are
+  auto-created; `computeLeaderboard` iterates approved-user ×
+  finished-match and skips any pair without a saved prediction — that
+  user earns 0 points for that match and their exact-score streak resets.
 - **`/rules` page**. New `src/pages/RulesPage.jsx` + module CSS, route in
   `App.jsx`, navbar link in `Navbar.jsx`, and `nav.rules` + `rules.*`
   i18n keys in both `en.json` and `he.json`. Rules block removed from

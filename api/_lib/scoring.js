@@ -15,14 +15,13 @@
 // Leaderboard bonus (one-time, applied at compute time):
 //   3 consecutive exact-score hits (in kickoff order) → +3 pts.
 //   The bonus is awarded once and does NOT stack if the streak grows
-//   beyond 3. Because 0-0 is the default prediction state in this app,
-//   virtual 0-0 exact hits count toward the streak just like saved ones.
+//   beyond 3.
 //
 // Missing prediction handling:
-//   A user who never saved a prediction for a finished match is treated
-//   as having predicted 0-0 (virtual default). No DB rows are created;
-//   the default is materialized only at scoring time inside
-//   `computeLeaderboard`.
+//   A user who never saved a prediction for a finished match earns 0
+//   points for that match. The match counts as a miss and breaks any
+//   exact-score streak in progress — identical to a wrong prediction
+//   for streak purposes.
 
 const POINTS = {
   EXACT_BASE: 3,
@@ -83,8 +82,9 @@ const normalize = (s) => (s ?? '').toString().trim().toLowerCase();
 
 // Pure, single-pass, in-memory leaderboard compute. All inputs are arrays
 // fetched ONCE at the call site; this function does no DB access. Missing
-// predictions are treated as virtual 0-0. Tournament bonus is read from
-// each user's persisted `users.scores.tournamentBonus` (safe-defaulted).
+// predictions earn 0 points and break the exact-score streak. Tournament
+// bonus is read from each user's persisted `users.scores.tournamentBonus`
+// (safe-defaulted).
 //
 // Inputs:
 //   users:           [{ id, name, bet, scores? }, ...]   APPROVED USER rows
@@ -121,8 +121,12 @@ function computeLeaderboard({ users, finishedMatches, predictions, tournamentOve
 
     for (const match of safeMatches) {
       const key = `${u.id}:${String(match.id)}`;
-      // Virtual 0-0 default if the user never saved a prediction.
-      const pred = predByUserMatch.get(key) ?? { home: 0, away: 0 };
+      const pred = predByUserMatch.get(key);
+      // Missing prediction → 0 pts, no exact/correct credit, streak resets.
+      if (!pred) {
+        consecutiveExact = 0;
+        continue;
+      }
       const r = calcPoints(pred, match);
       points += r.points;
       if (r.correct) correctResults += 1;

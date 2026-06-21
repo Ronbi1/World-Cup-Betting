@@ -131,9 +131,9 @@ export default function BetModal({ match, opened, onClose, onSaved }) {
   const { t, i18n } = useTranslation();
   const locale = i18n.resolvedLanguage === 'he' ? 'he-IL' : 'en-GB';
 
-  // Default 0-0. The product contract is: a user that opens the modal and
-  // saves immediately stores a 0-0 prediction. Missing predictions are
-  // also scored as virtual 0-0 by computeLeaderboard on the backend.
+  // Initial form value is 0-0. A user that opens the modal and saves
+  // immediately stores a 0-0 prediction. Users who never open the modal
+  // have no prediction at all and earn 0 points for the match.
   const [homeScore, setHomeScore] = useState(0);
   const [awayScore, setAwayScore] = useState(0);
 

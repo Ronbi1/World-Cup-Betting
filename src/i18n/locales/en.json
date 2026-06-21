@@ -410,7 +410,6 @@
     "syncNote": "Match data is refreshing — totals update when scores sync.",
     "empty": "No matches to show yet.",
     "pending": "—",
-    "virtualBet": "Default 0–0 (no bet saved)",
     "privacyNote": "Only started matches are shown for other players.",
     "tournamentBonusNote": "+{{points}} tournament bonus (winner / top scorer / assist)",
     "col": {

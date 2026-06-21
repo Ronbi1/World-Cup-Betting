@@ -232,7 +232,7 @@ router.post('/', requireAuth, async (req, res, next) => {
 // `prediction_edits` so overrides are never silent.
 //
 // Write order (audit-first):
-//   1. Read the existing prediction (may not exist — virtual 0-0).
+//   1. Read the existing prediction (may not exist — missing prediction is unscored).
 //   2. INSERT into prediction_edits with old + new values.
 //   3. UPSERT into predictions.
 //   4. If step 3 fails, DELETE the audit row to avoid an orphan.
@@ -287,8 +287,8 @@ router.post(
       }
 
       // Read existing prediction so the audit row records true before-state.
-      // No row = virtual 0-0; we store null/null in the audit (NOT 0/0) so
-      // the log faithfully reflects that the user had never submitted.
+      // No row = user never submitted; we store null/null in the audit (NOT
+      // 0/0) so the log faithfully reflects that the user had no prediction.
       const { data: existing, error: existingError } = await supabase
         .from('predictions')
         .select('home, away')

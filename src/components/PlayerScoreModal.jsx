@@ -8,12 +8,9 @@ import { formatMatchDate, hasMatchStarted } from '../utils/matchTime';
 import { calcMatchPoints, computeExactScoreBonus } from '../utils/scoring';
 import styles from './PlayerScoreModal.module.css';
 
-function ScoreFrame({ home, away, virtual, title }) {
+function ScoreFrame({ home, away }) {
   return (
-    <span
-      className={`${styles.scorePill} numerals ${virtual ? styles.virtualBet : ''}`}
-      title={title}
-    >
+    <span className={`${styles.scorePill} numerals`}>
       <span className={styles.scoreNum}>{home}</span>
       <span className={styles.scoreSep} aria-hidden="true">–</span>
       <span className={styles.scoreNum}>{away}</span>
@@ -23,8 +20,7 @@ function ScoreFrame({ home, away, virtual, title }) {
 
 function resolveBet(predMap, match) {
   const saved = predMap[String(match.id)];
-  if (saved) return { home: saved.home, away: saved.away, virtual: false };
-  if (hasMatchStarted(match)) return { home: 0, away: 0, virtual: true };
+  if (saved) return { home: saved.home, away: saved.away };
   return null;
 }
 
@@ -223,12 +219,7 @@ export default function PlayerScoreModal({ player, currentUserId, opened, onClos
                       </td>
                       <td className={styles.colCenter}>
                         {bet ? (
-                          <ScoreFrame
-                            home={bet.home}
-                            away={bet.away}
-                            virtual={bet.virtual}
-                            title={bet.virtual ? t('playerScore.virtualBet') : undefined}
-                          />
+                          <ScoreFrame home={bet.home} away={bet.away} />
                         ) : (
                           '—'
                         )}

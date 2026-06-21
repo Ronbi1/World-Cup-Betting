@@ -71,8 +71,9 @@ export function useLiveLeaderboard({ baseScores, matches }) {
       let dExact = 0;
       let dCorrect = 0;
       for (const m of liveMatches) {
-        // Missing prediction → virtual 0-0, exactly like the server scorer.
-        const pred = predsByMatch[String(m.id)]?.[String(row.userId)] ?? { home: 0, away: 0 };
+        // Missing prediction → no live credit (matches server scoring).
+        const pred = predsByMatch[String(m.id)]?.[String(row.userId)];
+        if (!pred) continue;
         const r = calcMatchPoints(pred, m);
         dPoints += r.points;
         if (r.exact) dExact += 1;
