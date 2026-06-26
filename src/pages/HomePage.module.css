@@ -211,6 +211,79 @@
 .noMatchesSub { font-size: 0.82rem; color: var(--clr-muted); margin-top: 0.35rem; }
 .noMatchesSub a { color: var(--clr-accent); }
 
+/* Short helper line under a section title (e.g. "Showing live + next 15 h"). */
+.sectionHelper {
+  margin: -0.55rem 0 0.9rem;
+  padding-inline-start: 0.75rem;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: var(--clr-muted);
+}
+
+/* "Recently finished" — visually secondary to the main matches section.
+   Same card chrome, dimmer accent + slimmer header, a collapsible body. */
+.secondarySection {
+  opacity: 0.92;
+}
+.secondarySection .matchList { margin-top: 0.65rem; }
+
+.secondaryDisclosure {
+  /* Reset native details/summary so it inherits our card type system. */
+  margin: 0;
+}
+.secondaryDisclosure[open] .secondarySummary {
+  margin-bottom: 0.25rem;
+}
+
+.secondarySummary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.6rem 0.55rem 0.75rem;
+  border-bottom: 1px solid var(--clr-border);
+  border-inline-start: 3px solid var(--clr-muted);
+  font-family: var(--font-display);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--clr-text-secondary);
+  user-select: none;
+}
+.secondarySummary::-webkit-details-marker { display: none; }
+.secondarySummary::after {
+  content: '▾';
+  margin-inline-start: auto;
+  font-size: 0.85rem;
+  color: var(--clr-muted);
+  transition: transform 180ms ease;
+}
+.secondaryDisclosure[open] .secondarySummary::after {
+  transform: rotate(180deg);
+}
+.secondarySummary:hover { color: var(--clr-text-primary); }
+.secondarySummary:focus-visible {
+  outline: 2px solid var(--clr-accent-cyan);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.secondaryTitle { font-size: 1rem; font-weight: 400; }
+.secondaryCount {
+  font-size: 0.85rem;
+  color: var(--clr-muted);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+@media (max-width: 720px) {
+  .secondarySummary {
+    padding: 0.45rem 0.6rem 0.55rem 0.75rem;
+  }
+  .secondaryTitle { font-size: 0.95rem; }
+  .sectionHelper { font-size: 0.74rem; margin-top: -0.4rem; }
+}
+
 /* Leaderboard header row with recalculate button */
 .leaderboardHeader {
   display: flex;

@@ -3,12 +3,18 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/useAuth';
 import { REG_STATUS, MATCH_STATUS } from '../utils/constants';
 import { isSimulationMode } from '../utils/simulation';
-import { useTodayMatches } from '../hooks/useTodayMatches';
+import { useHomeMatches } from '../hooks/useHomeMatches';
 import { useLiveMatchChannel } from '../hooks/useLiveMatchChannel';
 import { useLiveLeaderboard } from '../hooks/useLiveLeaderboard';
 import { useMinuteTick } from '../hooks/useMinuteTick';
 import { useUserPredictions } from '../hooks/useUserPredictions';
-import { formatKickoffCountdown, formatMatchTime, hasMatchStarted } from '../utils/matchTime';
+import {
+  formatKickoffCountdown,
+  formatMatchTime,
+  hasMatchStarted,
+  getMatchesInNextHours,
+  getRecentlyFinishedMatches,
+} from '../utils/matchTime';
 import MatchCard from '../components/MatchCard';
 import SkeletonCard from '../components/SkeletonCard';
 import BetModal from '../components/BetModal';
@@ -45,7 +51,7 @@ export default function HomePage() {
     loading: loadingMatches,
     error: matchError,
     applyLiveUpdate,
-  } = useTodayMatches({ onMatchFinished: handleMatchFinished });
+  } = useHomeMatches({ onMatchFinished: handleMatchFinished });
 
   // Supabase Realtime: instant score/event push + goal/card toasts. No-op
   // (polling stays in charge) when realtime env vars aren't configured.
@@ -171,10 +177,31 @@ export default function HomePage() {
         status: REG_STATUS.APPROVED,
       }));
 
-  // Hero ticker: first upcoming match today (scheduled/timed, not finished
-  // or in-play). Used to render "KICKOFF · {home} vs {away} · IN {ctd}" —
-  // pure derivation from already-fetched data, no extra network call.
+  // HomePage windows: split the polled season list into the two sections
+  // the page renders — predictable (live + next 15 h) and recently
+  // finished. Both are pure derivations from already-fetched data, re-run
+  // whenever the minute tick advances so cards age out of each window in
+  // real time without an extra network call.
+  const upcomingMatches = useMemo(
+    () => getMatchesInNextHours(todayMatches, 15, now),
+    [todayMatches, now],
+  );
+  const recentlyFinishedMatches = useMemo(
+    () => getRecentlyFinishedMatches(todayMatches, now),
+    [todayMatches, now],
+  );
+
+  // Hero ticker: first SCHEDULED/TIMED match in the upcoming window —
+  // matches what the user sees in the main section. Falls back to the
+  // first scheduled match anywhere in the polled set so the ticker stays
+  // useful at quiet hours (between fixtures, deep into the off-day).
   const nextMatch = useMemo(() => {
+    const fromWindow = upcomingMatches.find(
+      (m) =>
+        m.status === MATCH_STATUS.SCHEDULED ||
+        m.status === MATCH_STATUS.TIMED,
+    );
+    if (fromWindow) return fromWindow;
     const upcoming = todayMatches
       .filter(
         (m) =>
@@ -183,7 +210,7 @@ export default function HomePage() {
       )
       .sort((a, b) => new Date(a.utcDate) - new Date(b.utcDate));
     return upcoming[0] ?? null;
-  }, [todayMatches]);
+  }, [todayMatches, upcomingMatches]);
 
   const nextMatchCountdown = nextMatch
     ? formatKickoffCountdown(nextMatch.utcDate, t, now)
@@ -262,7 +289,8 @@ export default function HomePage() {
 
       <div className={styles.grid}>
         <section className={`${styles.card} ${styles.fullWidth}`}>
-          <h2 className={styles.sectionTitle}>📅 {t('home.todayMatches')}</h2>
+          <h2 className={styles.sectionTitle}>📅 {t('home.nextMatchesTitle')}</h2>
+          <p className={styles.sectionHelper}>{t('home.nextMatchesHelper')}</p>
           {loadingMatches && (
             <div className={styles.matchList}>
               {[1, 2, 3].map((n) => <SkeletonCard key={n} compact />)}
@@ -274,15 +302,15 @@ export default function HomePage() {
               <small>{matchError}</small>
             </div>
           )}
-          {!loadingMatches && !matchError && todayMatches.length === 0 && (
+          {!loadingMatches && !matchError && upcomingMatches.length === 0 && (
             <div className={styles.noMatches}>
-              <p>{t('home.noMatchesToday')}</p>
-              <p className={styles.noMatchesSub}>{t('home.noMatchesTodaySub')}</p>
+              <p>{t('home.noUpcomingMatches')}</p>
+              <p className={styles.noMatchesSub}>{t('home.noUpcomingMatchesSub')}</p>
             </div>
           )}
-          {!loadingMatches && todayMatches.length > 0 && (
+          {!loadingMatches && upcomingMatches.length > 0 && (
             <div className={styles.matchList}>
-              {todayMatches.map((m) => (
+              {upcomingMatches.map((m) => (
                 <MatchCard
                   key={m.id}
                   match={m}
@@ -296,6 +324,37 @@ export default function HomePage() {
             </div>
           )}
         </section>
+
+        {!loadingMatches && recentlyFinishedMatches.length > 0 && (
+          <section className={`${styles.card} ${styles.fullWidth} ${styles.secondarySection}`}>
+            <details
+              className={styles.secondaryDisclosure}
+              open={recentlyFinishedMatches.length <= 2}
+            >
+              <summary className={styles.secondarySummary}>
+                <span className={styles.secondaryTitle}>
+                  ✅ {t('home.recentlyFinishedTitle')}
+                </span>
+                <span className={`${styles.secondaryCount} numerals`}>
+                  ({recentlyFinishedMatches.length})
+                </span>
+              </summary>
+              <div className={styles.matchList}>
+                {recentlyFinishedMatches.map((m) => (
+                  <MatchCard
+                    key={m.id}
+                    match={m}
+                    compact
+                    onClick={handleMatchClick}
+                    onBets={handleMatchClick}
+                    now={now}
+                    userPrediction={predictions[String(m.id)]}
+                  />
+                ))}
+              </div>
+            </details>
+          </section>
+        )}
 
         <section className={`${styles.card} ${styles.fullWidth}`}>
           <div className={styles.leaderboardHeader}>

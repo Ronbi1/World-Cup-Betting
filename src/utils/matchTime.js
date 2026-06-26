@@ -132,3 +132,110 @@ export function formatKickoffCountdown(utcDate, t, now = Date.now()) {
   }
   return t('matchCard.countdown.daysHours', { days, hours });
 }
+
+// ─── HomePage windowing helpers ─────────────────────────────────────────────
+// Used by HomePage to split the season-wide match list into:
+//   • upcoming        → live + scheduled-with-kickoff in the next N hours
+//   • recently finished → FINISHED matches still worth showing as a recap
+// Filtering is intentionally on real Date math (never on formatted strings)
+// so midnight UTC / Israel-midnight boundaries can't accidentally hide a
+// match.
+
+// Generous wall-clock estimate for when a match will be over. Real end
+// times aren't in the current match payload — if a future scraper adds
+// one (`endedAt` / `finishedAt`) we prefer it; otherwise fall back to
+// kickoff + 3 h. The 3 h pad covers regulation (90) + halftime (15) +
+// stoppage (~10) + a worst-case knockout ET-plus-penalties tail
+// (~30 + 15 + penalty round). Slightly over-shoots for tidy group games —
+// by design, since the visibility cutoff that uses this value should
+// never yank a FINISHED-flagged match the moment the real whistle blows.
+const POST_KICKOFF_PAD_MS = 3 * MS_PER_HOUR;
+
+export function getEstimatedMatchEnd(match) {
+  if (!match) return null;
+  const explicit = match.endedAt ?? match.finishedAt;
+  if (explicit) {
+    const d = new Date(explicit);
+    if (!Number.isNaN(d.getTime())) return d;
+  }
+  if (!match.utcDate) return null;
+  const kickoff = new Date(match.utcDate).getTime();
+  if (!Number.isFinite(kickoff)) return null;
+  return new Date(kickoff + POST_KICKOFF_PAD_MS);
+}
+
+export function getMatchesInNextHours(matches, hoursAhead = 15, now = Date.now()) {
+  if (!Array.isArray(matches) || matches.length === 0) return [];
+  const windowMs = hoursAhead * MS_PER_HOUR;
+  const nowMs = typeof now === 'number' ? now : new Date(now).getTime();
+  const horizon = nowMs + windowMs;
+
+  return matches
+    .filter((m) => {
+      if (!m) return false;
+      if (m.status === MATCH_STATUS.IN_PLAY || m.status === MATCH_STATUS.PAUSED) {
+        return true;
+      }
+      if (m.status !== MATCH_STATUS.SCHEDULED && m.status !== MATCH_STATUS.TIMED) {
+        return false;
+      }
+      if (!m.utcDate) return false;
+      const kickoff = new Date(m.utcDate).getTime();
+      if (!Number.isFinite(kickoff)) return false;
+      return kickoff >= nowMs && kickoff <= horizon;
+    })
+    .sort((a, b) => new Date(a.utcDate).getTime() - new Date(b.utcDate).getTime());
+}
+
+// 24-hour Israel-local 'HH:MM' formatter used by the morning-window rule.
+const ISRAEL_HHMM_FMT = new Intl.DateTimeFormat('en-CA', {
+  timeZone: MATCH_TIME_ZONE,
+  hour: '2-digit',
+  minute: '2-digit',
+  hour12: false,
+});
+
+function israelHourMinute(date) {
+  const parts = ISRAEL_HHMM_FMT.format(date).split(':');
+  return { hour: Number(parts[0]), minute: Number(parts[1]) };
+}
+
+// Visibility rule for finished matches on the HomePage:
+//   • Normal  → visible for 1 hour after the (real or estimated) end.
+//   • Morning → if the end falls between 04:00 and 10:00 Israel time, keep
+//               it visible until 19:00 Israel that same day, so users who
+//               wake up at 09:00 still see the result on their HomePage.
+// DST transitions in Israel happen at 02:00 (Mar/Oct), never inside the
+// 04:00–19:00 same-day window, so wall-clock delta == UTC delta.
+const MORNING_START_HOUR = 4;
+const MORNING_END_HOUR = 10;
+const EVENING_CUTOFF_HOUR = 19;
+const NORMAL_VISIBLE_MS = MS_PER_HOUR;
+
+export function getRecentlyFinishedMatches(matches, now = Date.now()) {
+  if (!Array.isArray(matches) || matches.length === 0) return [];
+  const nowMs = typeof now === 'number' ? now : new Date(now).getTime();
+
+  return matches
+    .filter((m) => {
+      if (!m || m.status !== MATCH_STATUS.FINISHED) return false;
+      const end = getEstimatedMatchEnd(m);
+      if (!end) return false;
+      const endMs = end.getTime();
+
+      const { hour, minute } = israelHourMinute(end);
+      let visibleUntilMs;
+      if (hour >= MORNING_START_HOUR && hour < MORNING_END_HOUR) {
+        const minutesUntil19 = (EVENING_CUTOFF_HOUR - hour) * 60 - minute;
+        visibleUntilMs = endMs + minutesUntil19 * MS_PER_MINUTE;
+      } else {
+        visibleUntilMs = endMs + NORMAL_VISIBLE_MS;
+      }
+      return nowMs <= visibleUntilMs;
+    })
+    .sort((a, b) => {
+      const ae = getEstimatedMatchEnd(a)?.getTime() ?? 0;
+      const be = getEstimatedMatchEnd(b)?.getTime() ?? 0;
+      return be - ae;
+    });
+}

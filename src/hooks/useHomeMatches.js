@@ -1,7 +1,14 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { fetchTodayMatches, parseApiError } from '../services/footballService';
+import { fetchMatches, parseApiError } from '../services/footballService';
 import { MATCH_STATUS } from '../utils/constants';
 
+// Powers the HomePage "next 15 hours" + "recently finished" sections.
+// We fetch the full season list (not just today/UTC) because the HomePage
+// windows it on the client by Israel-local time, and any "next 15 h"
+// evening window straddles UTC midnight — a UTC-day-bounded fetch would
+// silently hide tomorrow-morning kickoffs. The /matches endpoint hits the
+// same backend cache as /matches/today so the cost is identical.
+//
 // worldcup26.ir exposes live status via time_elapsed. Adaptive polling:
 //   - 30 s while a match is IN_PLAY / PAUSED
 //   - 60 s when kickoff is within 15 minutes
@@ -31,11 +38,11 @@ function getPollInterval(matches) {
   return SLOW_POLL_MS;
 }
 
-// useTodayMatches({ onMatchFinished }) — optional callback fires when any
+// useHomeMatches({ onMatchFinished }) — optional callback fires when any
 // match in the polled set transitions into FINISHED. HomePage uses this to
 // kick off an immediate leaderboard refresh so users see their points within
 // ~1 minute of the real-world final whistle.
-export function useTodayMatches({ onMatchFinished } = {}) {
+export function useHomeMatches({ onMatchFinished } = {}) {
   const [matches, setMatches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -55,7 +62,7 @@ export function useTodayMatches({ onMatchFinished } = {}) {
     if (isInitial) setLoading(true);
     setError(null);
     try {
-      const data = await fetchTodayMatches();
+      const data = await fetchMatches();
       if (!cancelledRef.current) {
         // Detect FINISHED transitions before we overwrite matchesRef.
         const nextFinished = new Set(
@@ -123,7 +130,7 @@ export function useTodayMatches({ onMatchFinished } = {}) {
 
   // Merge a single match pushed over Supabase Realtime into the current set,
   // so a live goal/card reflects instantly without waiting for the next poll.
-  // Only touches matches already in today's list; unknown ids are ignored.
+  // Only touches matches already in the polled list; unknown ids are ignored.
   const applyLiveUpdate = useCallback((row) => {
     if (!row?.id) return;
     setMatches((prev) => {

@@ -78,8 +78,13 @@
       "topAssist": "מלך הבישולים – ניחוש שיא הבישולים → 15 נק׳"
     },
     "todayMatches": "המשחקים של היום",
+    "nextMatchesTitle": "המשחקים הקרובים",
+    "nextMatchesHelper": "מציג משחקים חיים ומשחקים שיתחילו ב־15 השעות הקרובות.",
     "noMatchesToday": "אין משחקים מתוכננים להיום.",
     "noMatchesTodaySub": "ניתן לראות את כל המשחקים בעמוד \"כל המשחקים\".",
+    "noUpcomingMatches": "אין משחקים ב־15 השעות הקרובות.",
+    "noUpcomingMatchesSub": "ניתן לראות את כל המשחקים בעמוד \"כל המשחקים\".",
+    "recentlyFinishedTitle": "משחקים שהסתיימו לאחרונה",
     "loadError": "טעינת משחקי היום נכשלה.",
     "leaderboard": "טבלת המובילים",
     "recalc": "חשב נקודות מחדש",

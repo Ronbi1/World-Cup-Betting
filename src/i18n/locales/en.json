@@ -78,8 +78,13 @@
       "topAssist": "Top Assist — pick the most-assists player → 15 pts"
     },
     "todayMatches": "Today's Matches",
+    "nextMatchesTitle": "Next 15 Hours",
+    "nextMatchesHelper": "Showing live matches and matches starting in the next 15 hours.",
     "noMatchesToday": "No matches scheduled for today.",
     "noMatchesTodaySub": "Check the All Games page for upcoming fixtures.",
+    "noUpcomingMatches": "No matches in the next 15 hours.",
+    "noUpcomingMatchesSub": "Check the All Games page for upcoming fixtures.",
+    "recentlyFinishedTitle": "Recently finished",
     "loadError": "Could not load today's matches.",
     "leaderboard": "Leaderboard",
     "recalc": "Recalculate Scores",
