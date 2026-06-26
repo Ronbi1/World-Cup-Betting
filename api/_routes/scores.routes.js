@@ -3,6 +3,8 @@ const { supabase } = require('../_lib/supabase');
 const { requireAuth, requireAdmin, requireFreshAdmin } = require('../_lib/auth');
 const { computeLeaderboard, readTournamentBonus } = require('../_lib/scoring');
 const { getFinishedMatches, useMirror } = require('../_lib/matchesSource');
+const { refreshLiveScores } = require('../_lib/liveScores');
+const { bustGamesCache } = require('../_lib/football');
 const leaderboardCache = require('../_lib/leaderboardCache');
 const { timeSupabase } = require('../_lib/requestTiming');
 const {
@@ -75,9 +77,52 @@ async function loadLeaderboardInputs(req = null) {
 }
 
 // GET /api/scores — leaderboard, dynamically computed from finished matches.
-// READ-ONLY: never writes to the database.
+// READ-ONLY for the user/predictions tables. `?fresh=true` may call
+// refreshLiveScores() (mirror mode) which writes only to matches_mirror —
+// the same write scope the /api/cron/live-scores tick already has.
 router.get('/', requireAuth, async (req, res, next) => {
   try {
+    const fresh = req.query.fresh === 'true';
+
+    if (fresh) {
+      const tStart = Date.now();
+      leaderboardCache.bust();
+      if (!isSimulationMode()) {
+        const t0 = Date.now();
+        try {
+          if (useMirror()) {
+            await refreshLiveScores();
+          } else {
+            bustGamesCache();
+          }
+        } catch (err) {
+          console.warn('[scores] fresh=true source refresh failed; continuing with current data', {
+            error: err.message,
+            ms: Date.now() - t0,
+            mode: useMirror() ? 'mirror' : 'live',
+          });
+        }
+      }
+      req.timing?.note('cacheHit', false);
+      req.timing?.note('fresh', true);
+      req.timing?.note('source', useMirror() ? 'mirror' : 'live');
+
+      const { users, finishedMatches, predictions } = await loadLeaderboardInputs(req);
+      req.timing?.note('users', users.length);
+      req.timing?.note('finishedMatches', finishedMatches.length);
+      req.timing?.note('predictions', predictions.length);
+      const leaderboard = computeLeaderboard({ users, finishedMatches, predictions });
+
+      leaderboardCache.write(leaderboard);
+      console.log('[scores] fresh=true ok', {
+        ms: Date.now() - tStart,
+        mode: useMirror() ? 'mirror' : 'live',
+        users: users.length,
+        finishedMatches: finishedMatches.length,
+      });
+      return res.json(leaderboard);
+    }
+
     const cached = leaderboardCache.read();
     if (cached) {
       req.timing?.note('cacheHit', true);

@@ -123,9 +123,16 @@ export function AuthProvider({ children }) {
   }, [user?.id, user?.role]);
 
   // ── Load scores for all approved users (available to everyone) ────────────
-  const fetchScores = useCallback(async () => {
+  // Pass { fresh: true } to bypass the server's 30 s leaderboard cache and
+  // (in mirror mode) push the matches_mirror to its latest live/FINISHED state
+  // before recomputing — used by HomePage right when a match flips FINISHED so
+  // the leaderboard catches up immediately instead of lagging up to ~90 s.
+  const fetchScores = useCallback(async ({ fresh = false } = {}) => {
     try {
-      const { data } = await serverApi.get('/scores');
+      const { data } = await serverApi.get(
+        '/scores',
+        fresh ? { params: { fresh: true } } : undefined,
+      );
       setScores(data);
     } catch (err) {
       console.error('[AuthContext] fetchScores error:', err.message);

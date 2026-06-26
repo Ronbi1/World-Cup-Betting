@@ -33,7 +33,10 @@ export default function HomePage() {
   const { data: spotlight, loading: loadingSpotlight, refresh: refreshSpotlight } = useSpotlight();
 
   const handleMatchFinished = useCallback(() => {
-    refreshScores();
+    // fresh=true bypasses the server's 30 s leaderboard cache AND pushes the
+    // matches_mirror to its latest FINISHED state, so the leaderboard total
+    // catches up with the just-earned points on the very next response.
+    refreshScores({ fresh: true });
     refreshSpotlight();
   }, [refreshScores, refreshSpotlight]);
 
