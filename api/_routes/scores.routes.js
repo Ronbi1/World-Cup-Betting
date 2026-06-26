@@ -67,7 +67,13 @@ async function loadLeaderboardInputs(req = null) {
       () => supabase
         .from('predictions')
         .select('user_id, match_id, home, away')
-        .in('match_id', finishedMatchIds),
+        .in('match_id', finishedMatchIds)
+        // Supabase's PostgREST defaults to a 1000-row cap. With ~20 users ×
+        // up to 104 matches we can cross that and silently drop predictions
+        // — predictions for the most recently finished matches end up missing
+        // and the leaderboard under-counts. 10 000 is ~5× the worst case for
+        // this pool, single round-trip, no pagination required.
+        .limit(10000),
     );
     if (predError) throw predError;
     predictions = data ?? [];
