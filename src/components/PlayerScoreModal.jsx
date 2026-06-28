@@ -29,6 +29,20 @@ function hasFinalScore(match) {
   return actual?.home !== null && actual?.home !== undefined;
 }
 
+// For knockout matches that went to ET/penalties, scoring uses the regulation
+// (90' + added) result, not the displayed final. The breakdown shows the
+// regulation score prominently with a "90'" tag so users understand why a
+// 1-1 prediction scored after the broadcast finished 2-1 in ET.
+function scoringResultFor(match) {
+  const stage = match.stage || 'GROUP_STAGE';
+  const reg = match.score?.regulation;
+  const hasReg = reg && reg.home != null && reg.away != null;
+  const wentToET = !!(match.score?.wentToExtraTime || match.score?.decidedByPenalties);
+  if (stage !== 'GROUP_STAGE' && hasReg) return reg;
+  if (stage !== 'GROUP_STAGE' && wentToET) return null; // unresolved
+  return match.score?.fullTime ?? null;
+}
+
 export default function PlayerScoreModal({ player, currentUserId, opened, onClose }) {
   const { t, i18n } = useTranslation();
   const locale = i18n.resolvedLanguage === 'he' ? 'he-IL' : 'en-GB';
@@ -102,8 +116,14 @@ export default function PlayerScoreModal({ player, currentUserId, opened, onClos
     let matchPointsTotal = 0;
     const tableRows = relevant.map((match) => {
       const bet = resolveBet(predictions, match);
-      const actual = match.score?.fullTime;
+      const fullTime = match.score?.fullTime;
+      const scoringResult = scoringResultFor(match);
       const finishedWithScore = hasFinalScore(match);
+      const wentToET = !!(match.score?.wentToExtraTime || match.score?.decidedByPenalties);
+      const showsRegulation =
+        wentToET &&
+        (match.stage || 'GROUP_STAGE') !== 'GROUP_STAGE' &&
+        scoringResult != null;
       let points = null;
       let rowClass = '';
 
@@ -117,7 +137,17 @@ export default function PlayerScoreModal({ player, currentUserId, opened, onClos
         else if (result.correct) rowClass = styles.rowResult;
       }
 
-      return { match, bet, actual, points, rowClass, finishedWithScore };
+      return {
+        match,
+        bet,
+        fullTime,
+        scoringResult,
+        wentToET,
+        showsRegulation,
+        points,
+        rowClass,
+        finishedWithScore,
+      };
     });
 
     const streakBonus = computeExactScoreBonus(finished, predByMatchId);
@@ -196,7 +226,17 @@ export default function PlayerScoreModal({ player, currentUserId, opened, onClos
                 </tr>
               </thead>
               <tbody>
-                {rows.map(({ match, bet, actual, points, rowClass, finishedWithScore }) => {
+                {rows.map(({
+                  match,
+                  bet,
+                  fullTime,
+                  scoringResult,
+                  wentToET,
+                  showsRegulation,
+                  points,
+                  rowClass,
+                  finishedWithScore,
+                }) => {
                   const homeName = match.homeTeam?.shortName ?? match.homeTeam?.name ?? '—';
                   const awayName = match.awayTeam?.shortName ?? match.awayTeam?.name ?? '—';
                   const dateStr = formatMatchDate(match.utcDate, locale, {
@@ -204,10 +244,14 @@ export default function PlayerScoreModal({ player, currentUserId, opened, onClos
                     month: 'short',
                   });
 
+                  // Use the per-match exact/correct flags from calcMatchPoints
+                  // (re-derived only when needed) instead of the brittle
+                  // points-≥-3 / points===1 thresholds, which no longer hold
+                  // across knockout stages where exact starts at 4.
                   let pointsClass = styles.pointsZero;
                   if (points === null) pointsClass = styles.pointsPending;
-                  else if (points >= 3) pointsClass = styles.pointsExact;
-                  else if (points === 1) pointsClass = styles.pointsResult;
+                  else if (rowClass === styles.rowExact) pointsClass = styles.pointsExact;
+                  else if (rowClass === styles.rowResult) pointsClass = styles.pointsResult;
 
                   return (
                     <tr key={match.id} className={rowClass}>
@@ -225,10 +269,39 @@ export default function PlayerScoreModal({ player, currentUserId, opened, onClos
                         )}
                       </td>
                       <td className={styles.colCenter}>
-                        {finishedWithScore ? (
-                          <ScoreFrame home={actual.home} away={actual.away} />
+                        {showsRegulation ? (
+                          <span
+                            className={styles.resultStack}
+                            title={t('playerScore.regulationTooltip', {
+                              defaultValue:
+                                "Scored on regulation-time result. Final after ET/penalties shown below.",
+                            })}
+                          >
+                            <span className={styles.regTag}>
+                              {t('playerScore.regulationTag', { defaultValue: "90'" })}
+                            </span>
+                            <ScoreFrame home={scoringResult.home} away={scoringResult.away} />
+                            {fullTime && (fullTime.home !== scoringResult.home ||
+                              fullTime.away !== scoringResult.away) && (
+                              <span className={`${styles.finalNote} numerals`}>
+                                {t('playerScore.finalAfter', {
+                                  defaultValue: 'Final {{home}}–{{away}}',
+                                  home: fullTime.home,
+                                  away: fullTime.away,
+                                })}
+                              </span>
+                            )}
+                          </span>
+                        ) : finishedWithScore ? (
+                          <ScoreFrame home={fullTime.home} away={fullTime.away} />
                         ) : hasMatchStarted(match) ? (
-                          <ScoreFrame home={actual?.home ?? 0} away={actual?.away ?? 0} />
+                          <ScoreFrame home={fullTime?.home ?? 0} away={fullTime?.away ?? 0} />
+                        ) : wentToET && !scoringResult ? (
+                          <span className={styles.finalNote}>
+                            {t('playerScore.unresolved', {
+                              defaultValue: 'ET/penalties — regulation score unavailable',
+                            })}
+                          </span>
                         ) : (
                           '—'
                         )}

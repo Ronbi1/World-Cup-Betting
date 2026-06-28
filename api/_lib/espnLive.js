@@ -35,6 +35,37 @@ function toIntOrNull(v) {
   return Number.isNaN(n) ? null : n;
 }
 
+// ── Regulation-time extraction ───────────────────────────────────────────────
+// ESPN soccer scoreboard returns `competitor.linescores` as an ORDERED array of
+// per-period score objects: [{ value: N }, ...]. For soccer, periods 1 and 2
+// are the first and second half — they together represent regulation time (90'
+// + added time). Any further entries are extra time and/or the penalty
+// shootout count.
+//
+// We sum linescores[0..1] to get regulation. If the array is missing or shorter
+// than 2 entries, we return null — never guess from the running total.
+function regulationFromLinescores(linescores) {
+  if (!Array.isArray(linescores) || linescores.length < 2) return null;
+  const a = toIntOrNull(linescores[0]?.value);
+  const b = toIntOrNull(linescores[1]?.value);
+  if (a == null || b == null) return null;
+  return a + b;
+}
+
+// ESPN status text signals — description / shortDetail can be "Final", "Full
+// Time", "Final/AET", "After Extra Time", "Final/PEN", "Penalty Shootout", etc.
+// Substring checks are deliberately broad; both regex run against the joined
+// lowercase text.
+function detectExtraTime(typeDescription, typeShortDetail) {
+  const s = `${typeDescription || ''} ${typeShortDetail || ''}`.toLowerCase();
+  return /\baet\b|\bet\b|extra\s*time|after\s*extra/i.test(s);
+}
+
+function detectPenalties(typeDescription, typeShortDetail) {
+  const s = `${typeDescription || ''} ${typeShortDetail || ''}`.toLowerCase();
+  return /\bpen\b|penalt/i.test(s);
+}
+
 // Unordered FIFA-code key so home/away orientation doesn't matter for lookup.
 function codePair(a, b) {
   return [String(a || '').toUpperCase(), String(b || '').toUpperCase()]
@@ -59,6 +90,23 @@ async function fetchEspnScoreboard({ axiosClient = axios } = {}) {
     const type = ev.status?.type || {};
     const status = mapEspnStatus(type);
     const isLive = status === 'IN_PLAY' || status === 'PAUSED';
+    // Regulation: sum of period-1 + period-2 linescores when present. Stays
+    // null if ESPN hasn't published periods yet (e.g. early in the match), or
+    // if linescores arrives short. The downstream freeze rule in liveScores.js
+    // keeps the previously-captured value if any tick produced one.
+    const regulationHomeScore = regulationFromLinescores(home.linescores);
+    const regulationAwayScore = regulationFromLinescores(away.linescores);
+    // ET/penalty signals: prefer the explicit status text. As a defensive
+    // backup, also flag based on linescores length so a match with 4+ periods
+    // is treated as having gone to ET even if ESPN labels it just "Final".
+    const homeLineCount = Array.isArray(home.linescores) ? home.linescores.length : 0;
+    const awayLineCount = Array.isArray(away.linescores) ? away.linescores.length : 0;
+    const maxLineCount = Math.max(homeLineCount, awayLineCount);
+    const wentToExtraTime = detectExtraTime(type.description, type.shortDetail)
+      || detectPenalties(type.description, type.shortDetail)
+      || maxLineCount > 2;
+    const decidedByPenalties = detectPenalties(type.description, type.shortDetail)
+      || maxLineCount > 4;
     return {
       espnId: String(ev.id),
       date: ev.date,
@@ -68,6 +116,10 @@ async function fetchEspnScoreboard({ axiosClient = axios } = {}) {
       awayName: away.team?.displayName ?? null,
       homeScore: toIntOrNull(home.score),
       awayScore: toIntOrNull(away.score),
+      regulationHomeScore,
+      regulationAwayScore,
+      wentToExtraTime,
+      decidedByPenalties,
       status,
       timeElapsed: isLive ? (ev.status?.displayClock || type.shortDetail || null) : null,
     };
@@ -157,5 +209,8 @@ module.exports = {
   codePair,
   eventKind,
   mapEspnStatus,
+  regulationFromLinescores,
+  detectExtraTime,
+  detectPenalties,
   ESPN_BASE,
 };

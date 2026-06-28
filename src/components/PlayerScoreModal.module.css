@@ -195,6 +195,29 @@
 .rowExact td { background: rgba(212, 175, 55, 0.06); }
 .rowResult td { background: rgba(34, 197, 94, 0.05); }
 
+/* Used when a knockout match went to ET/penalties — clarifies that the
+ * regulation-time score (not the displayed final) is what scoring is based on. */
+.resultStack {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.18rem;
+}
+
+.regTag {
+  font-size: 0.55rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--clr-muted);
+}
+
+.finalNote {
+  font-size: 0.62rem;
+  color: var(--clr-muted);
+  white-space: nowrap;
+}
+
 .subtotalRow td {
   padding: 0.5rem 0.5rem;
   border-top: 1px solid var(--clr-border);

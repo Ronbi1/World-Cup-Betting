@@ -41,16 +41,47 @@ function isLiveWindow(m, now) {
 // Produce the next `normalized` object, preserving everything (ids, teams,
 // crests, stage) and overlaying only the dynamic live fields. This keeps the
 // match id stable === predictions.match_id.
-function buildNormalized(prev, { status, homeScore, awayScore, timeElapsed, source, events }) {
+//
+// REGULATION FREEZE — critical for knockout scoring: once a tick captures
+// score.regulation (sum of half-1 + half-2 from ESPN linescores), later ticks
+// must NEVER overwrite it. ET goals push fullTime up; regulation stays at the
+// 90' value. Same goes for `wentToExtraTime` / `decidedByPenalties` flags —
+// once set, they remain set even if a later source omits them.
+function buildNormalized(prev, {
+  status,
+  homeScore,
+  awayScore,
+  timeElapsed,
+  source,
+  events,
+  regulationHome,
+  regulationAway,
+  wentToExtraTime,
+  decidedByPenalties,
+}) {
+  const prevScore = prev.score || {};
+  const prevReg = prevScore.regulation;
+  const hasPrevReg = prevReg && prevReg.home != null && prevReg.away != null;
+  // Freeze: keep the prior regulation if any tick already captured it.
+  // Otherwise accept this tick's value (only if BOTH sides came back numeric).
+  const regulation = hasPrevReg
+    ? prevReg
+    : (regulationHome != null && regulationAway != null
+        ? { home: regulationHome, away: regulationAway }
+        : (prevReg ?? null));
+
   return {
     ...prev,
     status,
     timeElapsed: timeElapsed ?? null,
     score: {
-      ...(prev.score || {}),
+      ...prevScore,
       home: homeScore,
       away: awayScore,
       fullTime: { home: homeScore, away: awayScore },
+      regulation,
+      wentToExtraTime: !!prevScore.wentToExtraTime || !!wentToExtraTime,
+      decidedByPenalties: !!prevScore.decidedByPenalties || !!decidedByPenalties,
     },
     // Keep prior events unless this refresh fetched fresh ones (ESPN only).
     events: events ?? prev.events ?? [],
@@ -66,16 +97,28 @@ function fromEspn(prev, espn) {
     status: espn.status,
     homeScore: direct ? espn.homeScore : espn.awayScore,
     awayScore: direct ? espn.awayScore : espn.homeScore,
+    regulationHome: direct ? espn.regulationHomeScore : espn.regulationAwayScore,
+    regulationAway: direct ? espn.regulationAwayScore : espn.regulationHomeScore,
+    wentToExtraTime: espn.wentToExtraTime,
+    decidedByPenalties: espn.decidedByPenalties,
     timeElapsed: espn.timeElapsed,
     source: 'espn',
   });
 }
 
+// worldcup26 fallback never carries regulation/ET signals. Pass nulls so the
+// freeze rule preserves whatever ESPN captured earlier in the match. If ESPN
+// was down for the entire match, regulation stays null and the scoring engine
+// reports the match as unresolved + logs a warning.
 function fromWc26(prev, wm) {
   return buildNormalized(prev, {
     status: wm.status,
     homeScore: wm.score?.fullTime?.home ?? null,
     awayScore: wm.score?.fullTime?.away ?? null,
+    regulationHome: null,
+    regulationAway: null,
+    wentToExtraTime: undefined,
+    decidedByPenalties: undefined,
     timeElapsed: wm.timeElapsed ?? null,
     source: 'wc26',
   });
@@ -86,11 +129,19 @@ function eventsSig(m) {
 }
 
 function changed(prev, next) {
+  const prevReg = prev.score?.regulation ?? null;
+  const nextReg = next.score?.regulation ?? null;
+  const regChanged =
+    (prevReg?.home ?? null) !== (nextReg?.home ?? null) ||
+    (prevReg?.away ?? null) !== (nextReg?.away ?? null);
   return (
     prev.status !== next.status ||
     (prev.score?.fullTime?.home ?? null) !== (next.score?.fullTime?.home ?? null) ||
     (prev.score?.fullTime?.away ?? null) !== (next.score?.fullTime?.away ?? null) ||
     (prev.timeElapsed ?? null) !== (next.timeElapsed ?? null) ||
+    !!prev.score?.wentToExtraTime !== !!next.score?.wentToExtraTime ||
+    !!prev.score?.decidedByPenalties !== !!next.score?.decidedByPenalties ||
+    regChanged ||
     eventsSig(prev) !== eventsSig(next) // a new card has no score change
   );
 }

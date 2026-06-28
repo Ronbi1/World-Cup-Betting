@@ -1,39 +1,77 @@
 // Scoring rules — single source of truth shared by recalculate logic and
 // any future test harness.
 //
-// Match predictions:
-//   Exact score (≤3 total goals)  → 3 pts
-//   Exact score (≥4 total goals)  → 5 pts (3 base + 2 high-scoring bonus)
-//   Correct result (not exact)    → 1 pt
-//   Wrong result                  → 0 pts
+// ─── Per-match prediction scoring ────────────────────────────────────────────
+// Knockout stages scale up — see STAGE_POINTS below. Group-stage scoring is
+// unchanged from the original 1/3/5 table so existing group-stage leaderboard
+// totals do not shift after the migration.
 //
-// Tournament bets (applied once, at end of tournament):
+//   Group stage         direction=1  exact=3  exact (≥4 goals)=5
+//   Round of 32         direction=2  exact=4  exact (≥4 goals)=6
+//   Round of 16         direction=2  exact=5  exact (≥4 goals)=7
+//   Quarter-finals      direction=3  exact=7  exact (≥4 goals)=9
+//   Semi-finals         direction=4  exact=9  exact (≥4 goals)=11
+//   Third-place match   direction=4  exact=9  exact (≥4 goals)=11   (= semi)
+//   Final               direction=5  exact=12 exact (≥4 goals)=15
+//
+// Unknown stage values fall back to GROUP_STAGE rates so a new upstream code
+// cannot crash scoring.
+//
+// ─── Regulation-time only for knockout matches ───────────────────────────────
+// Knockout scoring uses ONLY the score at the end of regulation time (90' +
+// added time). Extra time and penalties never affect points, even if they
+// decide the actual match. The live-scores cron freezes `match.score.regulation`
+// from ESPN linescores at the end of period 2; later ticks don't overwrite it.
+//   1-1 at 90' then 2-1 in ET  → scoring result is 1-1.
+//   0-0 at 90' then PK winner  → scoring result is 0-0.
+// If a knockout match went to ET/penalties but no regulation score is available,
+// the match is treated as UNRESOLVED: 0 points, no exact/correct credit, the
+// exact-streak counter does not advance, and a warning is logged once with
+// match id, stage, teams, fullTime, source, and the ET/penalty flags.
+//
+// ─── Tournament bets (applied once, at end of tournament) ────────────────────
 //   Winning team   → 15 pts
 //   Top scorer     → 15 pts
 //   Top assist     → 15 pts
 //
-// Leaderboard bonus (one-time, applied at compute time):
-//   3 consecutive exact-score hits (in kickoff order) → +3 pts.
-//   The bonus is awarded once and does NOT stack if the streak grows
-//   beyond 3.
+// ─── Leaderboard bonus (one-time) ────────────────────────────────────────────
+//   3 consecutive exact-score hits (in kickoff order) → +3 pts. The bonus is
+//   awarded once and does NOT stack. Unresolved knockout matches reset the
+//   streak (same as a wrong prediction).
 //
 // Missing prediction handling:
-//   A user who never saved a prediction for a finished match earns 0
-//   points for that match. The match counts as a miss and breaks any
-//   exact-score streak in progress — identical to a wrong prediction
-//   for streak purposes.
+//   A user who never saved a prediction for a finished match earns 0 points
+//   and the match breaks any in-progress exact-score streak.
+
+const STAGE_POINTS = {
+  GROUP_STAGE:    { correct: 1, exact: 3,  exactHighScoring: 5 },
+  ROUND_OF_32:    { correct: 2, exact: 4,  exactHighScoring: 6 },
+  ROUND_OF_16:    { correct: 2, exact: 5,  exactHighScoring: 7 },
+  QUARTER_FINALS: { correct: 3, exact: 7,  exactHighScoring: 9 },
+  SEMI_FINALS:    { correct: 4, exact: 9,  exactHighScoring: 11 },
+  THIRD_PLACE:    { correct: 4, exact: 9,  exactHighScoring: 11 },
+  FINAL:          { correct: 5, exact: 12, exactHighScoring: 15 },
+};
+
+const HIGH_SCORING_MIN = 4; // total goals threshold for the high-scoring tier
 
 const POINTS = {
-  EXACT_BASE: 3,
-  HIGH_SCORING_BONUS: 2,
-  HIGH_SCORING_MIN: 4,
-  CORRECT_RESULT: 1,
+  HIGH_SCORING_MIN,
   TOURNAMENT_WINNER: 15,
   TOP_SCORER: 15,
   TOP_ASSIST: 15,
   EXACT_SCORE_BONUS_MIN: 3,
   EXACT_SCORE_BONUS: 3,
+  // Group-stage rates kept as named constants for legacy tests and external
+  // readers. New code should read STAGE_POINTS instead.
+  EXACT_BASE: STAGE_POINTS.GROUP_STAGE.exact,
+  HIGH_SCORING_BONUS: STAGE_POINTS.GROUP_STAGE.exactHighScoring - STAGE_POINTS.GROUP_STAGE.exact,
+  CORRECT_RESULT: STAGE_POINTS.GROUP_STAGE.correct,
 };
+
+function stagePoints(stage) {
+  return STAGE_POINTS[stage] || STAGE_POINTS.GROUP_STAGE;
+}
 
 function outcome(home, away) {
   if (home > away) return 'home';
@@ -41,23 +79,73 @@ function outcome(home, away) {
   return 'draw';
 }
 
+// Log each unresolved knockout match at most once per process to avoid log
+// spam from repeated leaderboard requests. Resets when the process restarts —
+// that's fine: a fresh boot getting the warning again is a useful signal.
+const _unresolvedLogged = new Set();
+function logUnresolvedKnockoutOnce(match) {
+  const matchId = match?.id ?? '?';
+  if (_unresolvedLogged.has(String(matchId))) return;
+  _unresolvedLogged.add(String(matchId));
+  console.warn('[scoring] knockout match went to ET/penalties but no regulation score available', {
+    matchId,
+    stage: match?.stage ?? null,
+    homeTeam: match?.homeTeam?.name ?? match?.homeTeam?.shortName ?? null,
+    awayTeam: match?.awayTeam?.name ?? match?.awayTeam?.shortName ?? null,
+    fullTime: match?.score?.fullTime ?? null,
+    source: match?._liveSource ?? null,
+    wentToExtraTime: !!match?.score?.wentToExtraTime,
+    decidedByPenalties: !!match?.score?.decidedByPenalties,
+  });
+}
+
+// Resolve the score used for scoring. Returns `null` when a knockout match is
+// unresolved (went to ET/penalties but no regulation captured) — calcPoints
+// then awards zero. Group-stage matches and knockout matches that did NOT go
+// to ET fall back to fullTime, so the engine works even if some historical
+// rows in matches_mirror don't have `regulation` populated yet.
+function resolveScoringResult(match) {
+  const stage = match?.stage || 'GROUP_STAGE';
+  const isKnockout = stage !== 'GROUP_STAGE';
+  const reg = match?.score?.regulation;
+  const hasReg = reg && reg.home != null && reg.away != null;
+  const wentToET = !!(match?.score?.wentToExtraTime || match?.score?.decidedByPenalties);
+
+  if (isKnockout) {
+    if (hasReg) return reg;
+    if (wentToET) {
+      logUnresolvedKnockoutOnce(match);
+      return null; // 0 pts; do not fall back to fullTime — per the rules.
+    }
+    // No ET signal: regulation === fullTime by definition. Use it.
+    return match?.score?.fullTime ?? null;
+  }
+
+  // Group stage: regulation is just fullTime. Prefer the explicit regulation
+  // field when populated (post-migration rows), fall back to fullTime
+  // otherwise (pre-migration rows still in JSONB).
+  if (hasReg) return reg;
+  return match?.score?.fullTime ?? null;
+}
+
 function calcPoints(pred, match) {
-  const actual = match.score?.fullTime;
-  if (actual?.home === null || actual?.home === undefined) {
+  const actual = resolveScoringResult(match);
+  if (!actual || actual.home == null || actual.away == null) {
     return { points: 0, exact: false, correct: false };
   }
 
   const actualHome = actual.home;
   const actualAway = actual.away;
+  const sp = stagePoints(match?.stage);
 
   if (pred.home === actualHome && pred.away === actualAway) {
     const totalGoals = actualHome + actualAway;
-    const bonus = totalGoals >= POINTS.HIGH_SCORING_MIN ? POINTS.HIGH_SCORING_BONUS : 0;
-    return { points: POINTS.EXACT_BASE + bonus, exact: true, correct: true };
+    const points = totalGoals >= HIGH_SCORING_MIN ? sp.exactHighScoring : sp.exact;
+    return { points, exact: true, correct: true };
   }
 
   if (outcome(pred.home, pred.away) === outcome(actualHome, actualAway)) {
-    return { points: POINTS.CORRECT_RESULT, exact: false, correct: true };
+    return { points: sp.correct, exact: false, correct: true };
   }
 
   return { points: 0, exact: false, correct: false };
@@ -88,7 +176,7 @@ const normalize = (s) => (s ?? '').toString().trim().toLowerCase();
 //
 // Inputs:
 //   users:           [{ id, name, bet, scores? }, ...]   APPROVED USER rows
-//   finishedMatches: [{ id, score: { fullTime: { home, away } }, ... }, ...]
+//   finishedMatches: [{ id, score, stage, ... }, ...]
 //   predictions:     [{ user_id, match_id, home, away }, ...] (only those that exist)
 //   tournamentOverrides (optional): { winner?, topScorer?, topAssist? }
 //     If provided (admin recalculate), values override the per-user
@@ -177,4 +265,19 @@ function computeLeaderboard({ users, finishedMatches, predictions, tournamentOve
   return result;
 }
 
-module.exports = { POINTS, calcPoints, computeLeaderboard, readTournamentBonus };
+// Test seam: scoring tests assert the warning fires exactly once per match
+// per process. Tests reset between cases via this helper.
+function _resetUnresolvedLogCache() {
+  _unresolvedLogged.clear();
+}
+
+module.exports = {
+  POINTS,
+  STAGE_POINTS,
+  stagePoints,
+  resolveScoringResult,
+  calcPoints,
+  computeLeaderboard,
+  readTournamentBonus,
+  _resetUnresolvedLogCache,
+};

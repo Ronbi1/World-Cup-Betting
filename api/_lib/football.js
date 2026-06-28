@@ -360,12 +360,20 @@ function buildTeamSide({ teamId, labelEn, labelFa }) {
 function transformGame(raw) {
   const homeScore = toIntOrNull(raw.home_score);
   const awayScore = toIntOrNull(raw.away_score);
+  const stage = mapStage(raw.type, raw.group);
+  // Group matches can never go to extra time, so regulation === fullTime by
+  // definition. Knockout matches start with regulation=null; the live-scores
+  // tick (api/_lib/liveScores.js) freezes it from ESPN linescores at the end
+  // of period 2. worldcup26 itself does not expose a separate regulation
+  // score, so we never invent one for knockout fixtures here.
+  const isGroup = stage === 'GROUP_STAGE';
+  const regulation = isGroup ? { home: homeScore, away: awayScore } : null;
 
   return {
     id: String(raw.id),
     utcDate: parseLocalDate(raw.local_date, raw.stadium_id),
     status: mapStatus(raw.finished, raw.time_elapsed),
-    stage: mapStage(raw.type, raw.group),
+    stage,
     group: raw.group || null,
     homeTeam: buildTeamSide({
       teamId: raw.home_team_id,
@@ -384,6 +392,9 @@ function transformGame(raw) {
       halfAway: null,
       winner: null,
       fullTime: { home: homeScore, away: awayScore },
+      regulation,
+      wentToExtraTime: false,
+      decidedByPenalties: false,
     },
     matchday: toIntOrNull(raw.matchday),
     timeElapsed: raw.time_elapsed && raw.time_elapsed !== 'notstarted'

@@ -10,6 +10,7 @@ import BetModal from '../components/BetModal';
 import LiveBetsModal from '../components/LiveBetsModal';
 import LiveScoreBanner from '../components/LiveScoreBanner';
 import { MATCH_STATUS, STAGE_ORDER, REG_STATUS } from '../utils/constants';
+import { detectCurrentStage } from '../utils/stages';
 import { isMatchToday, isMatchOnDate, toIsraelDateString, hasMatchStarted } from '../utils/matchTime';
 import styles from './AllGamesPage.module.css';
 
@@ -49,7 +50,11 @@ export default function AllGamesPage() {
   const { matches, loading, error, lastUpdated, refresh } = useMatches();
   const { user, users, scores } = useAuth();
   const { t } = useTranslation();
-  const [activeStage, setActiveStage] = useState('GROUP_STAGE');
+  // null until a user click sets it explicitly. While null, the render uses
+  // detectCurrentStage(matches) as the effective stage so the page lands on
+  // the live tournament stage (first stage in STAGE_ORDER with any pending
+  // match). A user tab click locks in for the rest of the session.
+  const [activeStage, setActiveStage] = useState(null);
   const [filterStatus, setFilterStatus] = useState('ALL');
   const [viewMode, setViewMode] = useState('chronological');
   const [playedExpanded, setPlayedExpanded] = useState(false);
@@ -63,6 +68,13 @@ export default function AllGamesPage() {
 
   const now = useMinuteTick();
   const { predictions, upsertPrediction } = useUserPredictions();
+
+  // Render-time effective stage: until the user picks a tab, follow the live
+  // tournament stage detected from match data. No useEffect needed — the
+  // calculation is pure and re-runs naturally when `matches` changes (cheap:
+  // single pass per render).
+  const detectedStage = useMemo(() => detectCurrentStage(matches), [matches]);
+  const effectiveStage = activeStage ?? detectedStage ?? 'GROUP_STAGE';
 
   const handleMatchClick = (match) => {
     if (hasMatchStarted(match)) {
@@ -85,18 +97,18 @@ export default function AllGamesPage() {
   const availableStages = STAGE_ORDER.filter((s) => stageMap[s]);
 
   const stageMatches = useMemo(
-    () => matches.filter((m) => (m.stage || 'GROUP_STAGE') === activeStage),
-    [matches, activeStage],
+    () => matches.filter((m) => (m.stage || 'GROUP_STAGE') === effectiveStage),
+    [matches, effectiveStage],
   );
 
   const availableGroups = useMemo(() => {
-    if (activeStage !== 'GROUP_STAGE') return [];
+    if (effectiveStage !== 'GROUP_STAGE') return [];
     const groups = new Set();
     for (const m of stageMatches) {
       if (m.group) groups.add(m.group);
     }
     return [...groups].sort((a, b) => a.localeCompare(b));
-  }, [stageMatches, activeStage]);
+  }, [stageMatches, effectiveStage]);
 
   const stageTeams = useMemo(() => {
     const teamMap = new Map();
@@ -124,14 +136,14 @@ export default function AllGamesPage() {
     if (filterDate) {
       result = result.filter((m) => isMatchOnDate(m.utcDate, filterDate));
     }
-    if (filterGroup !== 'ALL' && activeStage === 'GROUP_STAGE') {
+    if (filterGroup !== 'ALL' && effectiveStage === 'GROUP_STAGE') {
       result = result.filter((m) => m.group === filterGroup);
     }
     if (filterTeam !== 'ALL') {
       result = result.filter((m) => matchHasTeam(m, filterTeam));
     }
     return result;
-  }, [stageMatches, filterStatus, filterDate, filterGroup, filterTeam, activeStage]);
+  }, [stageMatches, filterStatus, filterDate, filterGroup, filterTeam, effectiveStage]);
 
   const filteredGroups = useMemo(() => {
     const groups = {};
@@ -221,7 +233,7 @@ export default function AllGamesPage() {
                     <button
                       key={stage}
                       onClick={() => handleStageChange(stage)}
-                      className={`${styles.stageTab} ${activeStage === stage ? styles.stageActive : ''}`}
+                      className={`${styles.stageTab} ${effectiveStage === stage ? styles.stageActive : ''}`}
                     >
                       {t(`stages.${stage}`)}
                     </button>
@@ -230,7 +242,7 @@ export default function AllGamesPage() {
                     <button
                       key={stage}
                       onClick={() => handleStageChange(stage)}
-                      className={`${styles.stageTab} ${activeStage === stage ? styles.stageActive : ''} ${styles.placeholder}`}
+                      className={`${styles.stageTab} ${effectiveStage === stage ? styles.stageActive : ''} ${styles.placeholder}`}
                     >
                       {t(`stages.${stage}`)}
                     </button>
@@ -299,7 +311,7 @@ export default function AllGamesPage() {
           </div>
         </div>
 
-        {activeStage === 'GROUP_STAGE' && availableGroups.length > 0 && (
+        {effectiveStage === 'GROUP_STAGE' && availableGroups.length > 0 && (
           <div className={styles.filterRow}>
             <label className={styles.filterRowLabel} htmlFor="filter-group">
               {t('allGames.filter.groupSectionLabel')}
