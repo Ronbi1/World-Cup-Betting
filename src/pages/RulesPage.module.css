@@ -29,6 +29,9 @@
 }
 
 .sectionTitle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   font-size: 1rem;
   font-weight: 700;
   color: var(--clr-text-primary);
@@ -87,9 +90,377 @@
   flex-shrink: 0;
 }
 
+/* ─── Section 1: v2.0 What's New ─────────────────────────────────────────
+   Hero diff card. Gold flag accent on the inline-start edge mirrors the
+   knockout stage chip on MatchCard — visual continuity with the rest of
+   the app. */
+.changesCard {
+  position: relative;
+  border-color: var(--clr-accent-gold-border);
+  background: linear-gradient(
+    160deg,
+    rgba(33, 50, 89, 0.95) 0%,
+    var(--clr-surface) 70%
+  );
+  border-inline-start: 4px solid var(--clr-accent-gold-deep);
+  scroll-margin-top: 80px; /* don't bury the section under the sticky navbar when #changes scrolls into view */
+}
+
+.changesEyebrow {
+  display: inline-block;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--clr-accent-gold);
+  margin-bottom: 0.3rem;
+}
+
+.changesTitle {
+  font-family: var(--font-display);
+  font-size: clamp(1.4rem, 3.5vw, 1.85rem);
+  font-weight: 400;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #fff8dc;
+  margin: 0 0 1rem;
+  line-height: 1.1;
+}
+
+.diffGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.diffHeadRow {
+  display: grid;
+  grid-template-columns: minmax(8rem, 1fr) 1fr auto 1fr;
+  gap: 0.5rem 0.65rem;
+  align-items: center;
+  padding: 0 0.2rem;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.diffHeadSpacer {}
+.diffHeadOld { color: var(--clr-muted); }
+.diffHeadNew { color: var(--clr-accent-green); grid-column: 4; }
+
+.diffRow {
+  display: grid;
+  grid-template-columns: minmax(8rem, 1fr) 1fr auto 1fr;
+  gap: 0.5rem 0.65rem;
+  align-items: center;
+  padding: 0.6rem 0.7rem;
+  background: rgba(6, 13, 29, 0.5);
+  border: 1px solid var(--clr-border);
+  border-inline-start: 3px solid var(--clr-accent-green);
+  border-radius: 10px;
+}
+
+.diffLabel {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--clr-text-primary);
+  line-height: 1.3;
+}
+
+.diffOld {
+  font-size: 0.8rem;
+  color: var(--clr-text-secondary);
+  text-decoration: line-through;
+  text-decoration-color: rgba(148, 163, 184, 0.5);
+  text-decoration-thickness: 1px;
+  line-height: 1.35;
+}
+
+.diffArrow {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  color: var(--clr-accent-amber);
+  text-align: center;
+  line-height: 1;
+}
+[dir='rtl'] .diffArrow { transform: scaleX(-1); display: inline-block; }
+
+.diffNew {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--clr-text-primary);
+  line-height: 1.35;
+}
+
+/* ─── Section 2: Stage ladder ────────────────────────────────────────────
+   Desktop table + mobile stacked cards. The two views render the same data
+   but only one is visible at a time (CSS media query). */
+.tableWrap {
+  display: block;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-inline: -0.5rem; /* let the table breathe to the card edge on narrow widths */
+}
+
+.stageTable {
+  width: 100%;
+  min-width: 28rem;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.88rem;
+}
+
+.stageTable thead th {
+  text-align: start;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--clr-text-secondary);
+  padding: 0.5rem 0.6rem;
+  border-bottom: 1px solid var(--clr-border);
+}
+
+.stageTable .tNum { text-align: end; }
+
+.stageTable tbody td {
+  padding: 0.6rem 0.6rem;
+  border-bottom: 1px solid rgba(43, 61, 104, 0.5);
+  color: var(--clr-text-primary);
+  vertical-align: middle;
+}
+
+.stageRowGroup td { background: rgba(6, 182, 212, 0.04); }
+.stageRowGroup td:first-child { border-inline-start: 3px solid var(--clr-accent-cyan); }
+
+.stageRowKnockout td { background: rgba(212, 175, 55, 0.04); }
+.stageRowKnockout td:first-child { border-inline-start: 3px solid transparent; }
+
+.stageRowFinal td {
+  background: rgba(212, 175, 55, 0.1);
+  border-block: 1px solid rgba(212, 175, 55, 0.3);
+}
+
+.stageCell { font-weight: 600; }
+
+.stageChipGroup {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: rgba(6, 182, 212, 0.12);
+  border: 1px solid rgba(6, 182, 212, 0.4);
+  color: var(--clr-accent);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+/* Angular gold flag — same clip-path + gold tokens as MatchCard.stageBadge.
+   Forced LTR so the angled cut stays on the trailing edge regardless of
+   document direction (matches MatchCard which is also an LTR island). */
+.stageChipKnockout {
+  display: inline-flex;
+  align-items: center;
+  direction: ltr;
+  font-weight: 700;
+  font-size: 0.7rem;
+  padding: 3px 14px 3px 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--clr-accent-gold-deep);
+  background: var(--clr-accent-gold-bg);
+  border: 1px solid var(--clr-accent-gold-border);
+  border-right: none;
+  clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 50%, calc(100% - 8px) 100%, 0 100%);
+  white-space: nowrap;
+}
+
+.tNumFinal {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  letter-spacing: 0.04em;
+  color: var(--clr-accent-gold);
+  text-shadow: 0 0 18px rgba(212, 175, 55, 0.35);
+}
+
+/* Mobile: stacked cards replace the table */
+.stageCards {
+  display: none;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.stageCardItem {
+  background: rgba(6, 13, 29, 0.45);
+  border: 1px solid var(--clr-border);
+  border-radius: 12px;
+  padding: 0.7rem 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.stageCardGroup { border-inline-start: 3px solid var(--clr-accent-cyan); }
+.stageCardKnockout { border-inline-start: 3px solid var(--clr-accent-gold-deep); }
+.stageCardFinal {
+  background: rgba(212, 175, 55, 0.08);
+  border-color: var(--clr-accent-gold-border);
+}
+
+.stageCardGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.4rem;
+  margin: 0;
+}
+
+.stageCardGrid div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  align-items: center;
+  text-align: center;
+}
+
+.stageCardGrid dt {
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--clr-text-secondary);
+}
+
+.stageCardGrid dd {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--clr-text-primary);
+}
+
+/* ─── Section 3: Regulation-time callout ─────────────────────────────────
+   `90'` chip reuses the vocabulary from PlayerScoreModal.regTag so the
+   per-match breakdown and this page describe the same concept identically. */
+.regCard {
+  border-inline-start: 4px solid var(--clr-accent-gold-deep);
+}
+
+.regChip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.2rem;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: rgba(212, 175, 55, 0.18);
+  border: 1px solid var(--clr-accent-gold-border);
+  color: var(--clr-accent-gold);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  /* numerals + apostrophe always read LTR */
+  direction: ltr;
+}
+
+.regExamples {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem;
+  margin: 1rem 0 0.9rem;
+}
+
+.regExample {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.7rem 0.85rem;
+  background: rgba(6, 13, 29, 0.5);
+  border: 1px solid var(--clr-border);
+  border-radius: 10px;
+  text-align: center;
+}
+
+.regExampleScored {
+  border-color: var(--clr-accent-gold-border);
+  background: rgba(212, 175, 55, 0.08);
+}
+
+.regExampleLabel {
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--clr-text-secondary);
+}
+
+.regExampleScoreBroadcast {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--clr-text-secondary);
+  text-decoration: line-through;
+  text-decoration-color: rgba(148, 163, 184, 0.4);
+  /* "2-1" is an LTR sequence regardless of page direction */
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+.regExampleScore {
+  font-family: var(--font-display);
+  font-size: 1.85rem;
+  color: var(--clr-accent-gold);
+  letter-spacing: 0.04em;
+  text-shadow: 0 0 18px rgba(212, 175, 55, 0.35);
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+.regWarn {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--clr-text-secondary);
+  line-height: 1.5;
+  padding: 0.55rem 0.75rem;
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  border-radius: 8px;
+}
+
+/* ─── Responsive ─────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .diffHeadRow,
+  .diffRow {
+    grid-template-columns: 1fr auto 1fr;
+    grid-template-areas:
+      'label  label  label'
+      'old    arrow  new';
+    row-gap: 0.4rem;
+  }
+  .diffHeadRow .diffHeadSpacer { display: none; }
+  .diffHeadRow .diffHeadOld,
+  .diffHeadRow .diffHeadNew { grid-column: auto; }
+  .diffHeadOld { grid-column: 1 / 2; }
+  .diffHeadNew { grid-column: 3 / 4; }
+  .diffLabel  { grid-area: label; }
+  .diffOld    { grid-area: old; }
+  .diffArrow  { grid-area: arrow; }
+  .diffNew    { grid-area: new; }
+
+  .tableWrap { display: none; }
+  .stageCards { display: flex; }
+
+  .regExamples { grid-template-columns: 1fr; }
+}
+
 @media (max-width: 600px) {
   .page { padding: 1rem 0.85rem; }
   .title { font-size: 1.3rem; }
   .card { padding: 1rem 1.1rem; border-radius: 12px; }
   .rulesList li { font-size: 0.88rem; padding: 0.5rem 0.65rem; }
+  .changesTitle { font-size: 1.25rem; }
+  .regExampleScore { font-size: 1.5rem; }
 }

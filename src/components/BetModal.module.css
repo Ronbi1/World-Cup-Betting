@@ -137,6 +137,46 @@
   background: var(--clr-surface);
 }
 
+/* ── Knockout-stage reminder ────────────────────────────────────────────
+   Subtle inline notice for knockout matches only. Gold left-edge accent
+   (logical-property border so it flips to the right edge in RTL) mirrors
+   the gold flag chip used on MatchCard for knockout fixtures — visual
+   continuity from the card the user just tapped. */
+.knockoutReminder {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  padding: 0.55rem 0.75rem;
+  background: var(--clr-accent-gold-bg);
+  border: 1px solid var(--clr-accent-gold-border);
+  border-inline-start: 3px solid var(--clr-accent-gold-deep);
+  border-radius: 8px;
+  font-size: 0.78rem;
+  color: var(--clr-text-secondary);
+  line-height: 1.4;
+}
+
+.knockoutChip {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(212, 175, 55, 0.22);
+  border: 1px solid var(--clr-accent-gold-border);
+  color: var(--clr-accent-gold);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 700;
+  /* "90'" reads LTR in every language */
+  direction: ltr;
+}
+
+.knockoutText {
+  flex: 1;
+}
+
 /* ── Kickoff-lock banner ───────────────────────────────────────────────── */
 /* Shown above the teams row once the match has started. Uses logical
    properties so RTL (Hebrew) layout works unchanged. */

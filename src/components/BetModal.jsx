@@ -233,6 +233,11 @@ export default function BetModal({ match, opened, onClose, onSaved }) {
       weekday: 'short', day: '2-digit', month: 'short', year: 'numeric',
     });
 
+  // Knockout-stage matches use only the regulation-time score. Surface this
+  // at the moment of decision so users predicting in the modal aren't
+  // surprised later. Group-stage matches don't have the distinction.
+  const isKnockoutStage = match.stage && match.stage !== 'GROUP_STAGE';
+
   return (
     <Modal
       opened={opened}
@@ -247,6 +252,15 @@ export default function BetModal({ match, opened, onClose, onSaved }) {
           {formatDate(match.utcDate)}
           {match.group ? ` · ${match.group}` : ''}
         </Text>
+
+        {isKnockoutStage && (
+          <div className={styles.knockoutReminder}>
+            <span className={styles.knockoutChip}>90'</span>
+            <span className={styles.knockoutText}>
+              {t('betModal.knockoutReminder')}
+            </span>
+          </div>
+        )}
 
         {locked && (
           <div className={styles.lockedBanner} role="status">

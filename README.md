@@ -23,26 +23,55 @@ Stack — **Vercel + Supabase only**, free of charge.
 
 ## Scoring
 
-| Outcome | Points |
-|---|---|
-| Exact score (≤ 4 total goals) | **3 pts** |
-| Exact score (≥ 5 total goals) | **5 pts** |
-| Correct result (right winner/draw, wrong score) | **1 pt** |
-| Tournament Winner prediction | **15 pts** |
-| Top Scorer prediction | **5 pts** |
-| Top Assist prediction | **5 pts** |
+Knockout stages award more points the deeper you go. Group-stage scoring (1/3/5) is unchanged from launch so existing leaderboard totals do not shift when the migration ships.
 
-All bets are **locked** when the tournament starts on **June 11, 2026**.
+| Stage | Correct direction | Exact (≤ 3 goals) | Exact (≥ 4 goals) |
+|---|---|---|---|
+| Group stage | **1** | **3** | **5** |
+| Round of 32 | **2** | **4** | **6** |
+| Round of 16 | **2** | **5** | **7** |
+| Quarter-finals | **3** | **7** | **9** |
+| Semi-finals | **4** | **9** | **11** |
+| Third-place match | **4** | **9** | **11** |
+| Final | **5** | **12** | **15** |
+
+Plus, applied at the leaderboard level (not per match):
+
+| Bonus | Points |
+|---|---|
+| 3 consecutive exact-score predictions (one-time, no stacking) | **+3** |
+| Tournament Winner prediction | **15** |
+| Top Scorer prediction | **15** |
+| Top Assist prediction | **15** |
+
+The high-scoring threshold is `total goals ≥ 4` (e.g. an exact 2-2 or 3-1 earns the high tier).
+
+All match-result and tournament bets **lock at kickoff** (per match) or at the **tournament opening on June 11, 2026** (Winner / Top Scorer / Top Assist).
+
+### Regulation-time rule (knockouts only)
+
+For knockout matches, scoring uses **only the score at the end of regulation time** (90 + added minutes). Extra time and penalties never affect points — even when they decide the actual match on TV. The match card may still show the running/final score; the scoring engine looks at regulation alone.
+
+| Example (knockout) | What the broadcast shows | What scoring uses |
+|---|---|---|
+| 1-1 at 90', 2-1 after ET | 2-1 final | **1-1** |
+| 0-0 at 90', winner on penalties | 0-0 (5-4 PEN) | **0-0** |
+| 2-2 at 90', 3-2 after ET | 3-2 final | **2-2** |
+
+If a knockout match went to ET/penalties but no regulation score is available from the live pipeline, the match is treated as **unresolved**: 0 points for everyone, the exact-streak counter does not advance, and a structured warning is logged (`matchId`, `stage`, `homeTeam`, `awayTeam`, `fullTime`, `source`, `wentToExtraTime`, `decidedByPenalties`). The app never silently falls back to the post-ET final score for scoring.
+
+The `PlayerScoreModal` per-match breakdown shows the regulation score with a `90'` tag and a smaller "Final 2-1" note for any knockout match that went to ET/PEN, so users see what scoring was actually based on.
 
 ### How scoring updates
 
 | Surface | Cadence |
 |---|---|
 | `GET /api/scores` (read-only) | Recomputes from finished matches on every request. Server-side 30 s cache. |
-| `useTodayMatches` poll (HomePage) | 30 s (live) / 60 s (kickoff < 15 min) / 5 min (idle) |
+| `useHomeMatches` poll (HomePage) | 30 s (live) / 60 s (kickoff < 15 min) / 5 min (idle) |
+| Live-score cron (`/api/cron/live-scores`) | Once per minute. Pulls ESPN (primary) → worldcup26 (fallback) and writes only into `matches_mirror`. Freezes `score.regulation` from ESPN linescores at the end of period 2 so ET goals don't overwrite it. |
 | Leaderboard refetch | Automatic when any tracked match transitions to FINISHED; also a 60 s opportunistic poll while any match is live |
 | Worst-case delay (match finishes upstream → leaderboard updates in UI) | **≤ ~1 minute** (server cache 30 s + client refetch) |
-| `POST /api/scores/recalculate` (admin) | Writes a snapshot to `users.scores` and persists the tournament-bonus inputs (`{winner, topScorer, topAssist}`) so they survive future recomputes. Only used at end of tournament. |
+| `POST /api/scores/recalculate` (admin) | Writes a snapshot to `users.scores` and persists the tournament-bonus inputs (`{winner, topScorer, topAssist}`) so they survive future recomputes. Only used at end of tournament. Group-stage points must show zero delta when re-run. |
 
 Missing predictions earn **0 points** and count as a miss — they break any exact-score streak in progress. A user who never opens the prediction modal for a match gets no credit for that match, regardless of the final score. No DB rows are auto-created.
 
@@ -58,11 +87,16 @@ Missing predictions earn **0 points** and count as a miss — they break any exa
 | PWA | `vite-plugin-pwa` (Workbox), 192/512/maskable icons, iOS meta tags |
 | Backend | **Vercel Serverless Functions** under `/api/*` (single Express app) |
 | Database | **Supabase** (Postgres) — `users` and `predictions` tables |
-| External API | worldcup26.ir — `/get/games`, `/get/teams` (proxied server-side, 30 s cache, single-flight) |
+| Schedule source | worldcup26.ir — `/get/games`, `/get/teams` (proxied server-side, 30 s cache, single-flight). Mirrored into Supabase `matches_mirror` by the `/api/cron/refresh-matches` cron. |
+| Live-score source | **ESPN** scoreboard (primary) → **worldcup26** (per-match fallback). Polled by `/api/cron/live-scores` once per minute. Captures per-period `linescores` to compute regulation-time score; freezes it at the end of period 2 so ET/penalty goals never overwrite it. |
 | Email | Resend (optional) |
 | Auth | JWT (7-day) + bcryptjs hashed passwords. Boot-time validation via `GET /api/auth/me` keeps login sticky across refresh. |
 
-The browser never calls worldcup26.ir directly — every football request goes through a narrow, typed `/api/football/*` endpoint (`matches`, `matches/today`, `teams`) so the upstream schema can change without touching the frontend, and credentials never leak.
+The browser never calls worldcup26.ir or ESPN directly — every football request goes through a narrow, typed `/api/football/*` endpoint (`matches`, `matches/today`, `teams`) so the upstream schemas can change without touching the frontend, and credentials never leak.
+
+### All Games — current-stage default
+
+`AllGamesPage` opens on the **live tournament stage** — the first stage in `STAGE_ORDER` that still has any non-FINISHED match. Once all R32 fixtures finish, it auto-advances to R16; same for QF / SF / Third place / Final. After the whole tournament wraps, it lands on the last stage with data (the Final). A user clicking any stage tab locks that choice for the rest of the session. Detection helper: [`src/utils/stages.js`](src/utils/stages.js).
 
 ```
 World-Cup/
@@ -82,7 +116,7 @@ World-Cup/
 │   ├── hooks/{useMatches, useTodayMatches}.js
 │   ├── i18n/                     # i18next bootstrap + locales/{en,he}.json
 │   ├── services/{footballService, serverApi}.js
-│   └── utils/{constants, matchTime}.js
+│   └── utils/{constants, matchTime, scoring, stages}.js
 ├── scripts/resize-icons.ps1      # one-shot PWA icon resizer (PowerShell + GDI+)
 ├── dev-server.cjs                # Local Express dev server (port 3000) — npm run dev:api
 ├── vite.config.js                # Vite + PWA + dev proxy /api → :3000

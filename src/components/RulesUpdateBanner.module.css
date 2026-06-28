@@ -1,0 +1,242 @@
+/* ─── Rules-update broadcast bulletin ─────────────────────────────────────
+   In-flow card mounted at the top of HomePage. Same visual vocabulary as
+   ExactScoreSpotlight (deep-blue gradient, gold radial glow, Bebas Neue
+   eyebrow) but a horizontal news-chyron layout. Dismissible per-user via
+   wc_rules_v2_ack — see RulesUpdateBanner.jsx. */
+
+.banner {
+  position: relative;
+  margin-bottom: 1.25rem;
+  padding: 1.1rem 1.35rem 1rem;
+  border-radius: 16px;
+  background: linear-gradient(
+    165deg,
+    rgba(33, 50, 89, 0.95) 0%,
+    rgba(10, 20, 40, 0.98) 55%,
+    rgba(6, 13, 29, 1) 100%
+  );
+  border: 1px solid var(--clr-accent-gold-border);
+  box-shadow:
+    0 10px 32px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(212, 175, 55, 0.08) inset;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+/* Gold radial glow rising from the top — mirrors ExactScoreSpotlight.glow */
+.glow {
+  position: absolute;
+  inset: -30% -10% auto;
+  height: 80%;
+  background: radial-gradient(
+    ellipse 60% 70% at 50% 0%,
+    rgba(212, 175, 55, 0.22) 0%,
+    rgba(212, 175, 55, 0.06) 40%,
+    transparent 72%
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Thin diagonal-stripe ribbon along the top edge — broadcast bulletin */
+.stripe {
+  position: absolute;
+  top: 0;
+  inset-inline: 0;
+  height: 4px;
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--clr-accent-gold-deep) 0 8px,
+    rgba(10, 20, 40, 0.85) 8px 16px
+  );
+  opacity: 0.85;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ─── Header ────────────────────────────────────────────────────────────── */
+.header {
+  position: relative;
+  z-index: 1;
+  margin-bottom: 0.9rem;
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--clr-accent-gold);
+  margin-bottom: 0.35rem;
+}
+
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--clr-accent-amber);
+  box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.55);
+  animation: rubPulse 1.6s ease-out infinite;
+}
+
+@keyframes rubPulse {
+  0%   { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.55); }
+  70%  { box-shadow: 0 0 0 7px rgba(245, 158, 11, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+}
+
+.headline {
+  font-family: var(--font-display);
+  font-size: clamp(1.35rem, 3vw, 1.75rem);
+  font-weight: 400;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #fff8dc;
+  margin: 0;
+  line-height: 1.1;
+  text-shadow: 0 2px 18px rgba(212, 175, 55, 0.3);
+}
+
+/* ─── Pills row ─────────────────────────────────────────────────────────── */
+.pills {
+  position: relative;
+  z-index: 1;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.6rem;
+  padding: 0;
+  margin: 0 0 1rem;
+}
+
+.pill {
+  display: flex;
+  flex-direction: column;
+  gap: 0.18rem;
+  padding: 0.55rem 0.7rem 0.55rem 0.7rem;
+  border-radius: 8px;
+  background: rgba(6, 13, 29, 0.55);
+  border-inline-start: 3px solid var(--clr-accent-cyan);
+  backdrop-filter: blur(2px);
+}
+
+.pillGold  { border-inline-start-color: var(--clr-accent-gold); }
+.pillAmber { border-inline-start-color: var(--clr-accent-amber); }
+.pillGreen { border-inline-start-color: var(--clr-accent-green); }
+
+.pillLabel {
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--clr-text-secondary);
+}
+
+.pill.pillGold  .pillLabel { color: var(--clr-accent-gold); }
+.pill.pillAmber .pillLabel { color: var(--clr-accent-amber); }
+.pill.pillGreen .pillLabel { color: var(--clr-accent-green); }
+
+.pillBody {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--clr-text-primary);
+  line-height: 1.35;
+}
+
+/* ─── Actions ──────────────────────────────────────────────────────────── */
+.actions {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+}
+
+.ctaPrimary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.55rem 1rem;
+  border-radius: 8px;
+  background: var(--grad-primary-btn);
+  color: #1a1208;
+  font-weight: 800;
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-decoration: none;
+  box-shadow: 0 4px 16px rgba(249, 115, 22, 0.25);
+  transition: transform 0.12s, box-shadow 0.15s, filter 0.15s;
+  min-height: 44px;
+}
+
+.ctaPrimary:hover {
+  filter: brightness(1.06);
+  box-shadow: 0 6px 22px rgba(249, 115, 22, 0.4);
+  text-decoration: none;
+  color: #1a1208;
+}
+
+.ctaPrimary:active { transform: translateY(1px); }
+
+.ctaArrow {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  line-height: 1;
+}
+
+/* In RTL the arrow visually flips so it still points "forward" into the page */
+[dir='rtl'] .ctaArrow { transform: scaleX(-1); display: inline-block; }
+
+.ctaGhost {
+  appearance: none;
+  background: transparent;
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  color: var(--clr-text-secondary);
+  font-weight: 600;
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  padding: 0.55rem 0.9rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+  min-height: 44px;
+}
+
+.ctaGhost:hover {
+  color: var(--clr-accent-gold);
+  border-color: var(--clr-accent-gold-border);
+  background: rgba(212, 175, 55, 0.06);
+}
+
+.ctaGhost:focus-visible {
+  outline: 2px solid var(--clr-accent-gold);
+  outline-offset: 2px;
+}
+
+/* ─── Mobile ───────────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .banner {
+    padding: 1rem 1rem 0.9rem;
+    border-radius: 14px;
+  }
+  .pills {
+    grid-template-columns: 1fr;
+    gap: 0.45rem;
+    margin-bottom: 0.85rem;
+  }
+  .actions { flex-direction: column-reverse; align-items: stretch; }
+  .ctaPrimary,
+  .ctaGhost {
+    justify-content: center;
+    width: 100%;
+  }
+  .headline { font-size: 1.15rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dot { animation: none; }
+}

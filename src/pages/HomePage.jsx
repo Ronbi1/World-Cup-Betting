@@ -20,6 +20,7 @@ import SkeletonCard from '../components/SkeletonCard';
 import BetModal from '../components/BetModal';
 import LiveBetsModal from '../components/LiveBetsModal';
 import LiveScoreBanner from '../components/LiveScoreBanner';
+import RulesUpdateBanner from '../components/RulesUpdateBanner';
 import Podium from '../components/Podium';
 import PlayerScoreModal from '../components/PlayerScoreModal';
 import SpotlightPair from '../components/SpotlightPair';
@@ -229,6 +230,8 @@ export default function HomePage() {
 
   return (
     <main className={styles.page}>
+      <RulesUpdateBanner />
+
       {!loadingMatches && todayMatches.length > 0 && (
         <LiveScoreBanner matches={todayMatches} />
       )}

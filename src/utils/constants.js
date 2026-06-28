@@ -44,6 +44,7 @@ export const STAGE_ORDER = [
 // (see App.jsx).
 export const STORAGE_KEYS = {
   USER: 'wc_user',
+  RULES_V2_ACK: 'wc_rules_v2_ack',
 };
 
 export const LEGACY_STORAGE_KEYS = [

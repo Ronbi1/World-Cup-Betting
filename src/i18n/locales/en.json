@@ -20,12 +20,45 @@
   "rules": {
     "pageTitle": "Game Rules",
     "pageSubtitle": "Everything you need to know about how the pool works.",
+    "changesEyebrow": "v2.0 · What's new",
+    "changesTitle": "Scoring just got deeper",
+    "diff": {
+      "label": { "knockout": "Knockout scoring", "regulation": "ET / penalties (knockouts)", "group": "Group stage" },
+      "knockout":   { "old": "Same as group stage", "new": "Progressive — bigger points each round" },
+      "regulation": { "old": "Final displayed score could be confusing", "new": "Scoring uses regulation 90' only" },
+      "group":      { "old": "1 / 3 / 5", "new": "Unchanged" }
+    },
+    "stageLadderTitle": "Points by stage",
+    "stageLadderIntro": "Knockout matches reward exact predictions more the further the tournament goes.",
+    "stageLadderHeaders": {
+      "stage": "Stage",
+      "correct": "Correct result",
+      "exact": "Exact (≤ 3 goals)",
+      "exactHigh": "Exact (≥ 4 goals)"
+    },
+    "regulationTitle": "Regulation-time rule (knockouts only)",
+    "regulationBody": "For knockout matches, scoring uses only the score at the end of regulation (90' + added). Extra time and penalties never affect points — even when they decide the match on TV.",
+    "regulationExampleBroadcast": "What the broadcast shows",
+    "regulationExampleScored": "What scoring uses",
+    "regulationExampleScore": "{{home}}–{{away}}",
+    "regulationExampleFinal": "{{home}}–{{away}} final (after ET)",
+    "regulationUnresolved": "If the regulation score isn't available, the match awards 0 pts and breaks any exact-score streak.",
+    "bonusesTitle": "Bonuses & tournament bets",
     "howScoringWorksTitle": "How Scoring Updates",
     "howScoringWorksBody": "Once a match finishes upstream, the leaderboard updates automatically within about a minute. There is no need for an admin to recalculate after every match — the recalculate button is only used at the end of the tournament to award the winner / top scorer / top assist bonuses.",
     "exactScoreBonusTitle": "Exact-Score Streak Bonus",
     "exactScoreBonusBody": "Hit 3 exact-score predictions in a row and you receive a one-time +3 point bonus. The bonus is awarded once and does not increase if your streak grows longer.",
     "privacyTitle": "Predictions Privacy",
     "privacyBody": "Other participants' predictions are kept private until kickoff. The moment the match starts (by kickoff time or live status), everyone's predictions become visible on the homepage Live Predictions panel."
+  },
+  "rulesBanner": {
+    "eyebrow": "Rules Update",
+    "headline": "Knockout points just got bigger.",
+    "progressive": { "label": "Progressive knockouts", "body": "The deeper the stage, the bigger the points." },
+    "regulation":  { "label": "Regulation-only",       "body": "Knockout scoring ignores ET & penalties." },
+    "groupSafe":   { "label": "Group stage unchanged", "body": "Group-stage points stay unchanged." },
+    "cta": "See the new rules",
+    "dismiss": "Got it"
   },
   "auth": {
     "login": {
@@ -381,7 +414,8 @@
     "incompleteBody": "Please enter a score for both teams.",
     "savedTitle": "Prediction saved!",
     "errorTitle": "Error",
-    "errorBody": "Failed to save prediction. Try again."
+    "errorBody": "Failed to save prediction. Try again.",
+    "knockoutReminder": "Knockout reminder: points are calculated by the regulation-time score only — 90' + added time. Extra time and penalties do not count."
   },
   "liveBets": {
     "title": "Live Predictions Revealed",
