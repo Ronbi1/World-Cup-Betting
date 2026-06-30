@@ -8,6 +8,14 @@
 //              doesn't list also falls back, per match, so nothing goes stale.
 //   3. WRITE  — write-on-change ONLY, into matches_mirror only.
 //
+// REGULATION SECONDARY SOURCE — at the FINISHED-transition tick of a
+// knockout match that went to ET/penalties, if ESPN linescores never produced
+// a numeric P1/P2 pair (so `score.regulation` is still null), we derive
+// regulation by summing goal events with `period ≤ 2` from the same summary
+// we already fetched for the events timeline. See regulationFromEvents().
+// This eliminates the failure mode where one bad ESPN tick at full time
+// left the match permanently unresolved.
+//
 // HARD WRITE-SCOPE GUARANTEE (mirrors mirrorRefresh.js; enforced by
 // tests/liveScores.writeScope.test.js):
 //   * Writes ONLY to matches_mirror.
@@ -124,6 +132,30 @@ function fromWc26(prev, wm) {
   });
 }
 
+// Derive a regulation snapshot from an ESPN keyEvents list. Sums goals where
+// `period === 1 || period === 2`, attributed to home/away via the `side`
+// field that liveScores.js already orients to the mirror's home/away. Returns
+// { home, away } for any array (including empty — 0-0 going to ET is a valid
+// regulation snapshot), or null when given a non-array.
+//
+// Only invoked at the FINISHED-transition tick when score.regulation is still
+// null AND ET/penalties were signaled. A successful events fetch is required
+// (the caller passes the just-fetched, oriented list) — a stale or empty
+// previously-cached events list must NOT drive this fallback, or we'd
+// silently invent a 0-0 regulation for a genuine 2-1.
+function regulationFromEvents(events) {
+  if (!Array.isArray(events)) return null;
+  let home = 0;
+  let away = 0;
+  for (const ev of events) {
+    if (ev?.kind !== 'goal') continue;
+    if (ev?.period !== 1 && ev?.period !== 2) continue;
+    if (ev?.side === 'home') home += 1;
+    else if (ev?.side === 'away') away += 1;
+  }
+  return { home, away };
+}
+
 function eventsSig(m) {
   return (m.events || []).map((e) => e.id).join('|');
 }
@@ -202,6 +234,7 @@ async function refreshLiveScores({
         // keeps the prior events and never blocks the score update.
         const justFinished = next.status === 'FINISHED' && m.status !== 'FINISHED';
         if (next.status === 'IN_PLAY' || next.status === 'PAUSED' || justFinished) {
+          let eventsFreshFetched = false;
           try {
             const events = await fetchEspnEvents(espn.espnId);
             // Re-orient each event's ESPN-relative side to the mirror match's
@@ -219,8 +252,30 @@ async function refreshLiveScores({
                 ? null
                 : direct ? ev.espnSide : (ev.espnSide === 'home' ? 'away' : 'home'),
             }));
+            eventsFreshFetched = true;
           } catch {
             /* keep prior events */
+          }
+          // Secondary regulation source. At the FINISHED transition of a
+          // knockout match that went to ET/penalties, if ESPN linescores
+          // never gave us a numeric P1/P2 pair, derive regulation from the
+          // just-fetched events list. Guarded by `eventsFreshFetched` so a
+          // failed summary fetch never produces a fabricated 0-0. The
+          // existing freeze rule in buildNormalized keeps an already-captured
+          // regulation intact — this block runs only when it's still null.
+          if (
+            eventsFreshFetched
+            && justFinished
+            && next.score.regulation == null
+            && (next.score.wentToExtraTime || next.score.decidedByPenalties)
+          ) {
+            const derivedReg = regulationFromEvents(next.events);
+            if (derivedReg) {
+              next = {
+                ...next,
+                score: { ...next.score, regulation: derivedReg },
+              };
+            }
           }
         }
       }
@@ -256,4 +311,4 @@ async function refreshLiveScores({
   return { live: live.length, updated: updates.length, source, espnError, ms: Date.now() - startedAt };
 }
 
-module.exports = { refreshLiveScores, isLiveWindow };
+module.exports = { refreshLiveScores, isLiveWindow, regulationFromEvents };

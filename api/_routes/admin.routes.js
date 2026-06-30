@@ -1,21 +1,25 @@
 // Admin-only diagnostic + manual-trigger routes for the Supabase mirror.
 //
-// Neither endpoint is exposed in the UI in this PR. Admins curl them with
-// their session cookie. Both are gated by requireAuth + requireAdmin +
-// requireFreshAdmin — the strongest auth chain in the app.
+// All routes are gated by requireAuth + requireAdmin + requireFreshAdmin —
+// the strongest auth chain in the app.
 //
 // HARD GUARANTEES (also enforced by tests/mirrorRefresh.writeScope.test.js):
 //   * Backfill writes only to matches_mirror + teams_mirror via refreshMirror.
 //   * Compare is strictly read-only.
-//   * Neither imports scoring.js / computeLeaderboard.
-//   * Neither calls /api/scores/recalculate.
+//   * Regulation override writes ONLY to matches_mirror (a single row's
+//     `normalized.score.regulation`) and busts the leaderboard cache; it
+//     does NOT call computeLeaderboard or /scores/recalculate (the cache
+//     bust lets the next /scores read recompute fresh data via its existing
+//     path). scoring.js is not imported here.
 
 const express = require('express');
+const { supabase } = require('../_lib/supabase');
 const { requireAuth, requireAdmin, requireFreshAdmin } = require('../_lib/auth');
 const { refreshMirror } = require('../_lib/mirrorRefresh');
 const live = require('../_lib/football');
 const mirror = require('../_lib/matchesRepo');
 const { isSimulationMode } = require('../_lib/simulation');
+const leaderboardCache = require('../_lib/leaderboardCache');
 
 const router = express.Router();
 
@@ -201,4 +205,124 @@ router.get(
   },
 );
 
+// POST /api/admin/matches/:id/regulation
+// Rare-case manual fallback for the auto-capture path in liveScores.js: when
+// ESPN never publishes valid period scores for a knockout match that went to
+// ET/penalties, the mirror row is left with `score.regulation = null` and
+// the scoring engine treats every prediction as unresolved (0 pts). This
+// route lets an admin enter the 90' + stoppage-time result by hand. The
+// scoring engine reads `score.regulation` automatically on the next /scores
+// recompute, so the leaderboard catches up as soon as the cache is busted.
+//
+// Idempotency: refuses to overwrite an already-populated regulation. The
+// auto-capture path is the source of truth — this route only fills in the
+// gap when auto-capture didn't.
+const MAX_REG_GOALS = 20; // sanity bound — well above any realistic score
+function isValidRegScore(v) {
+  return Number.isInteger(v) && v >= 0 && v <= MAX_REG_GOALS;
+}
+
+// Pure-ish business logic — the Express route is a thin wrapper. Extracted
+// so vitest can drive every branch (simulation, not-found, group-stage
+// rejection, idempotency conflict, success) with an injected Supabase mock,
+// without standing up Express or mocking the auth middleware chain.
+async function setMatchRegulation(supabaseClient, { id, home, away }) {
+  if (!id) return { status: 400, body: { error: 'Missing match id.' } };
+  if (!isValidRegScore(home) || !isValidRegScore(away)) {
+    return {
+      status: 400,
+      body: { error: 'home and away must be integers between 0 and 20.' },
+    };
+  }
+
+  // Read the current row so we can both verify the match exists, confirm
+  // it is a knockout, and merge the new regulation into the existing
+  // `normalized` JSONB. Read-modify-write at the application level keeps
+  // this portable across Supabase environments where raw jsonb_set RPC may
+  // not be exposed.
+  const { data: existing, error: readErr } = await supabaseClient
+    .from('matches_mirror')
+    .select('id, status, stage, normalized')
+    .eq('id', id)
+    .maybeSingle();
+  if (readErr) throw readErr;
+  if (!existing) return { status: 404, body: { error: 'Match not found.' } };
+
+  const stage = existing.stage || existing.normalized?.stage || 'GROUP_STAGE';
+  if (stage === 'GROUP_STAGE') {
+    return {
+      status: 400,
+      body: { error: 'Regulation override is only available for knockout matches.' },
+    };
+  }
+
+  const currentReg = existing.normalized?.score?.regulation;
+  if (currentReg && currentReg.home != null && currentReg.away != null) {
+    return {
+      status: 409,
+      body: {
+        error: 'Regulation already recorded for this match. Refuse to overwrite.',
+        regulation: currentReg,
+      },
+    };
+  }
+
+  const prevScore = existing.normalized?.score || {};
+  const nextNormalized = {
+    ...(existing.normalized || {}),
+    score: {
+      ...prevScore,
+      regulation: { home, away },
+    },
+  };
+
+  const { error: writeErr } = await supabaseClient
+    .from('matches_mirror')
+    .update({
+      normalized: nextNormalized,
+      mirror_updated_at: new Date().toISOString(),
+    })
+    .eq('id', id);
+  if (writeErr) throw writeErr;
+
+  return {
+    status: 200,
+    body: { ok: true, match: { id, stage, regulation: { home, away } } },
+  };
+}
+
+router.post(
+  '/matches/:id/regulation',
+  requireAuth,
+  requireAdmin,
+  requireFreshAdmin,
+  async (req, res, next) => {
+    try {
+      if (isSimulationMode()) {
+        return res.status(403).json({
+          error: 'Simulation mode is read-only. Disable VITE_SIMULATION_MODE to set regulation.',
+        });
+      }
+
+      const id = String(req.params.id || '').trim();
+      const { home, away } = req.body || {};
+      const result = await setMatchRegulation(supabase, { id, home, away });
+
+      if (result.status === 200) {
+        leaderboardCache.bust();
+        console.log('[admin/regulation] ok', {
+          triggeredBy: req.user?.id,
+          matchId: id,
+          stage: result.body.match.stage,
+          regulation: result.body.match.regulation,
+        });
+      }
+      return res.status(result.status).json(result.body);
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
 module.exports = router;
+module.exports.setMatchRegulation = setMatchRegulation;

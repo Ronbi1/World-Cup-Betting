@@ -2,7 +2,10 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/useAuth';
 import { useLiveEvents } from '../context/useLiveEvents';
-import { REG_STATUS, ROLES } from '../utils/constants';
+import { REG_STATUS, ROLES, MATCH_STATUS } from '../utils/constants';
+import { useMatches, bustMatchCache } from '../hooks/useMatches';
+import serverApi from '../services/serverApi';
+import { extractApiError } from '../utils/apiErrors';
 import AdminOverrideModal from '../components/AdminOverrideModal';
 import styles from './AdminPage.module.css';
 
@@ -31,7 +34,7 @@ function DeleteModal({ user, onConfirm, onCancel, loading }) {
 }
 
 export default function AdminPage() {
-  const { users, updateUserStatus, updateUserRole, deleteUser, isAdmin, fetchAuditLog } = useAuth();
+  const { users, updateUserStatus, updateUserRole, deleteUser, isAdmin, fetchAuditLog, refreshScores } = useAuth();
   const { sendTestEvent, permission, requestNotifications } = useLiveEvents();
   const { t, i18n } = useTranslation();
   const locale = i18n.resolvedLanguage === 'he' ? 'he-IL' : 'en-GB';
@@ -325,6 +328,12 @@ export default function AdminPage() {
         </button>
       </section>
 
+      {/* Rare-case fallback: a knockout match that ended without a valid
+          regulation score captured from ESPN. Auto-capture in liveScores.js
+          is the primary path; this UI is for the residual cases. */}
+      <RegulationOverrideSection refreshScores={refreshScores} />
+
+
       <section className={styles.section}>
         <h2 className={styles.sectionTitle}>📜 {t('admin.audit.sectionTitle')}</h2>
         {auditError && <p className={styles.deleteError}>{auditError}</p>}
@@ -371,5 +380,154 @@ export default function AdminPage() {
         onClose={() => setOverrideOpen(false)}
       />
     </main>
+  );
+}
+
+// Lists every FINISHED knockout match in matches_mirror that has no
+// regulation snapshot captured, and lets an admin enter one. Mounted as a
+// small section on the admin page — visible only when there are unresolved
+// rows (renders an empty-state line when the list is clean).
+function RegulationOverrideSection({ refreshScores }) {
+  const { t, i18n } = useTranslation();
+  const locale = i18n.resolvedLanguage === 'he' ? 'he-IL' : 'en-GB';
+  const { matches, loading, refresh } = useMatches();
+  const [drafts, setDrafts] = useState({}); // { [matchId]: { home, away } }
+  const [savingId, setSavingId] = useState(null);
+  const [errors, setErrors] = useState({}); // { [matchId]: errorString }
+
+  const unresolved = useMemo(() => {
+    return (matches ?? []).filter((m) => {
+      if (m.status !== MATCH_STATUS.FINISHED) return false;
+      if (!m.stage || m.stage === 'GROUP_STAGE') return false;
+      const reg = m.score?.regulation;
+      return !reg || reg.home == null || reg.away == null;
+    });
+  }, [matches]);
+
+  const setDraft = (id, key, value) => {
+    setDrafts((prev) => ({
+      ...prev,
+      [id]: { ...(prev[id] || { home: '', away: '' }), [key]: value },
+    }));
+  };
+
+  const handleSave = async (match) => {
+    const draft = drafts[match.id] || { home: '', away: '' };
+    const home = parseInt(draft.home, 10);
+    const away = parseInt(draft.away, 10);
+    if (!Number.isInteger(home) || home < 0 || !Number.isInteger(away) || away < 0) {
+      setErrors((e) => ({ ...e, [match.id]: t('admin.regulation.saveError') }));
+      return;
+    }
+    setErrors((e) => ({ ...e, [match.id]: '' }));
+    setSavingId(match.id);
+    try {
+      await serverApi.post(`/admin/matches/${match.id}/regulation`, { home, away });
+      // The backend busted the leaderboardCache; refresh both the matches
+      // list (so this row drops out of "unresolved") and the leaderboard.
+      bustMatchCache();
+      await refresh();
+      await refreshScores({ fresh: true });
+      setDrafts((prev) => {
+        const next = { ...prev };
+        delete next[match.id];
+        return next;
+      });
+    } catch (err) {
+      setErrors((e) => ({
+        ...e,
+        [match.id]: extractApiError(err, t('admin.regulation.saveError')),
+      }));
+    } finally {
+      setSavingId(null);
+    }
+  };
+
+  return (
+    <section className={styles.section}>
+      <h2 className={styles.sectionTitle}>⚖️ {t('admin.regulation.sectionTitle')}</h2>
+      <p className={styles.regHint}>{t('admin.regulation.sectionHint')}</p>
+      {loading ? null : unresolved.length === 0 ? (
+        <p className={styles.empty}>{t('admin.regulation.empty')}</p>
+      ) : (
+        <div className={styles.tableWrapper}>
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th>{t('admin.regulation.table.match')}</th>
+                <th>{t('admin.regulation.table.stage')}</th>
+                <th>{t('admin.regulation.table.final')}</th>
+                <th>{t('admin.regulation.table.regulation')}</th>
+                <th>{t('admin.regulation.table.actions')}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {unresolved.map((m) => {
+                const draft = drafts[m.id] || { home: '', away: '' };
+                const ft = m.score?.fullTime ?? m.score ?? {};
+                return (
+                  <tr key={m.id}>
+                    <td>
+                      {m.homeTeam.shortName} vs {m.awayTeam.shortName}
+                      {' '}
+                      <span className={styles.na}>
+                        ({new Date(m.utcDate).toLocaleDateString(locale, {
+                          day: '2-digit', month: 'short',
+                        })})
+                      </span>
+                    </td>
+                    <td>{t(`stages.${m.stage}`, m.stage)}</td>
+                    <td>
+                      <span className="numerals">{ft.home ?? '?'} – {ft.away ?? '?'}</span>
+                    </td>
+                    <td>
+                      <span className={styles.regScoreInputs}>
+                        <input
+                          className={styles.input}
+                          type="number"
+                          inputMode="numeric"
+                          min="0"
+                          max="20"
+                          value={draft.home}
+                          onChange={(e) => setDraft(m.id, 'home', e.target.value)}
+                          placeholder={t('admin.regulation.homePlaceholder')}
+                          aria-label={t('admin.regulation.homePlaceholder')}
+                        />
+                        <span className={styles.regScoreSep}>–</span>
+                        <input
+                          className={styles.input}
+                          type="number"
+                          inputMode="numeric"
+                          min="0"
+                          max="20"
+                          value={draft.away}
+                          onChange={(e) => setDraft(m.id, 'away', e.target.value)}
+                          placeholder={t('admin.regulation.awayPlaceholder')}
+                          aria-label={t('admin.regulation.awayPlaceholder')}
+                        />
+                      </span>
+                      {errors[m.id] && (
+                        <div className={styles.deleteError} style={{ marginTop: '0.4rem' }}>
+                          {errors[m.id]}
+                        </div>
+                      )}
+                    </td>
+                    <td className={styles.actions}>
+                      <button
+                        className={styles.approveBtn}
+                        onClick={() => handleSave(m)}
+                        disabled={savingId === m.id}
+                      >
+                        {savingId === m.id ? t('admin.regulation.saving') : t('admin.regulation.save')}
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
   );
 }

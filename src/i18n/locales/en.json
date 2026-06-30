@@ -401,6 +401,23 @@
       "matchUnknown": "Match {{id}}",
       "noPrior": "— (no prior)",
       "loadError": "Could not load audit log."
+    },
+    "regulation": {
+      "sectionTitle": "Unresolved knockout matches",
+      "sectionHint": "Knockout matches that finished without a 90' regulation score captured from ESPN. Enter the regulation result (90 minutes + stoppage only, no extra time, no penalties) to unblock scoring. Saving immediately refreshes the leaderboard.",
+      "empty": "All finished knockout matches have a regulation score. Nothing to do.",
+      "table": {
+        "match": "Match",
+        "stage": "Stage",
+        "final": "Final (FT/AET/PEN)",
+        "regulation": "Regulation (90')",
+        "actions": "Actions"
+      },
+      "homePlaceholder": "Home",
+      "awayPlaceholder": "Away",
+      "save": "Save regulation",
+      "saving": "Saving…",
+      "saveError": "Could not save regulation."
     }
   },
   "betModal": {
